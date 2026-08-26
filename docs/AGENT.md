@@ -84,6 +84,42 @@ to prevent.
 
 Each answer is consumed exactly once, by the next tick.
 
+## Meeting notes (Wispr Flow, Granola, anything else)
+
+Wispr Flow's Notetaker has no hosted API we can sync — the Flow API is voice-only and gated
+behind approval — but Notetaker exposes meeting history over **MCP**. So it arrives the same way
+everything else does locally: the agent reads it and pushes it here.
+
+Meeting recaps are the densest source of commitments there is, so they get their own kind:
+
+```jsonc
+{
+  "signals": [
+    {
+      "provider": "WISPR_FLOW",
+      "externalId": "wispr:meeting:2026-08-26-standup",
+      "kind": "MEETING_NOTE",
+      "title": "Eng standup — 26 Aug",
+      "body": "## Flow Summary\n…\n## Action items\n- Neri to open the rate-limiting PR today\n- Dana to review once it's up",
+      "author": { "displayName": "Wispr Flow Notetaker", "isMe": false },
+      "participants": [
+        { "displayName": "Neri", "handle": "neri", "isMe": true },
+        { "displayName": "Dana", "handle": "dana", "isMe": false }
+      ],
+      "occurredAtIso": "2026-08-26T09:30:00.000Z",
+      "isDirectedAtMe": true
+    }
+  ]
+}
+```
+
+Send the **whole recap**, action items included, as one signal. The extractor is told that a
+`MEETING_NOTE` is a record of something that already happened, and that only items the user took
+on or is owed become loops — "Dana to review" is Dana's problem, not yours.
+
+Use `Copy to Markdown` in Notetaker for the body; the headings it emits (`## Flow Summary`,
+`## Pre-read`) are stable regardless of what the UI labels them.
+
 ## A reasonable loop for an agent
 
 1. `GET /api/agent/probes` — answer anything outstanding.

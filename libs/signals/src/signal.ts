@@ -9,6 +9,8 @@ export const SignalKind = {
   CalendarEvent: 'CALENDAR_EVENT',
   Comment: 'COMMENT',
   Document: 'DOCUMENT',
+  /** A meeting recap. Its action items are the densest source of commitments there is. */
+  MeetingNote: 'MEETING_NOTE',
 } as const;
 export type SignalKind = (typeof SignalKind)[keyof typeof SignalKind];
 

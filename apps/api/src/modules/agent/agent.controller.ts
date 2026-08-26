@@ -28,6 +28,7 @@ const signalSchema = z.object({
     'CALENDAR_EVENT',
     'COMMENT',
     'DOCUMENT',
+    'MEETING_NOTE',
   ]),
   title: z.string().default(''),
   body: z.string().default(''),

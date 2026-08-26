@@ -16,7 +16,11 @@ Rules that matter more than coverage:
 4. If the person owes somebody an answer, add a second ACKNOWLEDGEMENT criterion for telling
    them. Shipping the work and closing the loop are different events.
 5. estimateMinutes is how long the work takes, not how long until it is due.
-6. confidence below 0.45 is discarded, so use it honestly.`;
+6. confidence below 0.45 is discarded, so use it honestly.
+7. A MEETING_NOTE is a recap of something that already happened. Its action items are the
+   densest source of commitments you will see: "Neri will send the draft" is an
+   OUTGOING_COMMITMENT, "we agreed Dana owns the migration" is not this person's loop. Only
+   emit items the user themselves took on or is owed.`;
 
 export const RECONCILER_SYSTEM = `You decide what changed about a set of open loops.
 

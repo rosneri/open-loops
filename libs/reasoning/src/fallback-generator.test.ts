@@ -6,13 +6,25 @@ import type { StructuredGenerator } from './structured-generator.port.js';
 const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const request = { name: 'x', system: 's', prompt: 'p', schema: z.object({ n: z.number() }) };
 
-const generator = (label: string, behaviour: 'ok' | 'fail'): StructuredGenerator => ({
-  label,
-  generate: vi.fn(async () => {
-    if (behaviour === 'fail') throw new Error(`${label} is out of quota`);
-    return await Promise.resolve({ n: 1 });
-  }),
-});
+/**
+ * `generate` is generic, so a stub has to be too — a plain `vi.fn` returning a fixed object is
+ * not assignable. The spy sits beside it rather than replacing it.
+ */
+const generator = (
+  label: string,
+  behaviour: 'ok' | 'fail',
+): StructuredGenerator & { readonly calls: { count: number } } => {
+  const calls = { count: 0 };
+  return {
+    label,
+    calls,
+    generate: async <TResult>(): Promise<TResult> => {
+      calls.count += 1;
+      if (behaviour === 'fail') throw new Error(`${label} is out of quota`);
+      return await Promise.resolve({ n: 1 } as TResult);
+    },
+  };
+};
 
 describe('FallbackGenerator', () => {
   it('uses the first generator and never touches the second', async () => {
@@ -23,7 +35,7 @@ describe('FallbackGenerator', () => {
     }).generate(request);
 
     expect(result).toEqual({ n: 1 });
-    expect(second.generate).not.toHaveBeenCalled();
+    expect(second.calls.count).toBe(0);
   });
 
   it('falls through when the preferred generator hits its limit', async () => {

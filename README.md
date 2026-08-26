@@ -50,6 +50,10 @@ interpret. There are two, chosen by `OPEN_LOOPS_MODE`:
 That capability difference is a domain rule (`libs/integrations/src/model/capability.ts`), not a
 convention — a hosted connector physically cannot correct a record.
 
+Locally the reasoning runs on the **Claude Code you are already signed into** — no API key, no
+extra bill. Set `ANTHROPIC_API_KEY` as well and it becomes a fallback: when the CLI hits a usage
+limit or is missing (as on a server), the keyed provider takes over and the tick keeps running.
+
 **Deciding what it means** is where the AI lives, in exactly two steps:
 
 1. **Extraction** turns raw signals into candidate loops, each with *completion criteria* — the
@@ -124,7 +128,7 @@ Versions are pinned in `.prototools` and installed by [proto](https://moonrepo.d
 | Backend | NestJS 11 |
 | Frontend | React 19, Vite 8, Tailwind 4 |
 | Database | Postgres 16 via Prisma 7 |
-| AI | Vercel AI SDK 7 |
+| AI | Claude Code CLI locally, Vercel AI SDK 7 hosted |
 | Tests | Vitest 4 |
 
 One wrinkle worth knowing: `typescript-eslint` does not support the TypeScript 7 API yet, so the

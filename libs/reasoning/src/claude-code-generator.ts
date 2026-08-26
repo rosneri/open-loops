@@ -60,7 +60,7 @@ const JSON_ONLY = [
  * the schema goes in the prompt — without it the model invents its own field names, which is
  * exactly what happened the first time this ran.
  */
-const describeSchema = (schema: ZodType<unknown>): string =>
+const describeSchema = (schema: ZodType): string =>
   JSON.stringify(z.toJSONSchema(schema, { io: 'output' }));
 
 /**

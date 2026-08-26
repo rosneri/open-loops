@@ -15,6 +15,8 @@ export const SourceProvider = {
   Notion: 'NOTION',
   Asana: 'ASANA',
   WhatsApp: 'WHATSAPP',
+  /** Meeting notes and action items. No hosted API — it arrives over MCP via the local agent. */
+  WisprFlow: 'WISPR_FLOW',
   Discord: 'DISCORD',
   MicrosoftTeams: 'MICROSOFT_TEAMS',
   Outlook: 'OUTLOOK',

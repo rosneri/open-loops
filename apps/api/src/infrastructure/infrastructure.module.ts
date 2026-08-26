@@ -229,12 +229,13 @@ const generatorFor = (input: { config: AppConfig; logger: Logger }): StructuredG
   const keyed = keyedGenerator({ config, provider });
   if (keyed !== undefined) chain.push(keyed);
 
-  if (chain.length === 0) {
+  const [first, ...rest] = chain;
+  if (first === undefined) {
     throw new Error(
       'No reasoning provider is available. Install Claude Code, or set ANTHROPIC_API_KEY.',
     );
   }
-  return chain.length === 1 ? (chain[0] as StructuredGenerator) : new FallbackGenerator({ generators: chain, logger });
+  return rest.length === 0 ? first : new FallbackGenerator({ generators: chain, logger });
 };
 
 const keyedGenerator = (input: {
