@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/signals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bounded context: raw signals \u2014 the normalised feed every provider maps into.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*"
+  }
+}

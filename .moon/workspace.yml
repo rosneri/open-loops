@@ -1,0 +1,28 @@
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+# Each library is one bounded context (or one adapter for a context). Apps are just clients:
+# every rule that matters lives in libs/, so a second client — CLI, mobile, MCP server — is a
+# new entry here and nothing else.
+projects:
+  kernel: 'libs/kernel'
+  loops: 'libs/loops'
+  planning: 'libs/planning'
+  integrations: 'libs/integrations'
+  signals: 'libs/signals'
+  reasoning: 'libs/reasoning'
+  persistence: 'libs/persistence'
+  connectors-composio: 'libs/connectors-composio'
+  connectors-local: 'libs/connectors-local'
+  orchestration: 'libs/orchestration'
+  contracts: 'libs/contracts'
+  api: 'apps/api'
+  web: 'apps/web'
+
+vcs:
+  client: 'git'
+  defaultBranch: 'main'
+
+pipeline:
+  inheritColorsForPipedTasks: true
+
+telemetry: false

@@ -1,0 +1,19 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'persistence'
+  description: 'Prisma adapters implementing every context repository port.'
+
+dependsOn:
+  - contracts
+  - kernel
+  - loops
+  - planning
+  - integrations
+  - signals
+
+tags:
+  - 'adapter'

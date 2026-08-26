@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'integrations'
+  description: 'Bounded context: connections and what each may write.'
+
+dependsOn:
+  - kernel
+
+tags:
+  - 'domain'

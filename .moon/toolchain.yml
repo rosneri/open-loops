@@ -1,0 +1,15 @@
+$schema: 'https://moonrepo.dev/schemas/toolchain.json'
+
+# Versions live in .prototools; moon defers to proto so the two never drift.
+node:
+  version: '25.8.1'
+  packageManager: 'bun'
+  bun:
+    version: '1.3.14'
+  inferTasksFromScripts: false
+  dependencyVersionFormat: 'workspace'
+
+typescript:
+  createMissingConfig: false
+  syncProjectReferences: false
+  routeOutDirToCache: false

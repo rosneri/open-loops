@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bounded context: connections and what each may write.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*"
+  }
+}

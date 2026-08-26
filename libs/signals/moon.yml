@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'signals'
+  description: 'Bounded context: raw signals — the normalised feed every provider maps into.'
+
+dependsOn:
+  - kernel
+
+tags:
+  - 'domain'

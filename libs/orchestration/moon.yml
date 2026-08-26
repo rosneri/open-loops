@@ -1,0 +1,19 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'orchestration'
+  description: 'Context map: the hourly tick that drives loops, planning and signals together.'
+
+dependsOn:
+  - contracts
+  - kernel
+  - loops
+  - planning
+  - integrations
+  - signals
+
+tags:
+  - 'application'

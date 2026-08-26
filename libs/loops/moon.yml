@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'loops'
+  description: 'Bounded context: open loops — obligations, evidence, completion.'
+
+dependsOn:
+  - kernel
+
+tags:
+  - 'domain'

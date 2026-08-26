@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'planning'
+  description: 'Bounded context: the one-day plan — ordering, packing, slippage.'
+
+dependsOn:
+  - kernel
+
+tags:
+  - 'domain'

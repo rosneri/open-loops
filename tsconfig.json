@@ -1,0 +1,51 @@
+// Bun resolves the workspace-root tsconfig when a task runs from here, and Nest needs the
+// legacy decorator semantics. Per-project tsconfigs repeat these two flags for editors.
+{
+  "extends": "./tsconfig.options.json",
+  "include": [],
+  "references": [
+    {
+      "path": "./libs/kernel"
+    },
+    {
+      "path": "./libs/loops"
+    },
+    {
+      "path": "./libs/planning"
+    },
+    {
+      "path": "./libs/integrations"
+    },
+    {
+      "path": "./libs/signals"
+    },
+    {
+      "path": "./libs/reasoning"
+    },
+    {
+      "path": "./libs/persistence"
+    },
+    {
+      "path": "./libs/connectors-composio"
+    },
+    {
+      "path": "./libs/connectors-local"
+    },
+    {
+      "path": "./libs/orchestration"
+    },
+    {
+      "path": "./libs/contracts"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/web"
+    }
+  ],
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}

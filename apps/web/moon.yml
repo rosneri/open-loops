@@ -1,0 +1,35 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'application'
+language: 'typescript'
+stack: 'frontend'
+project:
+  name: 'web'
+  description: 'React client. Depends only on contracts, so a second client costs nothing.'
+
+dependsOn:
+  - contracts
+
+tags:
+  - 'app'
+
+tasks:
+  dev:
+    command: 'vite'
+    preset: 'server'
+    options:
+      cache: false
+      persistent: true
+  build:
+    command: 'vite build'
+    inputs:
+      - '@group(sources)'
+      - 'index.html'
+      - 'vite.config.ts'
+    outputs:
+      - 'dist'
+  typecheck:
+    command: 'tsc --noEmit -p tsconfig.json'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'

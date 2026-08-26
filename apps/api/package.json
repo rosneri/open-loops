@@ -1,0 +1,35 @@
+{
+  "name": "@open-loops/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NestJS host. Controllers only translate HTTP into use cases — no rules live here.",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "tick": "bun src/tick-once.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.3",
+    "@nestjs/core": "^11.2.3",
+    "@nestjs/platform-express": "^11.2.3",
+    "@open-loops/connectors-composio": "workspace:*",
+    "@open-loops/connectors-local": "workspace:*",
+    "@open-loops/contracts": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/orchestration": "workspace:*",
+    "@open-loops/persistence": "workspace:*",
+    "@open-loops/planning": "workspace:*",
+    "@open-loops/reasoning": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "cron": "^4.3.5",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0"
+  }
+}

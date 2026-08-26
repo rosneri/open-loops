@@ -1,0 +1,7 @@
+# proto owns every tool version this repo needs. `proto use` installs them all.
+node = "25.8.1"
+bun = "1.3.14"
+moon = "2.5.3"
+
+[settings]
+auto-install = true

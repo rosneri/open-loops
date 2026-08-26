@@ -1,0 +1,20 @@
+{
+  "name": "@open-loops/connectors-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local data adapter: an AI client that already holds the sessions pushes in.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/loops": "workspace:*"
+  }
+}

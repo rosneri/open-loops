@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'connectors-composio'
+  description: 'Hosted data adapter: Composio sessions broker OAuth and run provider tools.'
+
+dependsOn:
+  - kernel
+  - signals
+  - integrations
+  - loops
+
+tags:
+  - 'adapter'

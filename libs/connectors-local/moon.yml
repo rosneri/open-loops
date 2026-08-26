@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'connectors-local'
+  description: 'Local data adapter: an AI client that already holds the sessions pushes in.'
+
+dependsOn:
+  - kernel
+  - signals
+  - integrations
+  - loops
+
+tags:
+  - 'adapter'

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: open-loops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openloops
+      POSTGRES_PASSWORD: openloops
+      POSTGRES_DB: openloops
+    ports:
+      - '5439:5432'
+    volumes:
+      - open-loops-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openloops -d openloops']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  open-loops-pgdata:

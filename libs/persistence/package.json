@@ -1,0 +1,39 @@
+{
+  "name": "@open-loops/persistence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Prisma adapters implementing every context repository port.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/planning": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "@prisma/client": "^7.10.0",
+    "zod": "^4.4.3",
+    "@prisma/adapter-pg": "^7.10.0",
+    "pg": "^8.16.3",
+    "@open-loops/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "prisma": "^7.10.0",
+    "@types/pg": "^8.15.6"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  }
+}

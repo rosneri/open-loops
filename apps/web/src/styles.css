@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink-950: #09090b;
+  --color-ink-900: #101012;
+  --color-ink-850: #16161a;
+  --color-ink-800: #1c1c21;
+  --color-ink-700: #26262d;
+  --color-ink-600: #33333c;
+  --color-chalk-100: #f4f4f5;
+  --color-chalk-300: #c8c8ce;
+  --color-chalk-500: #85858f;
+  --color-chalk-600: #62626b;
+  --color-signal-open: #7c8cf8;
+  --color-signal-progress: #e0a13c;
+  --color-signal-unconfirmed: #d06ac0;
+  --color-signal-done: #4fb286;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-chalk-100);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'ss01';
+}
+
+/* A barely-there dot grid. Enough texture that the flat panels do not read as a wireframe. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0);
+  background-size: 3px 3px;
+}
+
+.hairline {
+  border: 1px solid color-mix(in oklab, var(--color-ink-700) 75%, transparent);
+}

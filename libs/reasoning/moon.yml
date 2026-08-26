@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'reasoning'
+  description: 'The thinking half: extraction and reconciliation via the Vercel AI SDK.'
+
+dependsOn:
+  - orchestration
+  - kernel
+  - loops
+  - signals
+
+tags:
+  - 'adapter'

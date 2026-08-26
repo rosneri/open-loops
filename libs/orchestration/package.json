@@ -1,0 +1,22 @@
+{
+  "name": "@open-loops/orchestration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Context map: the hourly tick that drives loops, planning and signals together.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/planning": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "@open-loops/contracts": "workspace:*"
+  }
+}

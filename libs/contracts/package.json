@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wire DTOs shared by every client. No behaviour, no dependencies but the kernel.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*"
+  }
+}

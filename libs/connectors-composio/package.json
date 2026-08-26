@@ -1,0 +1,21 @@
+{
+  "name": "@open-loops/connectors-composio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hosted data adapter: Composio sessions broker OAuth and run provider tools.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@composio/core": "^0.17.0"
+  }
+}

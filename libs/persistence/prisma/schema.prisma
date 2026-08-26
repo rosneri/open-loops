@@ -1,0 +1,186 @@
+// Persistence mirrors the aggregates, not the screens. Everything time-like is a DateTime here
+// and an epoch-millisecond `Instant` in the domain; src/mappers is the only place that converts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  // Prisma 7 takes the connection string from prisma.config.ts (CLI) and from the driver
+  // adapter passed to `new PrismaClient()` (runtime). Nothing secret lives in this file.
+  provider = "postgresql"
+}
+
+model OpenLoop {
+  id        String @id
+  sourceKey String @unique
+
+  kind    String
+  title   String
+  summary String @db.Text
+
+  provider   String
+  externalId String
+  threadRef  String?
+  url        String?
+  channel    String?
+  occurredAt DateTime
+
+  counterpartyName       String?
+  counterpartyHandle     String?
+  counterpartyEmail      String?
+  counterpartyImportance String?
+
+  dueAt           DateTime?
+  promisedFor     DateTime?
+  estimateMinutes Int
+  priority        Int
+  confidence      Float
+
+  manualState  String?
+  manualReason String?
+  snoozedUntil DateTime?
+
+  createdAt     DateTime
+  updatedAt     DateTime
+  lastCheckedAt DateTime?
+
+  criteria   Criterion[]
+  evidence   EvidenceRecord[]
+  planBlocks PlanBlock[]
+  events     LoopEventLog[]
+
+  @@index([updatedAt])
+  @@index([provider])
+}
+
+model Criterion {
+  id       String  @id
+  loopId   String
+  role     String
+  optional Boolean @default(false)
+  probe    Json
+
+  loop     OpenLoop         @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  evidence EvidenceRecord[]
+
+  @@index([loopId])
+}
+
+model EvidenceRecord {
+  id          String   @id @default(uuid())
+  loopId      String
+  criterionId String
+  verdict     String
+  observedAt  DateTime
+  summary     String   @db.Text
+  url         String?
+
+  loop      OpenLoop  @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  criterion Criterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@index([loopId, observedAt])
+}
+
+model DailyPlan {
+  id          String   @id
+  day         String   @unique
+  dayStartAt  DateTime
+  startMinute Int
+  endMinute   Int
+  manualOrder Json
+  generatedAt DateTime
+
+  blocks PlanBlock[]
+}
+
+model PlanBlock {
+  id          String   @id @default(uuid())
+  planId      String
+  loopId      String
+  startAt     DateTime
+  endAt       DateTime
+  position    Int
+  disposition String
+  slipCount   Int      @default(0)
+  pinned      Boolean  @default(false)
+
+  plan DailyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  loop OpenLoop  @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, loopId])
+  @@index([planId, startAt])
+}
+
+model Integration {
+  id                 String    @id
+  provider           String    @unique
+  mode               String
+  status             String
+  accountLabel       String?
+  externalAccountRef String?
+  scopes             String[]
+  lastSyncedAt       DateTime?
+  lastError          String?
+  connectedAt        DateTime?
+}
+
+model SyncCursor {
+  provider String   @id
+  at       DateTime
+}
+
+model RawSignal {
+  id             String    @id @default(uuid())
+  provider       String
+  externalId     String
+  kind           String
+  title          String    @db.Text
+  body           String    @db.Text
+  author         Json
+  participants   Json
+  occurredAt     DateTime
+  threadRef      String?
+  url            String?
+  channel        String?
+  isDirectedAtMe Boolean   @default(false)
+  metadata       Json?
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@unique([provider, externalId])
+  @@index([processedAt, occurredAt])
+  @@index([kind, occurredAt])
+}
+
+model LoopEventLog {
+  id      String   @id @default(uuid())
+  loopId  String
+  type    String
+  at      DateTime
+  payload Json
+
+  loop OpenLoop @relation(fields: [loopId], references: [id], onDelete: Cascade)
+
+  @@index([loopId, at])
+}
+
+/// Local mode has no API keys, so the AI client answers probes out of band. A tick leaves the
+/// question here; the agent posts the answer back and the next tick consumes it exactly once.
+model ProbeTask {
+  id          String    @id @default(uuid())
+  loopId      String
+  criterionId String
+  probe       Json
+  describedAs String    @db.Text
+  requestedAt DateTime  @default(now())
+  answeredAt  DateTime?
+  consumedAt  DateTime?
+  verdict     String?
+  summary     String?   @db.Text
+  url         String?
+
+  @@index([criterionId, answeredAt])
+  @@index([answeredAt, consumedAt])
+}

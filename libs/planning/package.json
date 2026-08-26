@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/planning",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bounded context: the one-day plan \u2014 ordering, packing, slippage.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*"
+  }
+}

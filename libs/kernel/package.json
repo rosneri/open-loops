@@ -1,0 +1,14 @@
+{
+  "name": "@open-loops/kernel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared kernel: identity, time, results. Depends on nothing.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts"
+}
