@@ -6,6 +6,12 @@ export interface ConnectionHandshake {
   readonly redirectUrl?: string;
 }
 
+export interface UpstreamConnection {
+  readonly provider: SourceProvider;
+  readonly externalAccountRef: string;
+  readonly accountLabel?: string;
+}
+
 export interface ConnectionState {
   readonly active: boolean;
   readonly scopes: readonly string[];
@@ -23,4 +29,10 @@ export interface ConnectionBroker {
   }): Promise<ConnectionHandshake>;
   completeConnection(externalAccountRef: string): Promise<ConnectionState>;
   disconnect(externalAccountRef: string): Promise<void>;
+  /**
+   * Accounts the broker already holds for this user. Authorisation happens once, per Composio
+   * account — not once per deployment — so a fresh database can adopt what is already connected
+   * instead of dragging the user back through consent.
+   */
+  listConnected(): Promise<readonly UpstreamConnection[]>;
 }

@@ -4,8 +4,10 @@ import type { ExtractLoopsResult, ExtractLoopsUseCase } from './extract-loops.us
 import type { RebalanceDayResult, RebalanceDayUseCase } from './rebalance-day.use-case.js';
 import type { ReconcileLoopsResult, ReconcileLoopsUseCase } from './reconcile-loops.use-case.js';
 import type { SyncSourcesResult, SyncSourcesUseCase } from './sync-sources.use-case.js';
+import type { ManageIntegrationsUseCase } from './manage-integrations.use-case.js';
 
 export interface RunTickDeps {
+  readonly integrations: ManageIntegrationsUseCase;
   readonly sync: SyncSourcesUseCase;
   readonly extract: ExtractLoopsUseCase;
   readonly reconcile: ReconcileLoopsUseCase;
@@ -26,6 +28,9 @@ export class RunTickUseCase {
     this.deps.logger.info('tick started');
 
     const failures: TickFailureDto[] = [];
+    // Cheap, and it means connecting an app is the only step a user ever has to take.
+    await this.step('adopt', failures, async () => await this.deps.integrations.adoptUpstream());
+
     const sync = await this.deps.sync.execute();
     failures.push(...sync.failures);
 

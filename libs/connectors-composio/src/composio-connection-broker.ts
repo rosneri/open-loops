@@ -3,9 +3,10 @@ import type {
   ConnectionBroker,
   ConnectionHandshake,
   ConnectionState,
+  UpstreamConnection,
 } from '@open-loops/integrations';
 import type { ComposioSessionProvider } from './composio-session.js';
-import { toolkitSlugFor } from './composio-session.js';
+import { providerForToolkit, toolkitSlugFor } from './composio-session.js';
 
 /**
  * Why this exists at all: Composio owns the OAuth applications, so the user never registers a
@@ -53,6 +54,26 @@ export class ComposioConnectionBroker implements ConnectionBroker {
       scopes: [],
       accountLabel: `${match.name} · ${this.deps.sessions.userId}`,
     };
+  }
+
+  public async listConnected(): Promise<readonly UpstreamConnection[]> {
+    const session = await this.deps.sessions.session$();
+    const { items } = await session.toolkits();
+
+    return items.flatMap((item) => {
+      const provider = providerForToolkit(item.slug);
+      const accountId = item.connection?.connectedAccount?.id;
+      if (provider === undefined || item.connection?.isActive !== true || accountId === undefined) {
+        return [];
+      }
+      return [
+        {
+          provider,
+          externalAccountRef: accountId,
+          accountLabel: `${item.name} · ${this.deps.sessions.userId}`,
+        },
+      ];
+    });
   }
 
   public disconnect(externalAccountRef: string): Promise<void> {

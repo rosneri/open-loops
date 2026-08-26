@@ -3,6 +3,7 @@ import type {
   ConnectionBroker,
   ConnectionHandshake,
   ConnectionState,
+  UpstreamConnection,
 } from '@open-loops/integrations';
 
 /**
@@ -24,6 +25,11 @@ export class LocalConnectionBroker implements ConnectionBroker {
       scopes: ['local-agent'],
       accountLabel: externalAccountRef.replace('local:', 'local agent · '),
     });
+  }
+
+  /** Nothing is brokered locally, so there is nothing to adopt. */
+  public listConnected(): Promise<readonly UpstreamConnection[]> {
+    return Promise.resolve([]);
   }
 
   public disconnect(): Promise<void> {

@@ -115,6 +115,7 @@ const providers: Provider[] = [
   {
     provide: Tokens.RunTick,
     inject: [
+      Tokens.ManageIntegrations,
       Tokens.SyncSources,
       Tokens.ExtractLoops,
       Tokens.ReconcileLoops,
@@ -123,13 +124,14 @@ const providers: Provider[] = [
       Tokens.Logger,
     ],
     useFactory: (
+      integrations: ManageIntegrationsUseCase,
       sync: SyncSourcesUseCase,
       extract: ExtractLoopsUseCase,
       reconcile: ReconcileLoopsUseCase,
       rebalance: RebalanceDayUseCase,
       clock: Clock,
       logger: Logger,
-    ) => new RunTickUseCase({ sync, extract, reconcile, rebalance, clock, logger }),
+    ) => new RunTickUseCase({ integrations, sync, extract, reconcile, rebalance, clock, logger }),
   },
   {
     provide: Tokens.IngestSignals,

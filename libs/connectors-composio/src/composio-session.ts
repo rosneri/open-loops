@@ -71,3 +71,10 @@ export const toolkitSlugFor = (provider: SourceProvider): string | undefined =>
 export const COMPOSIO_PROVIDERS: readonly SourceProvider[] = Object.keys(
   TOOLKIT_ALIASES,
 ) as SourceProvider[];
+
+const BY_TOOLKIT = new Map(
+  Object.entries(TOOLKIT_ALIASES).map(([provider, slug]) => [slug, provider as SourceProvider]),
+);
+
+export const providerForToolkit = (slug: string): SourceProvider | undefined =>
+  BY_TOOLKIT.get(slug.toLowerCase());

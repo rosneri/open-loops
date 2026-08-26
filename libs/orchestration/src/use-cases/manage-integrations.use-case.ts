@@ -44,6 +44,37 @@ export class ManageIntegrationsUseCase {
     });
   }
 
+  /**
+   * Adopts every account the broker already holds. Authorisation lives with Composio, not with
+   * this database, so a fresh deployment can pick up connections made on a laptop instead of
+   * sending the user back through consent for each one.
+   */
+  public async adoptUpstream(): Promise<readonly SourceProvider[]> {
+    const upstream = await this.deps.broker.listConnected();
+    const adopted: SourceProvider[] = [];
+
+    for (const connection of upstream) {
+      const integration = await this.ensure(connection.provider);
+      if (integration.snapshot().externalAccountRef === connection.externalAccountRef &&
+          integration.isUsable()) {
+        continue;
+      }
+      integration.beginConnect(connection.externalAccountRef);
+      integration.activate({
+        scopes: [],
+        ...(connection.accountLabel === undefined
+          ? {}
+          : { accountLabel: connection.accountLabel }),
+        at: this.deps.clock.now(),
+      });
+      await this.deps.integrations.save(integration);
+      adopted.push(connection.provider);
+    }
+
+    if (adopted.length > 0) this.deps.logger.info('adopted upstream connections', { adopted });
+    return adopted;
+  }
+
   public async beginConnect(input: {
     provider: SourceProvider;
     callbackUrl: string;
