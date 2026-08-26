@@ -55,7 +55,12 @@ export class ManageIntegrationsUseCase {
 
     // Local mode has nothing to authorise, so the connection is live the moment it is declared.
     const alreadyActive =
-      handshake.redirectUrl === undefined ? await this.completeConnect(input.provider) : false;
+      handshake.redirectUrl === undefined
+        ? await this.completeConnect({
+            provider: input.provider,
+            externalAccountRef: handshake.externalAccountRef,
+          })
+        : false;
 
     return {
       provider: input.provider,
@@ -65,10 +70,19 @@ export class ManageIntegrationsUseCase {
     };
   }
 
-  public async completeConnect(provider: SourceProvider): Promise<boolean> {
-    const integration = await this.ensure(provider);
-    const ref = integration.snapshot().externalAccountRef;
+  /**
+   * The provider tells us which account it just authorised. Trust that over whatever this
+   * integration happens to be holding: starting a second connect flow overwrites the stored
+   * reference, so relying on it silently completes the wrong attempt.
+   */
+  public async completeConnect(input: {
+    provider: SourceProvider;
+    externalAccountRef?: string;
+  }): Promise<boolean> {
+    const integration = await this.ensure(input.provider);
+    const ref = input.externalAccountRef ?? integration.snapshot().externalAccountRef;
     if (ref === undefined) return false;
+    integration.beginConnect(ref);
 
     const state = await this.deps.broker.completeConnection(ref);
     if (!state.active) {
@@ -82,7 +96,7 @@ export class ManageIntegrationsUseCase {
       at: this.deps.clock.now(),
     });
     await this.deps.integrations.save(integration);
-    this.deps.logger.info('integration connected', { provider });
+    this.deps.logger.info('integration connected', { provider: input.provider });
     return true;
   }
 

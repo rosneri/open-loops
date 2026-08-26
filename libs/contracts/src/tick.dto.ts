@@ -1,3 +1,10 @@
+/** A step that failed without taking the whole tick down: one provider, or one reasoning step. */
+export interface TickFailureDto {
+  /** The provider name, or the name of the step: `extract`, `reconcile`, `plan`. */
+  readonly source: string;
+  readonly error: string;
+}
+
 export interface TickReportDto {
   readonly startedAt: number;
   readonly finishedAt: number;
@@ -8,5 +15,5 @@ export interface TickReportDto {
   readonly awaitingAcknowledgement: number;
   readonly blocksPlanned: number;
   readonly deferred: number;
-  readonly failures: readonly { readonly provider: string; readonly error: string }[];
+  readonly failures: readonly TickFailureDto[];
 }

@@ -7,6 +7,12 @@ import type { ManageIntegrationsUseCase } from '@open-loops/orchestration';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 
+interface CallbackQuery {
+  readonly returnTo?: string;
+  /** Composio's own field name; it arrives snake_cased on the redirect. */
+  readonly connected_account_id?: string;
+}
+
 @Controller('api/integrations')
 export class IntegrationsController {
   public constructor(
@@ -43,14 +49,22 @@ export class IntegrationsController {
     return await this.begin({ provider, returnTo });
   }
 
+  /**
+   * Composio appends `connected_account_id` to the callback. Passing it through is what makes
+   * the flow correct when more than one connect attempt is in the air at once.
+   */
   @Get(':provider/callback')
   public async callback(
     @Param('provider') provider: string,
-    @Query('returnTo') returnTo: string | undefined,
+    @Query() query: CallbackQuery,
     @Res() response: Response,
   ): Promise<void> {
-    const active = await this.integrations.completeConnect(this.parse(provider));
-    response.redirect(`${this.webReturn(returnTo, provider)}&connected=${String(active)}`);
+    const accountId = query.connected_account_id;
+    const active = await this.integrations.completeConnect({
+      provider: this.parse(provider),
+      ...(accountId === undefined ? {} : { externalAccountRef: accountId }),
+    });
+    response.redirect(`${this.webReturn(query.returnTo, provider)}&connected=${String(active)}`);
   }
 
   @Delete(':provider')

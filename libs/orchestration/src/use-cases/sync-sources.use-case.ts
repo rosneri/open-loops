@@ -15,7 +15,7 @@ export interface SyncSourcesDeps {
 export interface SyncSourcesResult {
   readonly fetched: number;
   readonly perProvider: Readonly<Record<string, number>>;
-  readonly failures: readonly { provider: SourceProvider; error: string }[];
+  readonly failures: readonly { source: SourceProvider; error: string }[];
 }
 
 const LOOKBACK_MS = 72 * 60 * 60 * 1000;
@@ -33,7 +33,7 @@ export class SyncSourcesUseCase {
     const now = this.deps.clock.now();
     const active = await this.deps.integrations.listActive();
     const perProvider: Record<string, number> = {};
-    const failures: { provider: SourceProvider; error: string }[] = [];
+    const failures: { source: SourceProvider; error: string }[] = [];
     let fetched = 0;
 
     for (const integration of active) {
@@ -46,7 +46,7 @@ export class SyncSourcesUseCase {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         integration.fail({ error: message });
-        failures.push({ provider, error: message });
+        failures.push({ source: provider, error: message });
         this.deps.logger.warn('sync failed', { provider, error: message });
       }
       await this.deps.integrations.save(integration);

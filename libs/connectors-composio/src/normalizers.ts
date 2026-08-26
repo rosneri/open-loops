@@ -27,20 +27,57 @@ const instantFrom = (value: unknown, fallback: Instant): Instant => {
   return Number.isNaN(parsed) ? fallback : asInstant(parsed);
 };
 
-/** Tool results nest their list under different keys; dig out the first array we recognise. */
+/**
+ * Every provider buries its list under a different key — `notifications`, `items`, `nodes`,
+ * `threads`. Naming them all is a losing game, so the well-known ones are tried first for
+ * predictability and anything else falls back to "the first array of objects we can find".
+ */
+const PREFERRED_KEYS = [
+  'items',
+  'notifications',
+  'messages',
+  'issues',
+  'pull_requests',
+  'nodes',
+  'results',
+  'events',
+  'threads',
+  'files',
+  'value',
+  'data',
+  'response_data',
+] as const;
+
+const isObjectArray = (value: unknown): value is Payload[] =>
+  Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'object' && item !== null);
+
+const namedCollection = (record: Payload): readonly Payload[] | undefined => {
+  for (const key of PREFERRED_KEYS) {
+    const value = record[key];
+    if (isObjectArray(value)) return value;
+  }
+  return undefined;
+};
+
+const anyCollection = (record: Payload): readonly Payload[] | undefined =>
+  Object.values(record).find(isObjectArray);
+
+const nestedCollection = (record: Payload, depth: number): readonly Payload[] | undefined => {
+  for (const value of Object.values(record)) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) continue;
+    const nested = collectionOf(value, depth + 1);
+    if (nested.length > 0) return nested;
+  }
+  return undefined;
+};
+
 const collectionOf = (payload: unknown, depth = 0): readonly Payload[] => {
   if (Array.isArray(payload)) return payload.map(asRecord);
-  if (depth > 4) return [];
-  const record = asRecord(payload);
-  for (const key of ['items', 'messages', 'issues', 'nodes', 'results', 'data', 'events', 'value', 'response_data']) {
-    const candidate = record[key];
-    if (Array.isArray(candidate)) return candidate.map(asRecord);
-    if (typeof candidate === 'object' && candidate !== null) {
-      const nested = collectionOf(candidate, depth + 1);
-      if (nested.length > 0) return nested;
-    }
-  }
-  return [];
+  if (depth > 4 || typeof payload !== 'object' || payload === null) return [];
+  const record = payload as Payload;
+  return (
+    namedCollection(record) ?? anyCollection(record) ?? nestedCollection(record, depth) ?? []
+  );
 };
 
 const urlOf = (item: Payload): string | undefined =>
