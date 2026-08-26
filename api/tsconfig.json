@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.options.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "noUnusedLocals": false
+  },
+  "include": ["*.ts"]
+}

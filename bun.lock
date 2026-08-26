@@ -4,7 +4,16 @@
   "workspaces": {
     "": {
       "name": "open-loops",
+      "dependencies": {
+        "@nestjs/common": "^11.2.3",
+        "@nestjs/core": "^11.2.3",
+        "@nestjs/platform-express": "^11.2.3",
+        "@open-loops/api": "workspace:*",
+        "express": "^5.1.0",
+        "reflect-metadata": "^0.2.2",
+      },
       "devDependencies": {
+        "@types/express": "^5.0.0",
         "@types/node": "^24.10.1",
         "prettier": "^3.6.2",
         "typescript": "7.0.2",
