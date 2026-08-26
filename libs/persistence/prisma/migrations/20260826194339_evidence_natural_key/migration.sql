@@ -1,0 +1,2 @@
+-- Recorded empty: generated with a flag Prisma 7 had removed, so the diff produced nothing.
+-- Kept so applied history stays intact; the real change is the next migration.

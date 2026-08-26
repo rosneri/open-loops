@@ -22,12 +22,19 @@ happened, the loop slides down today's plan and the slip is counted.
 ```bash
 proto use                 # installs node, bun and moon at the pinned versions
 bun install
-cp .env.example .env      # then fill in DATABASE_URL and an AI key
+cp .env.example .env      # DATABASE_URL, and COMPOSIO_API_KEY if you want hosted sources
 bun run db:up             # Postgres in Docker on :5439
 bun run db:generate
-bun run db:push
+bun run db:migrate        # or db:push against a throwaway database
 moon run api:dev web:dev  # API on :4455, client on http://localhost:4444
 ```
+
+Locally the reasoning runs on the Claude Code you are already signed into, so there is no AI key
+to set. Everything else is optional until you connect a source.
+
+Two `.env` files, deliberately: the root one configures the running app, and
+`libs/persistence/.env` holds whatever database the Prisma CLI should migrate — Docker while you
+develop, the hosted one when you deploy. Both are gitignored.
 
 The client is bound to `0.0.0.0`, so `http://neriyas-mac-mini:4444` works from any device on
 the network, not just this machine.
