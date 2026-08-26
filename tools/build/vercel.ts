@@ -73,6 +73,11 @@ const main = async (): Promise<void> => {
   await mkdir(OUT, { recursive: true });
 
   await run(['bun', 'run', '--cwd', 'libs/persistence', 'db:generate']);
+  // Applies any migration the deploy is carrying. `deploy` never prompts and never resets, so
+  // it is the only migrate command that belongs in a build.
+  if ((process.env['DATABASE_URL'] ?? '').length > 0) {
+    await run(['bun', 'run', '--cwd', 'libs/persistence', 'db:deploy']);
+  }
   await run(['bun', 'run', '--cwd', 'apps/web', 'build']);
   await cp(join(ROOT, 'apps/web/dist'), join(OUT, 'static'), { recursive: true });
 

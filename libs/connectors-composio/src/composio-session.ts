@@ -59,6 +59,7 @@ const TOOLKIT_ALIASES: Partial<Record<SourceProvider, string>> = {
   JIRA: 'jira',
   NOTION: 'notion',
   ASANA: 'asana',
+  WHATSAPP: 'whatsapp',
   DISCORD: 'discord',
   MICROSOFT_TEAMS: 'microsoft_teams',
   OUTLOOK: 'outlook',

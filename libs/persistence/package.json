@@ -12,16 +12,17 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
+    "@open-loops/contracts": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
     "@open-loops/kernel": "workspace:*",
     "@open-loops/loops": "workspace:*",
     "@open-loops/planning": "workspace:*",
-    "@open-loops/integrations": "workspace:*",
     "@open-loops/signals": "workspace:*",
-    "@prisma/client": "^7.10.0",
-    "zod": "^4.4.3",
     "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^17.4.2",
     "pg": "^8.16.3",
-    "@open-loops/contracts": "workspace:*"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "prisma": "^7.10.0",
@@ -31,7 +32,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:deploy": "prisma migrate deploy"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

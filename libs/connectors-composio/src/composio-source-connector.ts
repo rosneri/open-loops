@@ -31,6 +31,7 @@ const INTENTS: Partial<Record<SourceProvider, readonly string[]>> = {
   JIRA: ['search Jira for unresolved issues assigned to me'],
   NOTION: ['search Notion for pages I recently edited'],
   GOOGLE_DRIVE: ['list files recently modified in my Google Drive'],
+  WHATSAPP: ['list my recent WhatsApp messages and unread chats'],
 };
 
 export interface ComposioSourceConnectorDeps {

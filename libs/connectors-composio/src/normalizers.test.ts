@@ -10,15 +10,20 @@ const ctx = (provider: SourceProvider): NormaliseContext => ({
 
 describe('normalise', () => {
   /** The shape GITHUB_LIST_NOTIFICATIONS actually returns — the key that broke the first sync. */
-  it('finds GitHub notifications under their own key, not just `items`', () => {
-    const signals = normalise({
+  it('reads a GitHub notification from its own shape, not the search shape', () => {
+    const [signal] = normalise({
       payload: {
         etag: 'W/"abc"',
         notifications: [
           {
             id: '24787149003',
-            reason: 'author',
-            subject: { title: 'Fix the rate limiter', type: 'PullRequest' },
+            reason: 'review_requested',
+            unread: true,
+            subject: {
+              title: 'Fix the rate limiter',
+              type: 'PullRequest',
+              url: 'https://api.github.com/repos/rosneri/personal-site/pulls/412',
+            },
             updated_at: '2026-07-27T06:43:51Z',
             repository: { full_name: 'rosneri/personal-site' },
           },
@@ -27,9 +32,33 @@ describe('normalise', () => {
       ctx: ctx(SourceProvider.GitHub),
     });
 
-    expect(signals).toHaveLength(1);
-    expect(signals[0]?.externalId).toBe('24787149003');
-    expect(signals[0]?.provider).toBe(SourceProvider.GitHub);
+    expect(signal?.externalId).toBe('24787149003');
+    // The regression that produced fifty rows titled "GitHub item" with empty bodies.
+    expect(signal?.title).toBe('Fix the rate limiter');
+    expect(signal?.kind).toBe('PULL_REQUEST');
+    expect(signal?.body).toContain('your review was requested');
+    expect(signal?.channel).toBe('rosneri/personal-site');
+    expect(signal?.url).toBe('https://github.com/rosneri/personal-site/pull/412');
+  });
+
+  it('still reads the GitHub search shape, which has no subject', () => {
+    const [signal] = normalise({
+      payload: {
+        items: [
+          {
+            id: 991,
+            title: 'Rate limit the public API',
+            body: 'we keep getting hammered',
+            user: { login: 'dana' },
+            updated_at: '2026-07-27T06:43:51Z',
+          },
+        ],
+      },
+      ctx: ctx(SourceProvider.GitHub),
+    });
+    expect(signal?.title).toBe('Rate limit the public API');
+    expect(signal?.author.displayName).toBe('dana');
+    expect(signal?.kind).toBe('ISSUE');
   });
 
   it('falls back to the first array of objects when the key is unknown', () => {

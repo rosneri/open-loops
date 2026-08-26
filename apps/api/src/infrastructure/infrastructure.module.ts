@@ -30,9 +30,17 @@ import {
   LocalConnectionBroker,
   LocalProbeRunner,
 } from '@open-loops/connectors-local';
-import { AiLoopExtractor, AiLoopReconciler, lazyModel } from '@open-loops/reasoning';
+import type { StructuredGenerator } from '@open-loops/reasoning';
+import {
+  AiSdkGenerator,
+  ClaudeCodeGenerator,
+  FallbackGenerator,
+  ModelLoopExtractor,
+  ModelLoopReconciler,
+  lazyModel,
+} from '@open-loops/reasoning';
 import type { AppConfig } from '../config/env.js';
-import { isLocalMode, loadConfig, meHandles } from '../config/env.js';
+import { aiModel, aiProvider, isLocalMode, loadConfig, meHandles } from '../config/env.js';
 import { SystemClock } from '../system/system-clock.js';
 import { UuidIdGenerator } from '../system/uuid-id-generator.js';
 import { JsonLogger } from '../system/json-logger.js';
@@ -178,28 +186,79 @@ const dataStrategy: Provider[] = [
 
 const reasoning: Provider[] = [
   {
-    provide: Tokens.LoopExtractor,
+    provide: Tokens.StructuredGenerator,
     inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger) =>
-      new AiLoopExtractor({ model: modelFor(config), logger }),
+    useFactory: (config: AppConfig, logger: Logger): StructuredGenerator =>
+      generatorFor({ config, logger }),
+  },
+  {
+    provide: Tokens.LoopExtractor,
+    inject: [Tokens.StructuredGenerator, Tokens.Logger],
+    useFactory: (generator: StructuredGenerator, logger: Logger) =>
+      new ModelLoopExtractor({ generator, logger }),
   },
   {
     provide: Tokens.LoopReconciler,
-    inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger) =>
-      new AiLoopReconciler({ model: modelFor(config), logger }),
+    inject: [Tokens.StructuredGenerator, Tokens.Logger],
+    useFactory: (generator: StructuredGenerator, logger: Logger) =>
+      new ModelLoopReconciler({ generator, logger }),
   },
 ];
 
-const modelFor = (config: AppConfig) =>
-  lazyModel({
-    provider: config.AI_PROVIDER,
-    model: config.AI_MODEL,
-    ...(config.ANTHROPIC_API_KEY === undefined
-      ? {}
-      : { anthropicApiKey: config.ANTHROPIC_API_KEY }),
-    ...(config.OPENAI_API_KEY === undefined ? {} : { openaiApiKey: config.OPENAI_API_KEY }),
+/**
+ * The one place that decides who does the thinking. Claude Code first when it is the configured
+ * provider — it costs nothing and needs no key — with a keyed provider behind it so a usage
+ * limit degrades to a bill instead of to an outage.
+ */
+const generatorFor = (input: { config: AppConfig; logger: Logger }): StructuredGenerator => {
+  const { config, logger } = input;
+  const provider = aiProvider(config);
+  const chain: StructuredGenerator[] = [];
+
+  if (provider === 'claude-code') {
+    chain.push(
+      new ClaudeCodeGenerator({
+        logger,
+        model: aiModel(config),
+        binary: config.CLAUDE_CODE_BIN,
+        timeoutMs: config.CLAUDE_CODE_TIMEOUT_MS,
+      }),
+    );
+  }
+
+  const keyed = keyedGenerator({ config, provider });
+  if (keyed !== undefined) chain.push(keyed);
+
+  if (chain.length === 0) {
+    throw new Error(
+      'No reasoning provider is available. Install Claude Code, or set ANTHROPIC_API_KEY.',
+    );
+  }
+  return chain.length === 1 ? (chain[0] as StructuredGenerator) : new FallbackGenerator({ generators: chain, logger });
+};
+
+const keyedGenerator = (input: {
+  config: AppConfig;
+  provider: ReturnType<typeof aiProvider>;
+}): StructuredGenerator | undefined => {
+  const { config } = input;
+  const provider = input.provider === 'claude-code' ? 'anthropic' : input.provider;
+  const key = provider === 'openai' ? config.OPENAI_API_KEY : config.ANTHROPIC_API_KEY;
+  if (key === undefined || key.length === 0) return undefined;
+
+  const model = input.provider === 'claude-code' ? FALLBACK_MODEL : aiModel(config);
+  return new AiSdkGenerator({
+    label: `${provider}/${model}`,
+    model: lazyModel({
+      provider,
+      model,
+      ...(provider === 'openai' ? { openaiApiKey: key } : { anthropicApiKey: key }),
+    }),
   });
+};
+
+/** `sonnet` is a CLI alias; the API needs a real model id. */
+const FALLBACK_MODEL = 'claude-sonnet-5';
 
 const ALL = [...base, ...persistence, ...dataStrategy, ...reasoning];
 

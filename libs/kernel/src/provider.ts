@@ -14,6 +14,7 @@ export const SourceProvider = {
   Jira: 'JIRA',
   Notion: 'NOTION',
   Asana: 'ASANA',
+  WhatsApp: 'WHATSAPP',
   Discord: 'DISCORD',
   MicrosoftTeams: 'MICROSOFT_TEAMS',
   Outlook: 'OUTLOOK',

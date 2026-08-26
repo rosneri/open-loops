@@ -27,8 +27,15 @@ const schema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
 
-  AI_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
-  AI_MODEL: z.string().default('claude-sonnet-5'),
+  /**
+   * `claude-code` drives the Claude Code already logged in on this machine, so local runs need
+   * no API key at all. It is the default in LOCAL mode; hosted deployments have no CLI and no
+   * interactive login, so they fall back to a keyed provider.
+   */
+  AI_PROVIDER: z.enum(['claude-code', 'anthropic', 'openai']).optional(),
+  AI_MODEL: z.string().optional(),
+  CLAUDE_CODE_BIN: z.string().default('claude'),
+  CLAUDE_CODE_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(900_000).default(240_000),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
 
@@ -45,6 +52,21 @@ export const loadConfig = (source: NodeJS.ProcessEnv = process.env): AppConfig =
 };
 
 export const isLocalMode = (config: AppConfig): boolean => config.OPEN_LOOPS_MODE === 'LOCAL';
+
+export type AiProvider = 'claude-code' | 'anthropic' | 'openai';
+
+/** Local means "use what is already on this machine"; hosted means "use a key". */
+export const aiProvider = (config: AppConfig): AiProvider =>
+  config.AI_PROVIDER ?? (isLocalMode(config) ? 'claude-code' : 'anthropic');
+
+const DEFAULT_MODELS: Record<AiProvider, string> = {
+  'claude-code': 'sonnet',
+  anthropic: 'claude-sonnet-5',
+  openai: 'gpt-5.2',
+};
+
+export const aiModel = (config: AppConfig): string =>
+  config.AI_MODEL ?? DEFAULT_MODELS[aiProvider(config)];
 
 /** Handles that identify the user across providers, used to tell "I said" from "they said". */
 export const meHandles = (config: AppConfig): readonly string[] =>

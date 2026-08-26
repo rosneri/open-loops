@@ -167,7 +167,70 @@ const slackSignal = (item: Payload, ctx: NormaliseContext): Signal => {
   };
 };
 
-const githubSignal = (item: Payload, ctx: NormaliseContext): Signal => {
+const GITHUB_SUBJECT_KINDS: Record<string, SignalKind> = {
+  PullRequest: SignalKind.PullRequest,
+  Issue: SignalKind.Issue,
+  Discussion: SignalKind.Comment,
+  Release: SignalKind.Document,
+};
+
+/**
+ * Why the notification is in your inbox, in the model's language. `reason` is the single most
+ * useful field GitHub gives us: "review_requested" is an obligation, "subscribed" usually isn't.
+ */
+const GITHUB_REASONS: Record<string, string> = {
+  assign: 'you were assigned to it',
+  author: 'you opened it',
+  comment: 'you commented on it',
+  mention: 'you were mentioned',
+  review_requested: 'your review was requested',
+  team_mention: 'your team was mentioned',
+  state_change: 'its state changed',
+  subscribed: 'you are watching the repository',
+};
+
+/**
+ * A notification and a search result are different shapes from the same provider: notifications
+ * carry `subject`, searches carry a top-level `title`. Getting this wrong is not loud — it
+ * yields fifty rows titled "GitHub item" that the extractor correctly refuses to act on.
+ */
+const githubNotification = (item: Payload, ctx: NormaliseContext): Signal => {
+  const subject = asRecord(item['subject']);
+  const repository = str(asRecord(item['repository'])['full_name']) ?? '';
+  const reason = str(item['reason']) ?? '';
+  const type = str(subject['type']) ?? 'Issue';
+
+  return {
+    ...base({
+      item,
+      ctx,
+      kind: GITHUB_SUBJECT_KINDS[type] ?? SignalKind.Issue,
+      externalId: idOf(item) ?? '',
+      title: str(subject['title']) ?? 'GitHub notification',
+      body: [
+        `${type} in ${repository}`,
+        GITHUB_REASONS[reason] ?? `notification reason: ${reason}`,
+        str(item['unread']) === undefined && item['unread'] === true ? 'still unread' : '',
+      ]
+        .filter((line) => line.length > 0)
+        .join('. '),
+      author: actor({ name: repository === '' ? 'GitHub' : repository, ctx }),
+      occurredAt: instantFrom(item['updated_at'], ctx.fallbackAt),
+    }),
+    ...(repository === '' ? {} : { channel: repository }),
+    url: webUrlOf(subject),
+  };
+};
+
+/** Notification subjects carry the API url; the human one is the same path on the web host. */
+const webUrlOf = (subject: Payload): string => {
+  const apiUrl = str(subject['url']) ?? '';
+  return apiUrl
+    .replace('https://api.github.com/repos/', 'https://github.com/')
+    .replace('/pulls/', '/pull/');
+};
+
+const githubSearchResult = (item: Payload, ctx: NormaliseContext): Signal => {
   const user = asRecord(item['user']);
   const isPull = item['pull_request'] !== undefined || item['head'] !== undefined;
   return base({
@@ -181,6 +244,9 @@ const githubSignal = (item: Payload, ctx: NormaliseContext): Signal => {
     occurredAt: instantFrom(item['updated_at'] ?? item['created_at'], ctx.fallbackAt),
   });
 };
+
+const githubSignal = (item: Payload, ctx: NormaliseContext): Signal =>
+  item['subject'] === undefined ? githubSearchResult(item, ctx) : githubNotification(item, ctx);
 
 const linearSignal = (item: Payload, ctx: NormaliseContext): Signal => {
   const creator = asRecord(item['creator']);

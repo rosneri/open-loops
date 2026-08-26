@@ -32,6 +32,7 @@ export const probeDraftSchema = z.object({
       'JIRA',
       'NOTION',
       'ASANA',
+      'WHATSAPP',
       'DISCORD',
       'MICROSOFT_TEAMS',
       'OUTLOOK',

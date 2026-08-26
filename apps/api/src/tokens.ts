@@ -26,6 +26,7 @@ export const Tokens = {
   ConnectionMode: 'OL_CONNECTION_MODE',
   ToolExplorer: 'OL_TOOL_EXPLORER',
 
+  StructuredGenerator: 'OL_STRUCTURED_GENERATOR',
   LoopExtractor: 'OL_LOOP_EXTRACTOR',
   LoopReconciler: 'OL_LOOP_RECONCILER',
 
