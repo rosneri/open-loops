@@ -17,3 +17,5 @@ libs/persistence/src/generated/
 coverage/
 .vercel
 .env*
+
+.vercel/

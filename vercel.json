@@ -1,23 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bun install && bun run --cwd libs/persistence db:generate && bun run --cwd apps/web build",
-  "outputDirectory": "apps/web/dist",
+  "buildCommand": "bun run tools/build/vercel.ts",
   "installCommand": "bun install",
-  "framework": null,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/tick",
-      "schedule": "0 6 * * *"
-    }
-  ]
+  "framework": null
 }

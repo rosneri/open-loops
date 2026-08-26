@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import express from 'express';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { AppModule } from '../apps/api/src/app.module.js';
+import { AppModule } from './app.module.js';
 
 /**
  * Vercel entry point. The same Nest application that `bun apps/api/src/main.ts` serves, wrapped
