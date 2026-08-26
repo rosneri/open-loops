@@ -5,8 +5,19 @@
   "installCommand": "bun install",
   "framework": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ],
-  "crons": [{ "path": "/api/tick", "schedule": "0 * * * *" }]
+  "crons": [
+    {
+      "path": "/api/tick",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }
