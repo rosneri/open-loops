@@ -43,17 +43,30 @@ export class PrismaSignalStore implements SignalStore {
     return rows.map(toDomain);
   }
 
+  /**
+   * Grouped by provider so a batch is a handful of `IN` statements instead of one round trip
+   * per signal. The per-key version worked against Postgres on localhost and blew the five
+   * second interactive-transaction budget against a hosted database — and it needs no
+   * transaction at all, because stamping an already-stamped row is a no-op.
+   */
   public async markProcessed(keys: readonly string[]): Promise<void> {
     if (keys.length === 0) return;
     const now = new Date();
-    await this.prisma.$transaction(
-      keys.map((key) =>
-        this.prisma.rawSignal.updateMany({
-          where: { ...keyParts(key), processedAt: null },
-          data: { processedAt: now },
-        }),
-      ),
-    );
+    const byProvider = new Map<string, string[]>();
+
+    for (const key of keys) {
+      const { provider, externalId } = keyParts(key);
+      const bucket = byProvider.get(provider);
+      if (bucket === undefined) byProvider.set(provider, [externalId]);
+      else bucket.push(externalId);
+    }
+
+    for (const [provider, externalIds] of byProvider) {
+      await this.prisma.rawSignal.updateMany({
+        where: { provider, externalId: { in: externalIds }, processedAt: null },
+        data: { processedAt: now },
+      });
+    }
   }
 
   public async pruneBefore(cutoff: Instant): Promise<number> {
