@@ -19,19 +19,19 @@ export class LoopCommandsUseCase {
   public constructor(private readonly deps: LoopCommandsDeps) {}
 
   public async snooze(input: { loopId: OpenLoopId; until: Instant }): Promise<void> {
-    await this.mutate(input.loopId, (loop, at) => loop.snooze({ until: input.until, at }));
+    await this.mutate(input.loopId, (loop, at) => { loop.snooze({ until: input.until, at }); });
   }
 
   public async drop(input: { loopId: OpenLoopId; reason: string }): Promise<void> {
-    await this.mutate(input.loopId, (loop, at) => loop.drop({ reason: input.reason, at }));
+    await this.mutate(input.loopId, (loop, at) => { loop.drop({ reason: input.reason, at }); });
   }
 
   public async confirmDone(input: { loopId: OpenLoopId; reason: string }): Promise<void> {
-    await this.mutate(input.loopId, (loop, at) => loop.confirmDone({ reason: input.reason, at }));
+    await this.mutate(input.loopId, (loop, at) => { loop.confirmDone({ reason: input.reason, at }); });
   }
 
   public async reopen(loopId: OpenLoopId): Promise<void> {
-    await this.mutate(loopId, (loop, at) => loop.reopen(at));
+    await this.mutate(loopId, (loop, at) => { loop.reopen(at); });
   }
 
   public async pinBlock(input: { loopId: OpenLoopId; range: TimeRange }): Promise<void> {

@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { api, type DiscoveredTool, type ToolExecution } from '../api.js';
+import { useAsyncAction } from '../hooks/use-async-action.js';
+import { ErrorPanel } from './error-panel.js';
+import { ToolList } from './tool-list.js';
+import { ToolResult } from './tool-result.js';
 
 const SUGGESTIONS = [
   'list my GitHub notifications and issues assigned to me',
@@ -11,8 +15,7 @@ const SUGGESTIONS = [
 
 /**
  * Proof that a connection is real. Discovery goes through Composio's tool search rather than a
- * hard-coded slug, so what you see here is exactly what the hourly sync would call — and the
- * returned log id is the same one you can look up in the Composio dashboard.
+ * hard-coded slug, so what you see here is exactly what the hourly sync would call.
  */
 export function ToolBench({
   toolkits,
@@ -24,19 +27,20 @@ export function ToolBench({
   const [query, setQuery] = useState(SUGGESTIONS[0] ?? '');
   const [tools, setTools] = useState<readonly DiscoveredTool[]>([]);
   const [result, setResult] = useState<ToolExecution | undefined>();
-  const [error, setError] = useState<string | undefined>();
-  const [busy, setBusy] = useState(false);
+  const action = useAsyncAction();
 
-  const guard = async (action: () => Promise<void>): Promise<void> => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      await action();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
+  const find = (): void => {
+    void action.run(async () => {
+      setResult(undefined);
+      setTools((await api.tools(query)).tools);
+    });
+  };
+
+  const run = (slug: string): void => {
+    void action.run(async () => {
+      setResult(await api.execute(slug));
+      onRefresh();
+    });
   };
 
   return (
@@ -46,7 +50,7 @@ export function ToolBench({
           <h2 className="text-lg font-medium tracking-tight">Try a real call</h2>
           <p className="mt-1 max-w-xl text-sm text-chalk-500">
             Describe what you want in plain language. Composio resolves it to an actual tool on a
-            connected account — no slug is ever hard-coded in this repository.
+            connected account — no slug is hard-coded anywhere in this repository.
           </p>
         </div>
         <span className="font-mono text-[10px] tracking-[0.14em] text-chalk-600 uppercase">
@@ -80,57 +84,22 @@ export function ToolBench({
         />
         <button
           type="button"
-          disabled={busy || query.trim().length < 3}
-          onClick={() =>
-            void guard(async () => {
-              setResult(undefined);
-              setTools((await api.tools(query)).tools);
-            })
-          }
+          disabled={action.busy || query.trim().length < 3}
+          onClick={find}
           className="rounded border border-chalk-600 px-4 py-2 text-xs text-chalk-100 transition hover:bg-ink-800 disabled:opacity-40"
         >
-          {busy ? 'Working…' : 'Find tools'}
+          {action.busy ? 'Working…' : 'Find tools'}
         </button>
       </div>
 
-      {error !== undefined && (
-        <p className="mt-4 font-mono text-[12px] break-all text-signal-unconfirmed">{error}</p>
-      )}
-
-      <ul className="mt-5 space-y-2">
-        {tools.map((tool) => (
-          <li key={tool.slug} className="hairline rounded bg-ink-950/40 p-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <code className="font-mono text-[12px] text-chalk-100">{tool.slug}</code>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  void guard(async () => {
-                    setResult(await api.execute(tool.slug));
-                    onRefresh();
-                  })
-                }
-                className="rounded border border-ink-700 px-2.5 py-1 text-[11px] text-chalk-300 transition hover:border-chalk-600 hover:text-chalk-100 disabled:opacity-40"
-              >
-                Run it
-              </button>
-            </div>
-            <p className="mt-1 line-clamp-2 text-[12px] text-chalk-600">{tool.description}</p>
-          </li>
-        ))}
-      </ul>
-
-      {result !== undefined && (
-        <div className="mt-5">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-chalk-600 uppercase">
-            {result.ok ? 'result' : 'failed'} · log {result.logId}
-          </p>
-          <pre className="hairline mt-2 max-h-80 overflow-auto rounded bg-ink-950/70 p-4 font-mono text-[11px] text-chalk-300">
-            {JSON.stringify(result.error ?? result.data, null, 2).slice(0, 6000)}
-          </pre>
+      {action.error !== undefined && (
+        <div className="mt-4">
+          <ErrorPanel message={action.error} />
         </div>
       )}
+
+      <ToolList tools={tools} busy={action.busy} onRun={run} />
+      {result !== undefined && <ToolResult result={result} />}
     </section>
   );
 }

@@ -55,9 +55,10 @@ export class ComposioConnectionBroker implements ConnectionBroker {
     };
   }
 
-  public async disconnect(externalAccountRef: string): Promise<void> {
+  public disconnect(externalAccountRef: string): Promise<void> {
     this.deps.logger.info('composio disconnect requested', { externalAccountRef });
     this.deps.sessions.invalidate();
+    return Promise.resolve();
   }
 
   private toolkitFor(provider: SourceProvider): string {

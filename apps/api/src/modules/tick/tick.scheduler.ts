@@ -32,7 +32,8 @@ export class TickScheduler implements OnApplicationBootstrap, OnApplicationShutd
   }
 
   public onApplicationShutdown(): void {
-    this.job?.stop();
+    // cron v4 returns a promise from stop(); shutdown does not wait on it.
+    void this.job?.stop();
   }
 
   private async runOnce(): Promise<void> {

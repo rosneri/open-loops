@@ -98,7 +98,7 @@ export class ComposioProbeRunner implements ProbeRunner {
         query: question.intent(request.probe),
         ...(toolkit === undefined ? {} : { toolkits: [toolkit] }),
       });
-      if (execution === undefined || !execution.ok) {
+      if (!execution?.ok) {
         return this.inconclusive(request, execution?.error ?? 'no matching tool');
       }
       const satisfied = question.satisfied(execution.data, request.probe);

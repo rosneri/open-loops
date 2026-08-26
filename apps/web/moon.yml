@@ -28,8 +28,3 @@ tasks:
       - 'vite.config.ts'
     outputs:
       - 'dist'
-  typecheck:
-    command: 'tsc --noEmit -p tsconfig.json'
-    inputs:
-      - '@group(sources)'
-      - 'tsconfig.json'

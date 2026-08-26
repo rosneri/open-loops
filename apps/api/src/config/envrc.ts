@@ -21,7 +21,7 @@ export const loadEnvrc = (path = join(homedir(), '.envrc')): Record<string, stri
       .split('\n')
       .reduce<Record<string, string>>((accumulated, line) => {
         const match = EXPORT_LINE.exec(line);
-        if (match !== null && match[1] !== undefined && match[2] !== undefined) {
+        if (match?.[1] !== undefined && match[2] !== undefined) {
           accumulated[match[1]] = unquote(match[2]);
         }
         return accumulated;

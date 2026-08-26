@@ -77,7 +77,7 @@ export class ComposioSourceConnector implements SourceConnector {
         query: context.intent,
         toolkits: [context.toolkit],
       });
-      if (execution === undefined || !execution.ok) {
+      if (!execution?.ok) {
         this.deps.logger.warn('composio intent produced nothing', {
           intent: context.intent,
           error: execution?.error,

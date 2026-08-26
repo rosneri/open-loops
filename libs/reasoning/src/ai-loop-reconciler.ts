@@ -3,7 +3,7 @@ import type { Evidence, OpenLoopView } from '@open-loops/loops';
 import { asCriterionId } from '@open-loops/loops';
 import type { LoopReconciler, ReconciliationVerdict } from '@open-loops/orchestration';
 import type { Signal } from '@open-loops/signals';
-import { generateObject } from 'ai';
+import { Output, generateText } from 'ai';
 import type { ModelProvider } from './model-registry.js';
 import { RECONCILER_SYSTEM, describeNow } from './prompts.js';
 import { reconciliationResultSchema } from './schemas.js';
@@ -43,9 +43,9 @@ export class AiLoopReconciler implements LoopReconciler {
     recentSignals: readonly Signal[];
     now: Instant;
   }): Promise<readonly ReconciliationVerdict[]> {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: this.deps.model(),
-      schema: reconciliationResultSchema,
+      output: Output.object({ schema: reconciliationResultSchema, name: 'verdicts' }),
       system: RECONCILER_SYSTEM,
       prompt: [
         describeNow(input.now),
@@ -57,8 +57,8 @@ export class AiLoopReconciler implements LoopReconciler {
       temperature: 0,
     });
 
-    this.deps.logger.debug('reconciler returned verdicts', { count: object.verdicts.length });
-    return object.verdicts.map((verdict) => ({
+    this.deps.logger.debug('reconciler returned verdicts', { count: output.verdicts.length });
+    return output.verdicts.map((verdict) => ({
       loopId: verdict.loopId,
       rationale: verdict.rationale,
       ...(verdict.suggestedPriority === undefined

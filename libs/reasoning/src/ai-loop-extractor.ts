@@ -4,7 +4,7 @@ import type { Party } from '@open-loops/loops';
 import { CriterionRole } from '@open-loops/loops';
 import type { ExtractedLoop, LoopExtractor } from '@open-loops/orchestration';
 import type { Signal } from '@open-loops/signals';
-import { generateObject } from 'ai';
+import { Output, generateText } from 'ai';
 import type { ModelProvider } from './model-registry.js';
 import { EXTRACTOR_SYSTEM, describeNow } from './prompts.js';
 import { toProbe } from './probe-mapper.js';
@@ -32,16 +32,16 @@ export class AiLoopExtractor implements LoopExtractor {
   }): Promise<readonly ExtractedLoop[]> {
     if (input.signals.length === 0) return [];
 
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: this.deps.model(),
-      schema: extractionResultSchema,
+      output: Output.object({ schema: extractionResultSchema, name: 'open_loops' }),
       system: EXTRACTOR_SYSTEM,
       prompt: `${describeNow(input.now)}\n\nSignals:\n${render(input.signals)}`,
       temperature: 0.1,
     });
 
-    this.deps.logger.info('extractor produced candidates', { count: object.loops.length });
-    return object.loops.map((draft) => toExtracted({ draft, now: input.now }));
+    this.deps.logger.info('extractor produced candidates', { count: output.loops.length });
+    return output.loops.map((draft) => toExtracted({ draft, now: input.now }));
   }
 }
 

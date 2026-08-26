@@ -93,29 +93,40 @@ const base = (input: {
   ...(urlOf(input.item) === undefined ? {} : { url: urlOf(input.item) ?? '' }),
 });
 
-const slackSignal = (item: Payload, ctx: NormaliseContext): Signal => {
-  const ts = str(item['ts']) ?? str(item['timestamp']) ?? '';
+/** Slack reports the channel as either a bare id or a nested object, depending on the tool. */
+const slackChannel = (item: Payload): { id: string; name: string | undefined } => {
   const channel = asRecord(item['channel']);
-  const channelId = str(channel['id']) ?? str(item['channel']) ?? 'dm';
-  const text = str(item['text']) ?? '';
-  const author = actor({
+  return {
+    id: str(channel['id']) ?? str(item['channel']) ?? 'dm',
+    name: str(channel['name']),
+  };
+};
+
+const slackAuthor = (item: Payload, ctx: NormaliseContext): SignalActor =>
+  actor({
     name: str(asRecord(item['user'])['name']) ?? str(item['username']) ?? str(item['user']),
     handle: str(item['user']) ?? str(item['user_id']),
     ctx,
   });
+
+const slackSignal = (item: Payload, ctx: NormaliseContext): Signal => {
+  const ts = str(item['ts']) ?? str(item['timestamp']) ?? '';
+  const channel = slackChannel(item);
+  const text = str(item['text']) ?? '';
+  const author = slackAuthor(item, ctx);
   return {
     ...base({
       item,
       ctx,
       kind: SignalKind.ChatMessage,
-      externalId: `${channelId}/${ts}`,
+      externalId: `${channel.id}/${ts}`,
       title: text.split('\n')[0] ?? 'Slack message',
       body: text,
       author,
       occurredAt: instantFrom(ts, ctx.fallbackAt),
     }),
-    threadRef: `${channelId}/${str(item['thread_ts']) ?? ts}`,
-    ...(str(channel['name']) === undefined ? {} : { channel: str(channel['name']) ?? '' }),
+    threadRef: `${channel.id}/${str(item['thread_ts']) ?? ts}`,
+    ...(channel.name === undefined ? {} : { channel: channel.name }),
   };
 };
 

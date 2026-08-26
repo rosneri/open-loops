@@ -1,0 +1,42 @@
+$schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+# Inherited by every project. A task defined here can still be overridden per project.
+fileGroups:
+  sources:
+    - 'src/**/*'
+  tests:
+    - 'src/**/*.test.ts'
+    - 'tests/**/*'
+  configs:
+    - '*.json'
+    - '*.ts'
+
+# `bun run <bin>` resolves the workspace's node_modules/.bin, which the system toolchain does
+# not put on PATH by itself.
+tasks:
+  typecheck:
+    command: 'bun run tsc --noEmit -p tsconfig.json'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    options:
+      runDepsInParallel: true
+
+  test:
+    command: 'bun run vitest run --passWithNoTests'
+    inputs:
+      - '@group(sources)'
+      - '@group(tests)'
+      - 'vitest.config.ts'
+
+  # The linter lives in tools/lint with its own TypeScript 6, because typescript-eslint does
+  # not support the TypeScript 7 API that the rest of the workspace compiles with.
+  # Runs from the workspace root because flat-config `files` patterns resolve against the
+  # working directory, and every override in eslint.config.mjs is written root-relative.
+  lint:
+    command: 'tools/lint/node_modules/.bin/eslint --config tools/lint/eslint.config.mjs $projectSource --max-warnings 0'
+    inputs:
+      - '@group(sources)'
+      - '/tools/lint/eslint.config.mjs'
+    options:
+      runFromWorkspaceRoot: true

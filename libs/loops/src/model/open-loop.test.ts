@@ -43,7 +43,7 @@ describe('OpenLoop', () => {
   it('rejects an empty title', () => {
     expect(() =>
       OpenLoop.create({ ...makeLoop().snapshot(), title: '   ' }),
-    ).toThrowError(/title/i);
+    ).toThrow(/title/i);
   });
 
   it('emits a status change when satisfying evidence arrives', () => {
@@ -73,7 +73,7 @@ describe('OpenLoop', () => {
   });
 
   it('refuses to snooze into the past', () => {
-    expect(() => makeLoop().snooze({ until: asInstant(NOW - 1), at: NOW })).toThrowError(/future/i);
+    expect(() => { makeLoop().snooze({ until: asInstant(NOW - 1), at: NOW }); }).toThrow(/future/i);
   });
 
   it('clears both the manual resolution and the snooze on reopen', () => {
