@@ -23,113 +23,118 @@ const pick = <TKey extends string, TValue>(
  * One tiny builder per probe kind. Each returns `undefined` when the model left out something
  * the probe genuinely needs, and the caller downgrades that to a manual check — an
  * under-specified probe would otherwise be unsatisfiable and pin the loop open forever.
+ *
+ * The draft carries five general fields rather than one per probe variant. That is not only
+ * tidier: a dozen optional siblings inside an array is enough to make Anthropic's structured
+ * output refuse the schema outright ("Schema is too complex"), which is how this shape was found.
  */
 const BUILDERS: Record<ProbeKind, Builder> = {
   [ProbeKind.PullRequestExists]: ({ draft, now, describedAs }) =>
-    draft.repository === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.PullRequestExists,
           describedAs,
           provider: provider(draft),
-          repository: draft.repository,
+          repository: draft.target,
           createdAfter: now,
-          ...pick('titleContains', draft.titleContains),
-          ...pick('branchContains', draft.branchContains),
+          ...pick('titleContains', draft.contains),
+          ...pick('branchContains', draft.ref),
         },
 
   [ProbeKind.PullRequestMerged]: ({ draft, describedAs }) =>
-    draft.repository === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.PullRequestMerged,
           describedAs,
           provider: provider(draft),
-          repository: draft.repository,
-          ...pick('pullRequestRef', draft.pullRequestRef),
-          ...pick('titleContains', draft.titleContains),
+          repository: draft.target,
+          ...pick('pullRequestRef', draft.ref),
+          ...pick('titleContains', draft.contains),
         },
 
   [ProbeKind.ReviewSubmitted]: ({ draft, describedAs }) =>
-    draft.repository === undefined || draft.pullRequestRef === undefined
+    draft.target === undefined || draft.ref === undefined
       ? undefined
       : {
           kind: ProbeKind.ReviewSubmitted,
           describedAs,
           provider: provider(draft),
-          repository: draft.repository,
-          pullRequestRef: draft.pullRequestRef,
+          repository: draft.target,
+          pullRequestRef: draft.ref,
         },
 
   [ProbeKind.IssueClosed]: ({ draft, describedAs }) =>
-    draft.issueRef === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.IssueClosed,
           describedAs,
           provider: provider(draft),
-          issueRef: draft.issueRef,
+          issueRef: draft.target,
         },
 
   [ProbeKind.IssueStatusIs]: ({ draft, describedAs }) =>
-    draft.issueRef === undefined || draft.status === undefined
+    draft.target === undefined || draft.status === undefined
       ? undefined
       : {
           kind: ProbeKind.IssueStatusIs,
           describedAs,
           provider: provider(draft),
-          issueRef: draft.issueRef,
+          issueRef: draft.target,
           status: draft.status,
         },
 
   [ProbeKind.RepliedInThread]: ({ draft, now, describedAs }) =>
-    draft.threadRef === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.RepliedInThread,
           describedAs,
           provider: provider(draft),
-          threadRef: draft.threadRef,
+          threadRef: draft.target,
           after: now,
         },
 
   [ProbeKind.MessageSentTo]: ({ draft, now, describedAs }) =>
-    draft.recipientRef === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.MessageSentTo,
           describedAs,
           provider: provider(draft),
-          recipientRef: draft.recipientRef,
+          recipientRef: draft.target,
           after: now,
+          ...pick('bodyContains', draft.contains),
         },
 
   [ProbeKind.EmailSent]: ({ draft, now, describedAs }) =>
-    draft.toEmail === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.EmailSent,
           describedAs,
-          toEmail: draft.toEmail,
+          toEmail: draft.target,
           after: now,
-          ...pick('subjectContains', draft.subjectContains),
+          ...pick('subjectContains', draft.contains),
         },
 
   [ProbeKind.CalendarEventExists]: ({ draft, now, describedAs }) => ({
     kind: ProbeKind.CalendarEventExists,
     describedAs,
-    titleContains: draft.titleContains ?? describedAs,
+    titleContains: draft.contains ?? describedAs,
     after: now,
   }),
 
   [ProbeKind.DocumentUpdated]: ({ draft, now, describedAs }) =>
-    draft.documentRef === undefined
+    draft.target === undefined
       ? undefined
       : {
           kind: ProbeKind.DocumentUpdated,
           describedAs,
           provider: provider(draft),
-          documentRef: draft.documentRef,
+          documentRef: draft.target,
           after: now,
         },
 

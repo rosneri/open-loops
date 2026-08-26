@@ -40,17 +40,14 @@ export const probeDraftSchema = z.object({
       'MANUAL',
     ])
     .optional(),
-  repository: z.string().optional(),
-  titleContains: z.string().optional(),
-  branchContains: z.string().optional(),
-  pullRequestRef: z.string().optional(),
-  issueRef: z.string().optional(),
+  /** What to look at: a repository, an issue key, a thread id, a person, an email address. */
+  target: z.string().optional(),
+  /** A second identifier when the probe needs one, e.g. the pull request inside a repository. */
+  ref: z.string().optional(),
+  /** Text the result must contain — a title fragment, a branch name, a subject line. */
+  contains: z.string().optional(),
+  /** The state the target must be in, for trackers that have more than open/closed. */
   status: z.string().optional(),
-  threadRef: z.string().optional(),
-  recipientRef: z.string().optional(),
-  toEmail: z.string().optional(),
-  subjectContains: z.string().optional(),
-  documentRef: z.string().optional(),
 });
 
 export const criterionDraftSchema = z.object({

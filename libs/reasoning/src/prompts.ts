@@ -13,6 +13,13 @@ Rules that matter more than coverage:
 2. sourceExternalId MUST be copied verbatim from a signal you were given. Never invent one.
 3. Every loop needs at least one DELIVERABLE criterion: the observable thing that would exist in
    the world if it were done. Prefer a probe a machine can check over MANUAL_CONFIRMATION.
+   A probe is described by five general fields:
+     target   - what to look at: "acme/api", "LIT-605", a Slack thread id, an email address
+     ref      - a second identifier when needed, e.g. the pull request number inside the repo
+     contains - text the result must contain: a title fragment, a branch name, a subject line
+     status   - the state the target must reach, for trackers with more than open/closed
+     provider - which app to look in
+   Leave a field out rather than guessing it. A probe you cannot specify is MANUAL_CONFIRMATION.
 4. If the person owes somebody an answer, add a second ACKNOWLEDGEMENT criterion for telling
    them. Shipping the work and closing the loop are different events.
 5. estimateMinutes is how long the work takes, not how long until it is due.
