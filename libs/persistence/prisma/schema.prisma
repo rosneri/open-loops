@@ -80,6 +80,10 @@ model EvidenceRecord {
   loop      OpenLoop  @relation(fields: [loopId], references: [id], onDelete: Cascade)
   criterion Criterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
 
+  /// Two identical observations of the same criterion at the same instant are the same
+  /// observation. Making that a database fact lets the aggregate be written with an idempotent
+  /// `createMany` instead of a read-then-append inside an interactive transaction.
+  @@unique([criterionId, observedAt, verdict])
   @@index([loopId, observedAt])
 }
 

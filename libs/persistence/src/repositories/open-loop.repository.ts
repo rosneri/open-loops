@@ -55,32 +55,38 @@ export class PrismaOpenLoopRepository implements OpenLoopRepository {
     await this.prisma.openLoop.deleteMany({ where: { id } });
   }
 
+  /**
+   * One batched round trip rather than an interactive transaction. The old version read the
+   * evidence count mid-transaction to decide what to append, which meant holding a connection
+   * across several round trips — fine against localhost, pool exhaustion from a lambda talking
+   * to a hosted database. The unique key on evidence makes the append idempotent instead.
+   */
   private async persist(props: OpenLoopProps): Promise<void> {
     const scalars = toScalars(props);
-    await this.prisma.$transaction(async (tx) => {
-      await tx.openLoop.upsert({
+    const criteria = criterionRows(props);
+    const evidence = evidenceRows(props);
+
+    await this.prisma.$transaction([
+      this.prisma.openLoop.upsert({
         where: { id: props.id },
         create: { id: props.id, ...scalars },
         update: scalars,
-      });
-      await tx.criterion.deleteMany({
+      }),
+      this.prisma.criterion.deleteMany({
         where: { loopId: props.id, id: { notIn: props.criteria.map((item) => item.id) } },
-      });
-      for (const criterion of criterionRows(props)) {
-        await tx.criterion.upsert({
+      }),
+      ...criteria.map((criterion) =>
+        this.prisma.criterion.upsert({
           where: { id: criterion.id },
           create: { ...criterion, loopId: props.id },
           update: { probe: criterion.probe, role: criterion.role, optional: criterion.optional },
-        });
-      }
-      const stored = await tx.evidenceRecord.count({ where: { loopId: props.id } });
-      const incoming = evidenceRows(props);
-      if (incoming.length > stored) {
-        await tx.evidenceRecord.createMany({
-          data: incoming.slice(stored).map((item) => ({ ...item, loopId: props.id })),
-        });
-      }
-    });
+        }),
+      ),
+      this.prisma.evidenceRecord.createMany({
+        data: evidence.map((item) => ({ ...item, loopId: props.id })),
+        skipDuplicates: true,
+      }),
+    ]);
   }
 }
 

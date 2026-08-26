@@ -14,7 +14,9 @@ export const createPrismaClient = (connectionString: string): PrismaClient => {
   client ??=
     globalRef.__openLoopsPrisma ??
     new PrismaClient({
-      adapter: new PrismaPg({ connectionString }),
+      // A lambda wants very few connections: many short-lived instances share one small pool
+      // upstream, and each extra socket makes exhaustion more likely, not less.
+      adapter: new PrismaPg({ connectionString, max: 3 }),
       // A hosted database is an order of magnitude further away than one on localhost. The
       // defaults (2s wait, 5s timeout) are tuned for the latter and fail the aggregate writes.
       transactionOptions: { maxWait: 10_000, timeout: 30_000 },
