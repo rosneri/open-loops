@@ -42,13 +42,46 @@ export class UnauthorizedError extends Error {
  */
 export const UNAUTHORIZED_EVENT = 'open-loops:unauthorized';
 
+/**
+ * A request that never settles is worse than one that fails: the screen sits on "Signing in…"
+ * or a skeleton with nothing to click and nothing to read. A tick saturating the API's event
+ * loop, a laptop waking on a dead network, a proxy holding the socket open — all of them look
+ * identical from here, and all of them should end in a sentence the user can act on.
+ *
+ * A tick can legitimately run for minutes, so it gets a longer leash than the rest.
+ */
+const DEFAULT_TIMEOUT_MS = 30_000;
+const SLOW_PATHS = ['/api/tick', '/api/plan/rebalance', '/api/composio/execute'];
+const SLOW_TIMEOUT_MS = 300_000;
+
+const timeoutFor = (path: string): number =>
+  SLOW_PATHS.some((slow) => path.startsWith(slow)) ? SLOW_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+
 const request = async <TResult>(path: string, init: RequestInit = {}): Promise<TResult> => {
   const headers = new Headers(init.headers);
   headers.set('content-type', 'application/json');
 
-  // `same-origin` is the default, but the session lives in a cookie now — saying so keeps the
-  // next person from "simplifying" this into a credential-less fetch.
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin' });
+  const limit = timeoutFor(path);
+  let response: Response;
+  try {
+    // `same-origin` is the default, but the session lives in a cookie now — saying so keeps the
+    // next person from "simplifying" this into a credential-less fetch.
+    response = await fetch(path, {
+      ...init,
+      headers,
+      credentials: 'same-origin',
+      signal: AbortSignal.timeout(limit),
+    });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === 'TimeoutError') {
+      throw new Error(
+        `${init.method ?? 'GET'} ${path} gave up after ${String(Math.round(limit / 1000))}s. ` +
+          'The API did not answer — check that it is running and reachable.',
+      );
+    }
+    throw cause instanceof Error ? cause : new Error(String(cause));
+  }
+
   if (response.status === 401) {
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     throw new UnauthorizedError();
