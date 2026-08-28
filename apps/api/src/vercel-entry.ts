@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -15,6 +16,8 @@ const server = express();
 const ready = NestFactory.create(AppModule, new ExpressAdapter(server), {
   logger: ['error', 'warn'],
 }).then(async (app) => {
+  // The session arrives as a cookie, so it has to be parsed before any guard looks for it.
+  app.use(cookieParser());
   app.enableCors({ origin: true, credentials: true });
   await app.init();
   return app;

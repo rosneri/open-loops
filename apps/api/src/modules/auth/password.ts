@@ -1,99 +1,22 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
-
-/** `promisify` cannot see through scrypt's overloads, so the options-taking one is named here. */
-interface ScryptRequest {
-  readonly password: string;
-  readonly salt: Buffer;
-  readonly keyLength: number;
-  readonly cost: number;
-  readonly blockSize: number;
-  readonly parallelism: number;
-}
-
-const scryptRaw = promisify(scryptCallback) as (
-  ...args: [string | Buffer, string | Buffer, number, ScryptOptions]
-) => Promise<Buffer>;
-
-interface ScryptOptions {
-  readonly N: number;
-  readonly r: number;
-  readonly p: number;
-  readonly maxmem: number;
-}
-
-/** One object rather than four positional arguments, which the lint rule rightly dislikes. */
-const derive = async (request: ScryptRequest): Promise<Buffer> =>
-  await scryptRaw(request.password.normalize('NFKC'), request.salt, request.keyLength, {
-    N: request.cost,
-    r: request.blockSize,
-    p: request.parallelism,
-    maxmem: MAX_MEMORY,
-  });
+import { compare, hash } from 'bcryptjs';
 
 /**
- * scrypt from `node:crypto` rather than bcrypt or argon2: both of those are native modules, and
- * this API is bundled into a single file for a Vercel function, where a `.node` binary would not
- * survive the build. scrypt is memory-hard, in the standard library, and needs no build step.
+ * bcrypt through `bcryptjs` — the pure-JavaScript implementation rather than the native `bcrypt`
+ * package. This API is bundled into a single file for a Vercel function, where a `.node` binary
+ * would not survive the build; bcryptjs has no build step and no binary.
  *
- * Parameters are stored alongside the hash so raising the cost later does not invalidate the
- * passwords already in the database.
+ * The cost factor is stored inside the hash, so raising it later leaves existing passwords
+ * working and only changes what new ones cost.
  */
-const KEY_LENGTH = 64;
-const COST = 2 ** 15;
-const BLOCK_SIZE = 8;
-const PARALLELISM = 1;
-/** scrypt needs roughly 128 * COST * BLOCK_SIZE bytes; Node's 32 MB default is below that. */
-const MAX_MEMORY = 256 * 1024 * 1024;
+const COST = 12;
 
-export const hashPassword = async (password: string): Promise<string> => {
-  const salt = randomBytes(16);
-  const derived = await derive({
-    password,
-    salt,
-    keyLength: KEY_LENGTH,
-    cost: COST,
-    blockSize: BLOCK_SIZE,
-    parallelism: PARALLELISM,
-  });
-  return [
-    'scrypt',
-    String(COST),
-    String(BLOCK_SIZE),
-    String(PARALLELISM),
-    salt.toString('base64'),
-    derived.toString('base64'),
-  ].join('$');
-};
+export const hashPassword = async (password: string): Promise<string> =>
+  await hash(password.normalize('NFKC'), COST);
 
-/**
- * Never throws on a malformed hash and never returns early on a mismatch: both would let the
- * caller distinguish "no such user" from "wrong password" by timing alone.
- */
+/** Returns false rather than throwing on a malformed hash: the caller cannot act on the reason. */
 export const verifyPassword = async (password: string, stored: string): Promise<boolean> => {
-  const parts = stored.split('$');
-  if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
-
-  const [, cost, blockSize, parallelism, salt, expected] = parts as [
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-  ];
-  const expectedBytes = Buffer.from(expected, 'base64');
-
   try {
-    const derived = await derive({
-      password,
-      salt: Buffer.from(salt, 'base64'),
-      keyLength: expectedBytes.length,
-      cost: Number(cost),
-      blockSize: Number(blockSize),
-      parallelism: Number(parallelism),
-    });
-    return derived.length === expectedBytes.length && timingSafeEqual(derived, expectedBytes);
+    return await compare(password.normalize('NFKC'), stored);
   } catch {
     return false;
   }

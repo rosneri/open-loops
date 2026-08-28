@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { loadConfig } from './config/env.js';
@@ -10,6 +11,9 @@ import { loadConfig } from './config/env.js';
 const bootstrap = async (): Promise<void> => {
   const config = loadConfig();
   const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'] });
+
+  // The session arrives as a cookie, so it has to be parsed before any guard looks for it.
+  app.use(cookieParser());
 
   app.enableCors({
     origin: config.WEB_ORIGIN === '*' ? true : config.WEB_ORIGIN.split(','),

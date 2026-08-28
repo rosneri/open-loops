@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import type { AppConfig } from '../../config/env.js';
 
 export const SESSION_COOKIE = 'open_loops_session';
@@ -29,21 +29,4 @@ export const clearSessionCookie = (response: Response, config: AppConfig): void 
     secure: config.OPEN_LOOPS_MODE === 'HOSTED',
     path: '/',
   });
-};
-
-/**
- * Express only parses cookies with `cookie-parser` installed. One header and one split is less
- * than a dependency, and it keeps the Vercel bundle free of middleware the app does not use.
- */
-export const readSessionCookie = (request: Request): string | undefined => {
-  const header = request.headers.cookie;
-  if (header === undefined) return undefined;
-
-  for (const part of header.split(';')) {
-    const index = part.indexOf('=');
-    if (index === -1) continue;
-    if (part.slice(0, index).trim() !== SESSION_COOKIE) continue;
-    return decodeURIComponent(part.slice(index + 1).trim());
-  }
-  return undefined;
 };

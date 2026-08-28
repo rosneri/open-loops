@@ -3,7 +3,7 @@ import type { AppConfig } from '../../config/env.js';
 import { aiModel, aiProvider } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { Public } from '../auth/public.decorator.js';
-import type { RequestWithUser } from '../auth/session.guard.js';
+import type { RequestWithUser } from '../auth/jwt-auth.guard.js';
 
 @Controller('api/health')
 export class HealthController {

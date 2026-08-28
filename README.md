@@ -60,6 +60,12 @@ bun run create-user <username> <password>   # or set one; also rotates an existi
 Rotating a password ends every session that account already had. `AUTH_JWT_SECRET` signs the
 session cookie and is required — at least 32 characters, and changing it logs everyone out.
 
+The machinery is Passport and `@nestjs/jwt` — the stack Nest documents — with `passport-local`
+on the login route, `passport-jwt` reading the token out of the cookie, `bcryptjs` for hashing
+and `cookie-parser` for the jar. `bcryptjs` rather than `bcrypt` or `argon2` because those are
+native modules, and the API is bundled into a single file for a Vercel function where a `.node`
+binary would not survive the build.
+
 The token lives in an `httpOnly`, `SameSite=Lax` cookie, so no script on the page can read it.
 It is `Secure` in `HOSTED` mode and not in `LOCAL`, where the app is plain HTTP on a LAN address
 and a secure cookie would never be stored at all.
