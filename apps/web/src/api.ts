@@ -28,11 +28,31 @@ export interface RebalanceResult {
   readonly deferred: number;
 }
 
+/** Thrown when the session is missing or expired, so the shell can swap in the sign-in form. */
+export class UnauthorizedError extends Error {
+  public constructor() {
+    super('Not signed in.');
+    this.name = 'UnauthorizedError';
+  }
+}
+
+/**
+ * A session can lapse in the middle of any screen, and every screen would otherwise have to
+ * handle that itself. One event, raised here, lets the shell take over wherever the user was.
+ */
+export const UNAUTHORIZED_EVENT = 'open-loops:unauthorized';
+
 const request = async <TResult>(path: string, init: RequestInit = {}): Promise<TResult> => {
   const headers = new Headers(init.headers);
   headers.set('content-type', 'application/json');
 
-  const response = await fetch(path, { ...init, headers });
+  // `same-origin` is the default, but the session lives in a cookie now — saying so keeps the
+  // next person from "simplifying" this into a credential-less fetch.
+  const response = await fetch(path, { ...init, headers, credentials: 'same-origin' });
+  if (response.status === 401) {
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    throw new UnauthorizedError();
+  }
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(
@@ -51,8 +71,20 @@ const post = async <TResult>(path: string, body?: unknown): Promise<TResult> =>
 const returnTo = (): string =>
   encodeURIComponent(`${window.location.origin}/integrations`);
 
+export interface SessionUser {
+  readonly id: string;
+  readonly username: string;
+}
+
 /** The only place the client knows any URLs. Every screen goes through these functions. */
 export const api = {
+  me: async (): Promise<SessionUser> => await request<SessionUser>('/api/auth/me'),
+
+  login: async (username: string, password: string): Promise<SessionUser> =>
+    await post<SessionUser>('/api/auth/login', { username, password }),
+
+  logout: async (): Promise<{ ok: true }> => await post<{ ok: true }>('/api/auth/logout'),
+
   today: async (): Promise<TodayDto> => await request<TodayDto>('/api/today'),
 
   loops: async (): Promise<readonly LoopDto[]> => await request<readonly LoopDto[]>('/api/loops'),

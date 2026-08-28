@@ -188,3 +188,18 @@ model ProbeTask {
   @@index([criterionId, answeredAt])
   @@index([answeredAt, consumedAt])
 }
+
+/// The only account model this app has. Credentials never live in environment variables, so a
+/// password change is a row update rather than a redeploy. `passwordHash` is scrypt output with
+/// its own salt and parameters encoded in the string; nothing here is reversible.
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  /// Bumping this invalidates every token issued before the change, which is what makes
+  /// "log out everywhere" and a password reset the same operation.
+  tokenVersion Int      @default(0)
+}

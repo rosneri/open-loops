@@ -19,6 +19,16 @@ const schema = z.object({
   OPEN_LOOPS_AGENT_TOKEN: z.string().optional(),
   WEB_ORIGIN: z.string().default('*'),
 
+  /**
+   * Signs the session cookie. Required rather than optional-with-a-fallback: a generated
+   * per-process secret would silently log everyone out on every restart, and a hardcoded
+   * default would be worse than no signature at all. Rotating it ends every session.
+   */
+  AUTH_JWT_SECRET: z.string().min(32, 'AUTH_JWT_SECRET must be at least 32 characters.'),
+  AUTH_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(24 * 7),
+  /** Set by Vercel Cron on its own requests; accepted alongside the agent token on /api/tick. */
+  CRON_SECRET: z.string().optional(),
+
   DAY_START_MINUTE: z.coerce.number().int().min(0).max(1439).default(9 * 60),
   DAY_END_MINUTE: z.coerce.number().int().min(1).max(1440).default(18 * 60),
   TICK_CRON: z.string().default('0 * * * *'),

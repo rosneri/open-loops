@@ -5,3 +5,4 @@ export * from './signal.store.js';
 export * from './event-publisher.js';
 export * from './busy-time.provider.js';
 export * from './probe-task.store.js';
+export * from './user.repository.js';

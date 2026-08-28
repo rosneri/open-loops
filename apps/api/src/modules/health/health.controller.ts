@@ -1,15 +1,22 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get, Inject, Req } from '@nestjs/common';
 import type { AppConfig } from '../../config/env.js';
 import { aiModel, aiProvider } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
+import { Public } from '../auth/public.decorator.js';
+import type { RequestWithUser } from '../auth/session.guard.js';
 
 @Controller('api/health')
 export class HealthController {
   public constructor(@Inject(Tokens.Config) private readonly config: AppConfig) {}
 
-  /** Cheap enough to poll, and it reports the two facts that explain most misbehaviour. */
+  /**
+   * Public so an uptime check needs no credentials, but the configuration details behind it —
+   * which describe the deployment — are only returned to a caller that is signed in.
+   */
+  @Public()
   @Get()
-  public health(): Record<string, unknown> {
+  public health(@Req() request: RequestWithUser): Record<string, unknown> {
+    if (request.user === undefined) return { ok: true };
     return {
       ok: true,
       mode: this.config.OPEN_LOOPS_MODE,

@@ -6,6 +6,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { ManageIntegrationsUseCase } from '@open-loops/orchestration';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
+import { Public } from '../auth/public.decorator.js';
 
 interface CallbackQuery {
   readonly returnTo?: string;
@@ -52,7 +53,13 @@ export class IntegrationsController {
   /**
    * Composio appends `connected_account_id` to the callback. Passing it through is what makes
    * the flow correct when more than one connect attempt is in the air at once.
+   *
+   * Public because Composio's redirect is a third-party navigation: the session cookie is
+   * `SameSite=Lax` so it does arrive, but the request must not fail for a user whose session
+   * lapsed while they were on the consent screen. It completes a handshake this server started
+   * and carries no user input beyond an account id Composio itself minted.
    */
+  @Public()
   @Get(':provider/callback')
   public async callback(
     @Param('provider') provider: string,

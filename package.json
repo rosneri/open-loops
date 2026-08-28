@@ -24,7 +24,8 @@
     "db:generate": "bun run --cwd libs/persistence db:generate",
     "db:push": "bun run --cwd libs/persistence db:push",
     "db:studio": "bun run --cwd libs/persistence db:studio",
-    "tick": "bun run --cwd apps/api tick"
+    "tick": "bun run --cwd apps/api tick",
+    "create-user": "bun apps/api/src/create-user.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

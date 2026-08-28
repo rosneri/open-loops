@@ -71,3 +71,25 @@ export function IntegrationCard({
     </div>
   );
 }
+
+/**
+ * A stand-in with the card's exact geometry, so the first paint shows the real grid rather
+ * than an empty page and nothing jumps when the request lands.
+ */
+export function IntegrationCardSkeleton(): React.ReactElement {
+  return (
+    <div
+      aria-hidden="true"
+      className="hairline flex animate-pulse flex-col justify-between rounded-lg bg-ink-900/60 p-5"
+    >
+      <div>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="h-[15px] w-24 rounded bg-ink-800" />
+          <span className="h-[10px] w-14 rounded bg-ink-800" />
+        </div>
+        <span className="mt-2 block h-[11px] w-20 rounded bg-ink-800" />
+      </div>
+      <div className="mt-5 h-[26px] w-full rounded border border-ink-700" />
+    </div>
+  );
+}

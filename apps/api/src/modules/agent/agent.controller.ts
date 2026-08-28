@@ -8,6 +8,7 @@ import type { PrismaProbeTaskStore } from '@open-loops/persistence';
 import type { Signal, SignalActor } from '@open-loops/signals';
 import { Tokens } from '../../tokens.js';
 import { AgentTokenGuard } from './agent-token.guard.js';
+import { Public } from '../auth/public.decorator.js';
 
 const actorSchema = z.object({
   displayName: z.string().min(1),
@@ -63,6 +64,8 @@ const evidenceSchema = z.object({
  * endpoints: push what you saw, read the questions, answer the questions.
  */
 @Controller('api/agent')
+// No browser calls these, so they authenticate with a shared secret instead of a session.
+@Public()
 @UseGuards(AgentTokenGuard)
 export class AgentController {
   public constructor(

@@ -26,6 +26,7 @@ cp .env.example .env      # DATABASE_URL, and COMPOSIO_API_KEY if you want hoste
 bun run db:up             # Postgres in Docker on :5439
 bun run db:generate
 bun run db:migrate        # or db:push against a throwaway database
+bun run create-user neri  # prints a generated password; there is no signup screen
 moon run api:dev web:dev  # API on :4455, client on http://localhost:4444
 ```
 
@@ -40,6 +41,33 @@ The client is bound to `0.0.0.0`, so `http://neriyas-mac-mini:4444` works from a
 the network, not just this machine.
 
 `bun run tick` runs one heartbeat by hand instead of waiting for the hour.
+
+## Signing in
+
+Every route is behind a login except three: `POST /api/auth/login`, a bare `GET /api/health`
+liveness check, and the OAuth callback Composio redirects the browser to. That is enforced by a
+global guard, so a new controller is protected the day it is written and has to say `@Public()`
+to opt out.
+
+Accounts are made from the command line, never from a signup page — the app has one user, and a
+public registration route on a deployment anyone can reach would undo the login it sits behind:
+
+```bash
+bun run create-user <username>              # generates and prints a password
+bun run create-user <username> <password>   # or set one; also rotates an existing account
+```
+
+Rotating a password ends every session that account already had. `AUTH_JWT_SECRET` signs the
+session cookie and is required — at least 32 characters, and changing it logs everyone out.
+
+The token lives in an `httpOnly`, `SameSite=Lax` cookie, so no script on the page can read it.
+It is `Secure` in `HOSTED` mode and not in `LOCAL`, where the app is plain HTTP on a LAN address
+and a secure cookie would never be stored at all.
+
+Two callers have no browser and therefore no cookie. `/api/agent/*` and `/api/tick` accept a
+bearer token instead — `OPEN_LOOPS_AGENT_TOKEN`, or the `CRON_SECRET` Vercel Cron sends on its
+own requests. An unset token disables that check on a single-user machine in `LOCAL` mode; in
+`HOSTED` mode, where anyone can reach the endpoint, the absence of a secret closes it instead.
 
 ## The two halves
 

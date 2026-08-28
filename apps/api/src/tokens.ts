@@ -18,6 +18,7 @@ export const Tokens = {
   EventPublisher: 'OL_EVENT_PUBLISHER',
   BusyTimeProvider: 'OL_BUSY_TIME_PROVIDER',
   ProbeTaskStore: 'OL_PROBE_TASK_STORE',
+  UserRepository: 'OL_USER_REPOSITORY',
 
   SourceConnectors: 'OL_SOURCE_CONNECTORS',
   ConnectionBroker: 'OL_CONNECTION_BROKER',

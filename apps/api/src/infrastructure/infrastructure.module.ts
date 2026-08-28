@@ -13,6 +13,7 @@ import {
   PrismaProbeTaskStore,
   PrismaSignalStore,
   PrismaSyncCursorStore,
+  PrismaUserRepository,
   SignalBusyTimeProvider,
   createPrismaClient,
   type PrismaClient,
@@ -67,6 +68,11 @@ const base: Provider[] = [
 ];
 
 const persistence: Provider[] = [
+  {
+    provide: Tokens.UserRepository,
+    inject: [Tokens.Prisma],
+    useFactory: (prisma: PrismaClient) => new PrismaUserRepository(prisma),
+  },
   {
     provide: Tokens.LoopRepository,
     inject: [Tokens.Prisma],

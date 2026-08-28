@@ -3,15 +3,24 @@ import type { IntegrationDto } from '@open-loops/contracts';
 import { api } from '../api.js';
 import { useAsyncAction } from '../hooks/use-async-action.js';
 import { ErrorPanel } from '../components/error-panel.js';
-import { IntegrationCard } from '../components/integration-card.js';
+import { IntegrationCard, IntegrationCardSkeleton } from '../components/integration-card.js';
 import { ToolBench } from '../components/tool-bench.js';
+
+/** Enough rows to fill the grid at every breakpoint without inventing a count we cannot know. */
+const SKELETON_CARDS = 6;
 
 export function IntegrationsPage(): React.ReactElement {
   const [integrations, setIntegrations] = useState<readonly IntegrationDto[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState<string | undefined>();
 
   const load = useCallback(async () => {
-    setIntegrations(await api.integrations());
+    try {
+      setIntegrations(await api.integrations());
+    } finally {
+      // Settled either way: a failure belongs in the error panel, not behind a permanent skeleton.
+      setLoaded(true);
+    }
   }, []);
 
   const action = useAsyncAction(load);
@@ -64,15 +73,19 @@ export function IntegrationsPage(): React.ReactElement {
       {action.error !== undefined && <ErrorPanel message={action.error} />}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {integrations.map((integration) => (
-          <IntegrationCard
-            key={integration.provider}
-            integration={integration}
-            pending={pending === integration.provider}
-            onConnect={connect}
-            onDisconnect={disconnect}
-          />
-        ))}
+        {loaded
+          ? integrations.map((integration) => (
+              <IntegrationCard
+                key={integration.provider}
+                integration={integration}
+                pending={pending === integration.provider}
+                onConnect={connect}
+                onDisconnect={disconnect}
+              />
+            ))
+          : Array.from({ length: SKELETON_CARDS }, (_, index) => (
+              <IntegrationCardSkeleton key={index} />
+            ))}
       </div>
 
       <ToolBench

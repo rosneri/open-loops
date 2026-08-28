@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
 import { UseCasesModule } from './infrastructure/use-cases.module.js';
 import { HealthController } from './modules/health/health.controller.js';
@@ -10,6 +11,10 @@ import { AgentTokenGuard } from './modules/agent/agent-token.guard.js';
 import { ComposioController } from './modules/composio/composio.controller.js';
 import { TickController } from './modules/tick/tick.controller.js';
 import { TickScheduler } from './modules/tick/tick.scheduler.js';
+import { AuthController } from './modules/auth/auth.controller.js';
+import { AuthService } from './modules/auth/auth.service.js';
+import { SessionGuard } from './modules/auth/session.guard.js';
+import { SessionOrTokenGuard } from './modules/auth/session-or-token.guard.js';
 
 /**
  * The HTTP surface is one flat module on purpose: the interesting boundaries are the libraries,
@@ -18,6 +23,7 @@ import { TickScheduler } from './modules/tick/tick.scheduler.js';
 @Module({
   imports: [InfrastructureModule, UseCasesModule],
   controllers: [
+    AuthController,
     HealthController,
     LoopsController,
     PlanController,
@@ -26,6 +32,13 @@ import { TickScheduler } from './modules/tick/tick.scheduler.js';
     ComposioController,
     TickController,
   ],
-  providers: [AgentTokenGuard, TickScheduler],
+  providers: [
+    AgentTokenGuard,
+    TickScheduler,
+    AuthService,
+    SessionOrTokenGuard,
+    // Global rather than per-controller: a route is protected by default and has to opt out.
+    { provide: APP_GUARD, useClass: SessionGuard },
+  ],
 })
 export class AppModule {}

@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "NestJS host. Controllers only translate HTTP into use cases — no rules live here.",
+  "description": "NestJS host. Controllers only translate HTTP into use cases \u2014 no rules live here.",
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
-    "tick": "bun src/tick-once.ts"
+    "tick": "bun src/tick-once.ts",
+    "create-user": "bun src/create-user.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.3",
