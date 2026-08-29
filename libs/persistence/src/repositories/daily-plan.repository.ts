@@ -4,11 +4,14 @@ import type { PrismaClient } from '../prisma-client.js';
 import { blockRows, toDomain, toScalars } from '../mappers/daily-plan.mapper.js';
 
 export class PrismaDailyPlanRepository implements DailyPlanRepository {
-  public constructor(private readonly prisma: PrismaClient) {}
+  public constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ownerId: string,
+  ) {}
 
   public async findByDay(day: DayKey): Promise<DailyPlan | undefined> {
     const row = await this.prisma.dailyPlan.findUnique({
-      where: { day },
+      where: { ownerId_day: { ownerId: this.ownerId, day } },
       include: { blocks: true },
     });
     return row === null ? undefined : toDomain(row);
@@ -20,7 +23,7 @@ export class PrismaDailyPlanRepository implements DailyPlanRepository {
     await this.prisma.$transaction(async (tx) => {
       await tx.dailyPlan.upsert({
         where: { id: props.id },
-        create: { id: props.id, ...scalars },
+        create: { id: props.id, ownerId: this.ownerId, ...scalars },
         update: scalars,
       });
       await tx.planBlock.deleteMany({ where: { planId: props.id } });

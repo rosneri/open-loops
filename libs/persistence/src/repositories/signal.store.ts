@@ -14,12 +14,15 @@ const keyParts = (key: string): { provider: string; externalId: string } => {
  * re-runnable: a sync that overlaps its own window is a no-op, not a source of duplicate loops.
  */
 export class PrismaSignalStore implements SignalStore {
-  public constructor(private readonly prisma: PrismaClient) {}
+  public constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ownerId: string,
+  ) {}
 
   public async append(signals: readonly Signal[]): Promise<number> {
     if (signals.length === 0) return 0;
     const result = await this.prisma.rawSignal.createMany({
-      data: signals.map(toCreate),
+      data: signals.map((signal) => ({ ...toCreate(signal), ownerId: this.ownerId })),
       skipDuplicates: true,
     });
     return result.count;
@@ -27,7 +30,7 @@ export class PrismaSignalStore implements SignalStore {
 
   public async listUnprocessed(limit: number): Promise<readonly Signal[]> {
     const rows = await this.prisma.rawSignal.findMany({
-      where: { processedAt: null },
+      where: { ownerId: this.ownerId, processedAt: null },
       orderBy: { occurredAt: 'asc' },
       take: limit,
     });
@@ -36,7 +39,7 @@ export class PrismaSignalStore implements SignalStore {
 
   public async listRecent(input: { since: Instant; limit: number }): Promise<readonly Signal[]> {
     const rows = await this.prisma.rawSignal.findMany({
-      where: { occurredAt: { gte: new Date(input.since) } },
+      where: { ownerId: this.ownerId, occurredAt: { gte: new Date(input.since) } },
       orderBy: { occurredAt: 'desc' },
       take: input.limit,
     });
@@ -63,7 +66,12 @@ export class PrismaSignalStore implements SignalStore {
 
     for (const [provider, externalIds] of byProvider) {
       await this.prisma.rawSignal.updateMany({
-        where: { provider, externalId: { in: externalIds }, processedAt: null },
+        where: {
+          ownerId: this.ownerId,
+          provider,
+          externalId: { in: externalIds },
+          processedAt: null,
+        },
         data: { processedAt: now },
       });
     }
@@ -71,25 +79,34 @@ export class PrismaSignalStore implements SignalStore {
 
   public async pruneBefore(cutoff: Instant): Promise<number> {
     const result = await this.prisma.rawSignal.deleteMany({
-      where: { occurredAt: { lt: new Date(cutoff) }, processedAt: { not: null } },
+      where: {
+        ownerId: this.ownerId,
+        occurredAt: { lt: new Date(cutoff) },
+        processedAt: { not: null },
+      },
     });
     return result.count;
   }
 }
 
 export class PrismaSyncCursorStore implements SyncCursorStore {
-  public constructor(private readonly prisma: PrismaClient) {}
+  public constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ownerId: string,
+  ) {}
 
   public async get(provider: string): Promise<Instant | undefined> {
-    const row = await this.prisma.syncCursor.findUnique({ where: { provider } });
+    const row = await this.prisma.syncCursor.findUnique({
+      where: { ownerId_provider: { ownerId: this.ownerId, provider } },
+    });
     return row === null ? undefined : asInstant(row.at.getTime());
   }
 
   public async set(input: { provider: string; at: Instant }): Promise<void> {
     const at = new Date(input.at);
     await this.prisma.syncCursor.upsert({
-      where: { provider: input.provider },
-      create: { provider: input.provider, at },
+      where: { ownerId_provider: { ownerId: this.ownerId, provider: input.provider } },
+      create: { ownerId: this.ownerId, provider: input.provider, at },
       update: { at },
     });
   }

@@ -3,27 +3,16 @@ import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/ker
 import { ALL_SOURCE_PROVIDERS } from '@open-loops/kernel';
 import type { ConnectionBroker } from '@open-loops/integrations';
 import { ConnectionMode } from '@open-loops/integrations';
-import type { ProbeRunner } from '@open-loops/loops';
 import type { SourceConnector } from '@open-loops/signals';
 import {
-  PrismaDailyPlanRepository,
-  PrismaIntegrationRepository,
-  PrismaLoopEventPublisher,
-  PrismaOpenLoopRepository,
-  PrismaProbeTaskStore,
-  PrismaSignalStore,
-  PrismaSyncCursorStore,
   PrismaUserRepository,
   PrismaSettingsRepository,
-  PrismaEpisodeRepository,
-  SignalBusyTimeProvider,
   createPrismaClient,
   type PrismaClient,
 } from '@open-loops/persistence';
 import {
   COMPOSIO_PROVIDERS,
   ComposioConnectionBroker,
-  ComposioProbeRunner,
   ComposioSessionProvider,
   ComposioSourceConnector,
   ComposioToolExplorer,
@@ -31,10 +20,13 @@ import {
 import {
   LocalAgentSourceConnector,
   LocalConnectionBroker,
-  LocalProbeRunner,
 } from '@open-loops/connectors-local';
 import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
 import { ElevenLabsPodcastGenerator } from '@open-loops/connectors-elevenlabs';
+import {
+  EdgeSpeechSynthesizer,
+  ScriptedPodcastGenerator,
+} from '@open-loops/connectors-studio';
 import type { StructuredGenerator } from '@open-loops/reasoning';
 import {
   AiSdkGenerator,
@@ -47,6 +39,7 @@ import {
 import type { AppConfig } from '../config/env.js';
 import { aiModel, aiProvider, isLocalMode, loadConfig, meHandles } from '../config/env.js';
 import { BlobAudioStore } from './blob-audio-store.js';
+import { FileAudioStore } from './file-audio-store.js';
 import { SystemClock } from '../system/system-clock.js';
 import { UuidIdGenerator } from '../system/uuid-id-generator.js';
 import { JsonLogger } from '../system/json-logger.js';
@@ -72,6 +65,10 @@ const base: Provider[] = [
   },
 ];
 
+/**
+ * Only the stores that are genuinely global live here. Everything owned by a person is built
+ * per request by `WorkspaceFactory`, which is what makes tenancy impossible to forget.
+ */
 const persistence: Provider[] = [
   {
     provide: Tokens.UserRepository,
@@ -83,80 +80,55 @@ const persistence: Provider[] = [
     inject: [Tokens.Prisma],
     useFactory: (prisma: PrismaClient) => new PrismaSettingsRepository(prisma),
   },
-  {
-    provide: Tokens.EpisodeRepository,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaEpisodeRepository(prisma),
-  },
-  {
-    provide: Tokens.LoopRepository,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaOpenLoopRepository(prisma),
-  },
-  {
-    provide: Tokens.PlanRepository,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaDailyPlanRepository(prisma),
-  },
-  {
-    provide: Tokens.IntegrationRepository,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaIntegrationRepository(prisma),
-  },
-  {
-    provide: Tokens.SignalStore,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaSignalStore(prisma),
-  },
-  {
-    provide: Tokens.SyncCursorStore,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaSyncCursorStore(prisma),
-  },
-  {
-    provide: Tokens.EventPublisher,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new PrismaLoopEventPublisher(prisma),
-  },
-  {
-    provide: Tokens.BusyTimeProvider,
-    inject: [Tokens.Prisma],
-    useFactory: (prisma: PrismaClient) => new SignalBusyTimeProvider(prisma),
-  },
-  {
-    provide: Tokens.ProbeTaskStore,
-    inject: [Tokens.Prisma, Tokens.Logger],
-    useFactory: (prisma: PrismaClient, logger: Logger) =>
-      new PrismaProbeTaskStore({ prisma, logger }),
-  },
 ];
 
-/**
- * The strategy switch, and the only branch in the system that knows local from hosted. Every
- * use case above it is written against ports and has no idea which world it is running in.
- */
 const podcast: Provider[] = [
   {
+    /**
+     * The in-house studio by default: the model this deployment already pays for writes the
+     * script, and the free Edge voices read it, so a daily episode costs nothing and needs no
+     * new account. ElevenLabs is there for anyone who wants its voices and has a key.
+     */
     provide: Tokens.PodcastGenerator,
-    inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger): PodcastGenerator =>
-      new ElevenLabsPodcastGenerator(
-        {
-          apiKey: config.ELEVENLABS_API_KEY,
-          modelId: config.ELEVENLABS_MODEL_ID,
-          hostVoiceId: config.ELEVENLABS_HOST_VOICE_ID,
-          guestVoiceId: config.ELEVENLABS_GUEST_VOICE_ID,
-          timeoutMs: config.ELEVENLABS_TIMEOUT_MS,
-          pollIntervalMs: config.ELEVENLABS_POLL_MS,
-        },
+    inject: [Tokens.Config, Tokens.Logger, Tokens.StructuredGenerator],
+    useFactory: (
+      config: AppConfig,
+      logger: Logger,
+      model: StructuredGenerator,
+    ): PodcastGenerator => {
+      if (config.PODCAST_PROVIDER === 'elevenlabs') {
+        return new ElevenLabsPodcastGenerator(
+          {
+            apiKey: config.ELEVENLABS_API_KEY,
+            modelId: config.ELEVENLABS_MODEL_ID,
+            hostVoiceId: config.ELEVENLABS_HOST_VOICE_ID,
+            guestVoiceId: config.ELEVENLABS_GUEST_VOICE_ID,
+            timeoutMs: config.ELEVENLABS_TIMEOUT_MS,
+            pollIntervalMs: config.ELEVENLABS_POLL_MS,
+          },
+          logger,
+        );
+      }
+      return new ScriptedPodcastGenerator({
+        model,
+        speech: new EdgeSpeechSynthesizer(),
+        voices: { host: config.STUDIO_HOST_VOICE, guest: config.STUDIO_GUEST_VOICE },
         logger,
-      ),
+      });
+    },
   },
   {
+    /**
+     * Blob when a token exists, disk otherwise. Falling back rather than failing is what lets a
+     * developer hear an episode without attaching a store first; a deployment always has the
+     * token, and its filesystem would not survive the request anyway.
+     */
     provide: Tokens.AudioStore,
     inject: [Tokens.Config],
     useFactory: (config: AppConfig): AudioStore =>
-      new BlobAudioStore(config.BLOB_READ_WRITE_TOKEN),
+      (config.BLOB_READ_WRITE_TOKEN ?? '').length > 0
+        ? new BlobAudioStore(config.BLOB_READ_WRITE_TOKEN)
+        : new FileAudioStore(config.PODCAST_DIR),
   },
 ];
 
@@ -214,19 +186,6 @@ const dataStrategy: Provider[] = [
       });
       return new ComposioConnectionBroker({ sessions, logger });
     },
-  },
-  {
-    provide: Tokens.ProbeRunners,
-    inject: [Tokens.Config, Tokens.Logger, Tokens.ToolExplorer, Tokens.ProbeTaskStore],
-    useFactory: (
-      config: AppConfig,
-      logger: Logger,
-      explorer: ComposioToolExplorer | undefined,
-      probeTasks: PrismaProbeTaskStore,
-    ): readonly ProbeRunner[] =>
-      isLocalMode(config) || explorer === undefined
-        ? [new LocalProbeRunner(probeTasks)]
-        : [new ComposioProbeRunner({ explorer, logger })],
   },
 ];
 

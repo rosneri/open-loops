@@ -1,0 +1,31 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'application'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'scheduler'
+  description: 'The clock. Holds one cron per account and calls the API when each is due.'
+
+dependsOn:
+  - kernel
+
+tags:
+  - 'app'
+
+tasks:
+  # Runs from the workspace root so the single root `.env` is the only place configuration lives.
+  dev:
+    command: 'bun --watch apps/scheduler/src/main.ts'
+    preset: 'server'
+    options:
+      cache: false
+      persistent: true
+      runFromWorkspaceRoot: true
+  start:
+    command: 'bun apps/scheduler/src/main.ts'
+    preset: 'server'
+    options:
+      cache: false
+      persistent: true
+      runFromWorkspaceRoot: true

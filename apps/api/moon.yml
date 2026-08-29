@@ -20,6 +20,7 @@ dependsOn:
   - connectors-composio
   - connectors-local
   - connectors-elevenlabs
+  - connectors-studio
   - podcast
 
 tags:

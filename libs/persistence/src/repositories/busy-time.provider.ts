@@ -12,11 +12,15 @@ const DEFAULT_MEETING_MS = 30 * 60 * 1000;
  * live integration: one ingestion path, one source of truth, identical in local and hosted mode.
  */
 export class SignalBusyTimeProvider implements BusyTimeProvider {
-  public constructor(private readonly prisma: PrismaClient) {}
+  public constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ownerId: string,
+  ) {}
 
   public async listBusy(input: { dayStartAt: Instant }): Promise<readonly BusyInterval[]> {
     const rows = await this.prisma.rawSignal.findMany({
       where: {
+        ownerId: this.ownerId,
         kind: SignalKind.CalendarEvent,
         occurredAt: { gte: new Date(input.dayStartAt), lt: new Date(input.dayStartAt + DAY_MS) },
       },

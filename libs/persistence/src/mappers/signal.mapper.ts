@@ -19,7 +19,7 @@ export const toDomain = (row: RawSignal): Signal => ({
   ...optional('metadata', row.metadata as Signal['metadata']),
 });
 
-export const toCreate = (signal: Signal): Prisma.RawSignalCreateManyInput => ({
+export const toCreate = (signal: Signal): Omit<Prisma.RawSignalCreateManyInput, 'ownerId'> => ({
   provider: signal.provider,
   externalId: signal.externalId,
   kind: signal.kind,

@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Post, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import type { IngestResultDto, PendingProbeDto } from '@open-loops/contracts';
 import { asInstant, isSourceProvider } from '@open-loops/kernel';
 import type { ConnectionMode } from '@open-loops/integrations';
-import type { IngestSignalsUseCase } from '@open-loops/orchestration';
-import type { PrismaProbeTaskStore } from '@open-loops/persistence';
+
 import type { Signal, SignalActor } from '@open-loops/signals';
 import { Tokens } from '../../tokens.js';
+import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
+import { OwnerResolver } from '../auth/owner-resolver.service.js';
 import { AgentTokenGuard } from './agent-token.guard.js';
 import { Public } from '../auth/public.decorator.js';
 
@@ -59,6 +60,9 @@ const evidenceSchema = z.object({
     .max(100),
 });
 
+/** Names the account these signals belong to; optional while there is only one. */
+export const USER_HEADER = 'x-open-loops-user';
+
 /**
  * The contract between Open Loops and whichever AI client drives it locally. Deliberately three
  * endpoints: push what you saw, read the questions, answer the questions.
@@ -69,27 +73,38 @@ const evidenceSchema = z.object({
 @UseGuards(AgentTokenGuard)
 export class AgentController {
   public constructor(
-    @Inject(Tokens.IngestSignals) private readonly ingest: IngestSignalsUseCase,
-    @Inject(Tokens.ProbeTaskStore) private readonly probeTasks: PrismaProbeTaskStore,
+    private readonly workspaces: WorkspaceFactory,
+    private readonly owners: OwnerResolver,
     @Inject(Tokens.ConnectionMode) private readonly mode: ConnectionMode,
   ) {}
 
   @Post('ingest')
-  public async ingestSignals(@Body() body: unknown): Promise<IngestResultDto> {
+  public async ingestSignals(
+    @Headers(USER_HEADER) username: string | undefined,
+    @Body() body: unknown,
+  ): Promise<IngestResultDto> {
     const { signals } = ingestSchema.parse(body);
-    return await this.ingest.execute({ mode: this.mode, signals: signals.map(toSignal) });
+    const workspace = this.workspaces.for(await this.owners.resolve(username));
+    return await workspace.ingest.execute({ mode: this.mode, signals: signals.map(toSignal) });
   }
 
   @Get('probes')
-  public async probes(): Promise<{ probes: readonly PendingProbeDto[] }> {
-    return { probes: await this.probeTasks.pending() };
+  public async probes(
+    @Headers(USER_HEADER) username: string | undefined,
+  ): Promise<{ probes: readonly PendingProbeDto[] }> {
+    const workspace = this.workspaces.for(await this.owners.resolve(username));
+    return { probes: await workspace.probes.pending() };
   }
 
   @Post('evidence')
-  public async evidence(@Body() body: unknown): Promise<{ applied: number }> {
+  public async evidence(
+    @Headers(USER_HEADER) username: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ applied: number }> {
     const { answers } = evidenceSchema.parse(body);
+    const workspace = this.workspaces.for(await this.owners.resolve(username));
     return {
-      applied: await this.probeTasks.answer(
+      applied: await workspace.probes.answer(
         answers.map((answer) => ({
           id: answer.id,
           verdict: answer.verdict,

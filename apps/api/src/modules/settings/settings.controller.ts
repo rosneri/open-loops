@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Put } from '@nestjs/common';
 import { z } from 'zod';
 import type { SettingsDto } from '@open-loops/contracts';
+import { Owner } from '../auth/owner.decorator.js';
 import { SettingsService } from './settings.service.js';
 
 const patchSchema = z.object({
@@ -17,17 +18,17 @@ export class SettingsController {
   public constructor(private readonly settings: SettingsService) {}
 
   @Get()
-  public async read(): Promise<SettingsDto> {
-    return await this.settings.view();
+  public async read(@Owner() ownerId: string): Promise<SettingsDto> {
+    return await this.settings.view(ownerId);
   }
 
   /** A partial update: the screen sends only what changed, so two fields never fight. */
   @Put()
-  public async write(@Body() body: unknown): Promise<SettingsDto> {
+  public async write(@Owner() ownerId: string, @Body() body: unknown): Promise<SettingsDto> {
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join('; '));
     }
-    return await this.settings.update(parsed.data);
+    return await this.settings.update(ownerId, parsed.data);
   }
 }

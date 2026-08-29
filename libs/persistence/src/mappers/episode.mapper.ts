@@ -19,7 +19,7 @@ export const toDomain = (row: EpisodeRow): Episode =>
     ...optional('completedAt', row.completedAt === null ? null : toInstant(row.completedAt)),
   });
 
-export const toRow = (props: EpisodeProps): EpisodeRow => ({
+export const toRow = (props: EpisodeProps): Omit<EpisodeRow, 'ownerId'> => ({
   id: props.id,
   day: props.day,
   status: props.status,

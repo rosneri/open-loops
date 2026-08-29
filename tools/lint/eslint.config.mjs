@@ -152,11 +152,21 @@ export default tseslint.config(
      * `useFactory` takes one argument per port it assembles — collapsing those into an object
      * would defeat the framework's own injection. The rules stay on everywhere else.
      */
-    files: ['apps/api/src/**/*.module.ts'],
+    files: ['apps/api/src/**/*.module.ts', 'apps/api/src/infrastructure/*.factory.ts'],
     rules: {
       'max-params': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',
       'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
     },
+  },
+  {
+    /**
+     * Same exception, one layer out. A controller signature is injection too: `@Owner()`,
+     * `@Param()` and `@Body()` are how Nest hands a handler what it asked for, and folding four
+     * of them into an object would mean parsing the request by hand. Every other rule applies —
+     * a controller with real branching still has to answer for its complexity.
+     */
+    files: ['apps/api/src/**/*.controller.ts'],
+    rules: { 'max-params': 'off' },
   },
 );

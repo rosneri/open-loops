@@ -1,24 +1,33 @@
-import { Controller, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Req, UseGuards } from '@nestjs/common';
 import type { TickReportDto } from '@open-loops/contracts';
-import type { RunTickUseCase } from '@open-loops/orchestration';
-import { Tokens } from '../../tokens.js';
+import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
+import { USER_HEADER } from '../agent/agent.controller.js';
+import type { RequestWithUser } from '../auth/jwt-auth.guard.js';
+import { OwnerResolver } from '../auth/owner-resolver.service.js';
 import { Public } from '../auth/public.decorator.js';
 import { SessionOrTokenGuard } from '../auth/session-or-token.guard.js';
 
 /**
- * Two callers: the button in the client, which has a session, and Vercel Cron, which sends
- * `Authorization: Bearer $CRON_SECRET` and has no cookie. `@Public()` waives the global guard so
- * the composite below can accept either.
+ * Two callers: the button in the client, which has a session and means itself, and the
+ * scheduler, which has the shared secret and names the account in a header. `@Public()` waives
+ * the global guard so the composite below can accept either.
  */
 @Controller('api/tick')
 @Public()
 @UseGuards(SessionOrTokenGuard)
 export class TickController {
-  public constructor(@Inject(Tokens.RunTick) private readonly tick: RunTickUseCase) {}
+  public constructor(
+    private readonly workspaces: WorkspaceFactory,
+    private readonly owners: OwnerResolver,
+  ) {}
 
-  /** Manual heartbeat. The scheduler calls the same use case on TICK_CRON. */
   @Post()
-  public async run(): Promise<TickReportDto> {
-    return await this.tick.execute();
+  public async run(
+    @Req() request: RequestWithUser,
+    @Headers(USER_HEADER) username: string | undefined,
+    @Body() _body: unknown,
+  ): Promise<TickReportDto> {
+    const ownerId = request.user?.id ?? (await this.owners.resolve(username));
+    return await this.workspaces.for(ownerId).tick.execute();
   }
 }

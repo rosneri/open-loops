@@ -22,11 +22,18 @@ export interface AnsweredProbe {
  * the answer is consumed exactly once — so a stale verdict can never be counted twice.
  */
 export class PrismaProbeTaskStore {
-  public constructor(private readonly deps: { prisma: PrismaClient; logger: Logger }) {}
+  public constructor(
+    private readonly deps: { prisma: PrismaClient; logger: Logger; ownerId: string },
+  ) {}
 
   public async takeAnswer(criterionId: string, at: number): Promise<AnsweredProbe | undefined> {
     const answered = await this.deps.prisma.probeTask.findFirst({
-      where: { criterionId, answeredAt: { not: null }, consumedAt: null },
+      where: {
+        ownerId: this.deps.ownerId,
+        criterionId,
+        answeredAt: { not: null },
+        consumedAt: null,
+      },
       orderBy: { answeredAt: 'desc' },
     });
     if (answered === null) return undefined;
@@ -40,11 +47,16 @@ export class PrismaProbeTaskStore {
   /** Only one open question per criterion; re-asking every hour would flood the agent. */
   public async enqueue(request: EnqueuedProbe): Promise<void> {
     const pending = await this.deps.prisma.probeTask.count({
-      where: { criterionId: request.criterionId, answeredAt: null },
+      where: {
+        ownerId: this.deps.ownerId,
+        criterionId: request.criterionId,
+        answeredAt: null,
+      },
     });
     if (pending > 0) return;
     await this.deps.prisma.probeTask.create({
       data: {
+        ownerId: this.deps.ownerId,
         loopId: request.loopId,
         criterionId: request.criterionId,
         probe: toJson(request.probe),
@@ -56,7 +68,7 @@ export class PrismaProbeTaskStore {
 
   public async pending(limit = 50): Promise<readonly PendingProbeDto[]> {
     const rows = await this.deps.prisma.probeTask.findMany({
-      where: { answeredAt: null },
+      where: { ownerId: this.deps.ownerId, answeredAt: null },
       orderBy: { requestedAt: 'asc' },
       take: limit,
     });
@@ -74,7 +86,9 @@ export class PrismaProbeTaskStore {
     let applied = 0;
     for (const answer of answers) {
       const result = await this.deps.prisma.probeTask.updateMany({
-        where: { id: answer.id, answeredAt: null },
+        // The owner is part of the filter, so answering someone else's probe by guessing an
+        // id updates nothing rather than succeeding quietly.
+        where: { id: answer.id, ownerId: this.deps.ownerId, answeredAt: null },
         data: {
           answeredAt: new Date(),
           verdict: answer.verdict,

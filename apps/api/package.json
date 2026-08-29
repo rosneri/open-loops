@@ -38,7 +38,8 @@
     "rxjs": "^7.8.2",
     "zod": "^4.4.3",
     "@open-loops/podcast": "workspace:*",
-    "@open-loops/connectors-elevenlabs": "workspace:*"
+    "@open-loops/connectors-elevenlabs": "workspace:*",
+    "@open-loops/connectors-studio": "workspace:*"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

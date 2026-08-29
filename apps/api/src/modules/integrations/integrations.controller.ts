@@ -2,14 +2,18 @@ import { Controller, Delete, Get, Inject, Param, Query, Res } from '@nestjs/comm
 import type { Response } from 'express';
 import type { BeginConnectionDto, IntegrationDto } from '@open-loops/contracts';
 import { isSourceProvider, type SourceProvider } from '@open-loops/kernel';
-import { BadRequestException } from '@nestjs/common';
-import type { ManageIntegrationsUseCase } from '@open-loops/orchestration';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
+import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
+import { Owner } from '../auth/owner.decorator.js';
 import { Public } from '../auth/public.decorator.js';
+import { HandshakeTokens } from './handshake-tokens.js';
 
 interface CallbackQuery {
   readonly returnTo?: string;
+  /** Names the account that started this handshake; signed, so it cannot be edited in transit. */
+  readonly state?: string;
   /** Composio's own field name; it arrives snake_cased on the redirect. */
   readonly connected_account_id?: string;
 }
@@ -17,13 +21,14 @@ interface CallbackQuery {
 @Controller('api/integrations')
 export class IntegrationsController {
   public constructor(
-    @Inject(Tokens.ManageIntegrations) private readonly integrations: ManageIntegrationsUseCase,
+    private readonly workspaces: WorkspaceFactory,
+    private readonly handshakes: HandshakeTokens,
     @Inject(Tokens.Config) private readonly config: AppConfig,
   ) {}
 
   @Get()
-  public async list(): Promise<readonly IntegrationDto[]> {
-    return await this.integrations.list();
+  public async list(@Owner() ownerId: string): Promise<readonly IntegrationDto[]> {
+    return await this.workspaces.for(ownerId).integrations.list();
   }
 
   /**
@@ -33,21 +38,23 @@ export class IntegrationsController {
    */
   @Get(':provider/connect')
   public async connect(
+    @Owner() ownerId: string,
     @Param('provider') provider: string,
     @Query('returnTo') returnTo: string | undefined,
     @Res() response: Response,
   ): Promise<void> {
-    const handshake = await this.begin({ provider, returnTo });
+    const handshake = await this.begin({ ownerId, provider, returnTo });
     response.redirect(handshake.redirectUrl ?? this.webReturn(returnTo, provider));
   }
 
   /** The JSON twin of `connect`, for clients that would rather open the URL themselves. */
   @Get(':provider/connect-url')
   public async connectUrl(
+    @Owner() ownerId: string,
     @Param('provider') provider: string,
     @Query('returnTo') returnTo: string | undefined,
   ): Promise<BeginConnectionDto> {
-    return await this.begin({ provider, returnTo });
+    return await this.begin({ ownerId, provider, returnTo });
   }
 
   /**
@@ -66,8 +73,14 @@ export class IntegrationsController {
     @Query() query: CallbackQuery,
     @Res() response: Response,
   ): Promise<void> {
+    // The owner comes from the signed state we minted when the handshake began, never from the
+    // session — a consent screen can outlive a session, and never from a plain query parameter,
+    // which anyone could edit to attach their account to somebody else's workspace.
+    const ownerId = this.handshakes.read(query.state);
+    if (ownerId === undefined) throw new UnauthorizedException('This connection link has expired.');
+
     const accountId = query.connected_account_id;
-    const active = await this.integrations.completeConnect({
+    const active = await this.workspaces.for(ownerId).integrations.completeConnect({
       provider: this.parse(provider),
       ...(accountId === undefined ? {} : { externalAccountRef: accountId }),
     });
@@ -75,21 +88,27 @@ export class IntegrationsController {
   }
 
   @Delete(':provider')
-  public async disconnect(@Param('provider') provider: string): Promise<{ ok: true }> {
-    await this.integrations.disconnect(this.parse(provider));
+  public async disconnect(
+    @Owner() ownerId: string,
+    @Param('provider') provider: string,
+  ): Promise<{ ok: true }> {
+    await this.workspaces.for(ownerId).integrations.disconnect(this.parse(provider));
     return { ok: true };
   }
 
   private async begin(input: {
+    ownerId: string;
     provider: string;
     returnTo: string | undefined;
   }): Promise<BeginConnectionDto> {
     const provider = this.parse(input.provider);
-    return await this.integrations.beginConnect({
+    const state = this.handshakes.mint(input.ownerId);
+    const query = new URLSearchParams({ state });
+    if (input.returnTo !== undefined) query.set('returnTo', input.returnTo);
+
+    return await this.workspaces.for(input.ownerId).integrations.beginConnect({
       provider,
-      callbackUrl: `${this.apiOrigin()}/api/integrations/${provider}/callback${
-        input.returnTo === undefined ? '' : `?returnTo=${encodeURIComponent(input.returnTo)}`
-      }`,
+      callbackUrl: `${this.apiOrigin()}/api/integrations/${provider}/callback?${query.toString()}`,
     });
   }
 

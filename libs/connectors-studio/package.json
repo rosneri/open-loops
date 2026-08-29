@@ -1,0 +1,21 @@
+{
+  "name": "@open-loops/connectors-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Podcast adapter: writes the script with the model already configured, speaks it with Edge TTS.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/podcast": "workspace:*",
+    "@open-loops/reasoning": "workspace:*",
+    "msedge-tts": "^2.0.7",
+    "zod": "^4.4.3"
+  }
+}

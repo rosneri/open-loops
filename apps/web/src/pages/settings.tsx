@@ -95,7 +95,7 @@ export function SettingsPage(): React.ReactElement {
       </header>
 
       {action.error !== undefined && <ErrorPanel message={action.error} />}
-      {settings.schedulerKind === 'PLATFORM_CRON' && <PlatformCronNotice />}
+      <PlatformCronNotice />
 
       <section className="space-y-6">
         <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">The sweep</h2>

@@ -6,7 +6,7 @@ import { toDate, toInstant, toJson } from './primitives.js';
 
 export type DailyPlanRowWithBlocks = DailyPlanRow & { blocks: PlanBlock[] };
 
-export type DailyPlanWrite = Omit<DailyPlanRow, 'id' | 'manualOrder'> & {
+export type DailyPlanWrite = Omit<DailyPlanRow, 'id' | 'ownerId' | 'manualOrder'> & {
   manualOrder: Prisma.InputJsonValue;
 };
 

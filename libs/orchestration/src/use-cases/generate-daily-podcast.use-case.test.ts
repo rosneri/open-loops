@@ -110,6 +110,9 @@ describe('GenerateDailyPodcastUseCase', () => {
     expect(seen?.brief).toContain('Open the rate limiter PR');
     expect(seen?.brief).toContain('Dana');
     expect(seen?.brief).toContain('1 open loop');
+    // The count helper only ever pluralises a real noun; the other two are phrases.
+    expect(seen?.brief).not.toContain('in progresss');
+    expect(seen?.brief).toContain('0 in progress');
     expect(result.audioUrl).toBe('https://blob.example/podcast/2026-08-29.mp3');
   });
 

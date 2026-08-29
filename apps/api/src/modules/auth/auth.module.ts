@@ -11,6 +11,8 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { JwtStrategy } from './jwt.strategy.js';
 import { LocalStrategy } from './local.strategy.js';
 import { SessionOrTokenGuard } from './session-or-token.guard.js';
+import { OwnerResolver } from './owner-resolver.service.js';
+import { HandshakeTokens } from '../integrations/handshake-tokens.js';
 
 /**
  * `session: false` throughout: the token in the cookie is the whole session, so Passport has no
@@ -36,9 +38,12 @@ import { SessionOrTokenGuard } from './session-or-token.guard.js';
     LocalStrategy,
     AgentTokenGuard,
     SessionOrTokenGuard,
+    OwnerResolver,
+    // Signs the OAuth handshake state, so it needs the same JwtService a session does.
+    HandshakeTokens,
     // Global rather than per-controller: a route is protected by default and has to opt out.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  exports: [AuthService, SessionOrTokenGuard, AgentTokenGuard],
+  exports: [AuthService, SessionOrTokenGuard, AgentTokenGuard, OwnerResolver, HandshakeTokens],
 })
 export class AuthModule {}

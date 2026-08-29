@@ -15,9 +15,11 @@ projects:
   connectors-composio: 'libs/connectors-composio'
   connectors-local: 'libs/connectors-local'
   connectors-elevenlabs: 'libs/connectors-elevenlabs'
+  connectors-studio: 'libs/connectors-studio'
   orchestration: 'libs/orchestration'
   contracts: 'libs/contracts'
   api: 'apps/api'
+  scheduler: 'apps/scheduler'
   web: 'apps/web'
 
 vcs:

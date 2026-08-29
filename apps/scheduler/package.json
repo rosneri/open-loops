@@ -1,0 +1,16 @@
+{
+  "name": "@open-loops/scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The clock. Holds one cron per account and calls the API when each is due.",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts"
+  },
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "cron": "^4.3.5",
+    "zod": "^4.4.3"
+  }
+}

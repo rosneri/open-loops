@@ -30,6 +30,20 @@ export class PrismaUserRepository {
     return await this.prisma.user.count();
   }
 
+  public async listAll(): Promise<readonly UserRecord[]> {
+    const rows = await this.prisma.user.findMany({ orderBy: { createdAt: 'asc' } });
+    return rows.map(toRecord);
+  }
+
+  /**
+   * The single account, or undefined when there are none or several. Callers use it to make a
+   * user header optional on a single-user install without ever guessing between two people.
+   */
+  public async onlyUser(): Promise<UserRecord | undefined> {
+    const rows = await this.prisma.user.findMany({ take: 2 });
+    return rows.length === 1 ? toRecord(rows[0] as Parameters<typeof toRecord>[0]) : undefined;
+  }
+
   /** Upsert rather than create, so re-running the setup script rotates a password in place. */
   public async upsert(input: { username: string; passwordHash: string }): Promise<UserRecord> {
     const username = normalise(input.username);

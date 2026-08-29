@@ -122,7 +122,7 @@ const scheduleColumns = (props: OpenLoopProps) => ({
   lastCheckedAt: props.lastCheckedAt === undefined ? null : toDate(props.lastCheckedAt),
 });
 
-export const toScalars = (props: OpenLoopProps): Omit<OpenLoopRow, 'id'> => ({
+export const toScalars = (props: OpenLoopProps): Omit<OpenLoopRow, 'id' | 'ownerId'> => ({
   kind: props.kind,
   title: props.title,
   summary: props.summary,

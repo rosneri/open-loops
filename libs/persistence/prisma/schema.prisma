@@ -14,7 +14,10 @@ datasource db {
 
 model OpenLoop {
   id        String @id
-  sourceKey String @unique
+  /// Every root table carries its owner. The child tables below do not: they are reachable
+  /// only through a parent that already has one, and a second copy could disagree with it.
+  ownerId   String
+  sourceKey String
 
   kind    String
   title   String
@@ -46,13 +49,15 @@ model OpenLoop {
   updatedAt     DateTime
   lastCheckedAt DateTime?
 
+  owner      User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   criteria   Criterion[]
   evidence   EvidenceRecord[]
   planBlocks PlanBlock[]
   events     LoopEventLog[]
 
-  @@index([updatedAt])
-  @@index([provider])
+  @@unique([ownerId, sourceKey])
+  @@index([ownerId, updatedAt])
+  @@index([ownerId, provider])
 }
 
 model Criterion {
@@ -89,14 +94,18 @@ model EvidenceRecord {
 
 model DailyPlan {
   id          String   @id
-  day         String   @unique
+  ownerId     String
+  day         String
   dayStartAt  DateTime
   startMinute Int
   endMinute   Int
   manualOrder Json
   generatedAt DateTime
 
+  owner  User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   blocks PlanBlock[]
+
+  @@unique([ownerId, day])
 }
 
 model PlanBlock {
@@ -119,7 +128,8 @@ model PlanBlock {
 
 model Integration {
   id                 String    @id
-  provider           String    @unique
+  ownerId            String
+  provider           String
   mode               String
   status             String
   accountLabel       String?
@@ -128,15 +138,25 @@ model Integration {
   lastSyncedAt       DateTime?
   lastError          String?
   connectedAt        DateTime?
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, provider])
 }
 
 model SyncCursor {
-  provider String   @id
+  ownerId  String
+  provider String
   at       DateTime
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, provider])
 }
 
 model RawSignal {
   id             String    @id @default(uuid())
+  ownerId        String
   provider       String
   externalId     String
   kind           String
@@ -153,9 +173,11 @@ model RawSignal {
   receivedAt     DateTime  @default(now())
   processedAt    DateTime?
 
-  @@unique([provider, externalId])
-  @@index([processedAt, occurredAt])
-  @@index([kind, occurredAt])
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, provider, externalId])
+  @@index([ownerId, processedAt, occurredAt])
+  @@index([ownerId, kind, occurredAt])
 }
 
 model LoopEventLog {
@@ -174,6 +196,7 @@ model LoopEventLog {
 /// question here; the agent posts the answer back and the next tick consumes it exactly once.
 model ProbeTask {
   id          String    @id @default(uuid())
+  ownerId     String
   loopId      String
   criterionId String
   probe       Json
@@ -185,8 +208,10 @@ model ProbeTask {
   summary     String?   @db.Text
   url         String?
 
-  @@index([criterionId, answeredAt])
-  @@index([answeredAt, consumedAt])
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, criterionId, answeredAt])
+  @@index([ownerId, answeredAt, consumedAt])
 }
 
 /// The only account model this app has. Credentials never live in environment variables, so a
@@ -202,13 +227,23 @@ model User {
   /// Bumping this invalidates every token issued before the change, which is what makes
   /// "log out everywhere" and a password reset the same operation.
   tokenVersion Int      @default(0)
+
+  settings     UserSettings?
+  loops        OpenLoop[]
+  plans        DailyPlan[]
+  integrations Integration[]
+  cursors      SyncCursor[]
+  signals      RawSignal[]
+  probeTasks   ProbeTask[]
+  episodes     PodcastEpisode[]
 }
 
-/// One row, always. Settings that a person changes from the app belong in the database rather
+/// One row per person. Settings that someone changes from the app belong in the database rather
 /// than in environment variables — changing a schedule should not be a redeploy. The env vars
-/// remain the seed for the first row and nothing more.
-model AppSettings {
-  id String @id @default("singleton")
+/// remain the seed for a new row and nothing more.
+model UserSettings {
+  id     String @id @default(uuid())
+  userId String @unique
 
   /// Cron expressions, read in OPEN_LOOPS_TIMEZONE.
   sweepCron   String
@@ -216,18 +251,21 @@ model AppSettings {
 
   podcastEnabled     Boolean @default(false)
   podcastLength      String  @default("default")
-  podcastHostVoiceId String?
+  podcastHostVoiceId  String?
   podcastGuestVoiceId String?
 
   updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// One episode per day. `brief` is the text the generator was given, kept because a disappointing
 /// episode is almost always a disappointing brief.
 model PodcastEpisode {
-  id     String @id @default(uuid())
-  day    String @unique
-  status String
+  id      String @id @default(uuid())
+  ownerId String
+  day     String
+  status  String
 
   title String
   brief String @db.Text
@@ -240,5 +278,8 @@ model PodcastEpisode {
   requestedAt DateTime
   completedAt DateTime?
 
-  @@index([requestedAt])
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, day])
+  @@index([ownerId, requestedAt])
 }

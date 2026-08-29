@@ -42,6 +42,21 @@ the network, not just this machine.
 
 `bun run tick` runs one heartbeat by hand instead of waiting for the hour.
 
+## Accounts
+
+Every root table carries an owner, and repositories are built for one person rather than taking
+an owner on every call. That is the whole enforcement mechanism: a use case cannot read someone
+else's loops because the object it was handed cannot express the question, so no query, screen or
+controller below `WorkspaceFactory` had to change when the app became multi-user.
+
+The child tables — criteria, evidence, plan blocks, the event log — deliberately have no owner
+column. They are reachable only through a parent that already has one, and a second copy of the
+answer could disagree with it.
+
+One thing is not yet per-account: Composio's connected apps are keyed by `OPEN_LOOPS_USER_ID`, so
+every account shares the same upstream OAuth connections. Splitting that would orphan the
+connections already made, so it is left as a known limit rather than quietly broken.
+
 ## Settings, and where a schedule actually runs
 
 Both schedules — the sweep and the podcast — live in the database, not in the environment. The
@@ -49,17 +64,25 @@ Both schedules — the sweep and the podcast — live in the database, not in th
 that, so changing a schedule is a save rather than a redeploy. The Settings screen validates the
 expression with cron's own parser and says what it means in words before you commit to it.
 
-Where that schedule is honoured depends on what is running the API:
+Nothing schedules itself. A serverless deployment has no process that outlives a request, and
+the platform's own cron is capped at one run a day on a Hobby plan — so `apps/scheduler` is a
+separate always-on process that holds the clocks and calls the deployment when something is due:
 
-- **A long-lived process** — this repo on your own machine — holds the cron job itself, so any
-  expression is honoured exactly. This is the `IN_PROCESS` case.
-- **A serverless deployment** has nothing that outlives a request, so the platform's cron drives
-  `POST /api/tick` and `POST /api/podcast/generate` over HTTP instead. On Vercel's Hobby plan
-  that means once a day, ±59 minutes. This is `PLATFORM_CRON`, and the screen says so rather
-  than pretending a five-minute sweep is possible there.
+```bash
+OPEN_LOOPS_API_URL=https://your-deployment \
+OPEN_LOOPS_AGENT_TOKEN=... \
+moon run scheduler:start
+```
 
-The distinction is drawn from `VERCEL` being set, not from `OPEN_LOOPS_MODE`: a machine running
-in `HOSTED` mode is still a long-lived process that can schedule.
+It reads `GET /api/schedules` — the one endpoint that spans accounts, which is why it takes the
+shared secret rather than a session — and keeps one cron job per account per kind of work. A
+change made in Settings is picked up on the next refresh rather than on a restart, a bad
+expression from one person is logged and skipped instead of stopping everyone's clock, and a run
+that is still going is never started again on top of itself.
+
+It holds no data and no database URL. Every schedule is read from the API and every run is a call
+back to it, so the deployment stays the only thing that touches the database and tenancy is
+enforced in exactly one place.
 
 ## The podcast of the day
 
@@ -68,14 +91,20 @@ generator is prose assembled from the same view the Today screen renders — the
 overdue, and what is done but unconfirmed — so an episode can only be as good as the day is
 legible.
 
-Generation goes through the `PodcastGenerator` port. The adapter in the box is ElevenLabs
-Studio, which is a hosted service and needs only `ELEVENLABS_API_KEY`. The obvious alternative,
-[podcastfy](https://github.com/souzatharsis/podcastfy), is Python and needs ffmpeg — there is
-nowhere for either to live inside a bundled Node function, so it would have to run as its own
-container. The port is the seam that keeps that a one-adapter change rather than a rewrite.
+Generation goes through the `PodcastGenerator` port. The default adapter is
+[podcastfy](https://github.com/souzatharsis/podcastfy)'s pipeline rewritten in TypeScript: the
+model this deployment already uses writes a two-speaker script, and each turn is spoken by the
+free Edge Read Aloud voices — the same backend podcastfy reaches for by default. MP3 frames
+concatenate, so the turns are joined into one file without ffmpeg. No key, no Python, no second
+runtime, and no cost per episode. Podcastfy itself could not run here: it is Python and needs
+ffmpeg, and this API is bundled to a single Node file for a function.
+
+`PODCAST_PROVIDER=elevenlabs` swaps in ElevenLabs Studio for anyone who wants its voices and has
+a key.
 
 Finished audio goes to Vercel Blob (`BLOB_READ_WRITE_TOKEN`) because a function's filesystem
-does not outlive the request that wrote to it. Episodes are keyed by day, so re-recording a day
+does not outlive the request that wrote to it. Without a token it falls back to a directory on
+disk served by the API, so a developer can hear an episode without attaching a store first. Episodes are keyed by day, so re-recording a day
 replaces it. A failure is stored with its reason and shown in Settings — the reason is almost
 always a missing key or a provider quota, and neither is discoverable from an empty list.
 

@@ -10,11 +10,11 @@ export interface SettingsDto {
   readonly podcastGuestVoiceId?: string;
   readonly timeZone: string;
   /**
-   * What the deployment can actually honour. The client shows this rather than pretending every
-   * schedule is possible: a Vercel Hobby cron fires once a day, so a five-minute sweep is only
-   * real when something else is doing the scheduling.
+   * Who holds the clock. `EXTERNAL` means a separate always-on scheduler reads these schedules
+   * and calls back in, which is what makes an arbitrary cron expression honourable from a
+   * serverless deployment that could otherwise only manage one platform cron a day.
    */
-  readonly schedulerKind: 'IN_PROCESS' | 'PLATFORM_CRON';
+  readonly schedulerKind: 'EXTERNAL';
   readonly podcastConfigured: boolean;
   readonly updatedAt: number;
 }

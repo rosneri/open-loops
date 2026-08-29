@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
-import { UseCasesModule } from './infrastructure/use-cases.module.js';
 import { HealthController } from './modules/health/health.controller.js';
 import { LoopsController } from './modules/loops/loops.controller.js';
 import { PlanController } from './modules/plan/plan.controller.js';
@@ -8,11 +7,11 @@ import { IntegrationsController } from './modules/integrations/integrations.cont
 import { AgentController } from './modules/agent/agent.controller.js';
 import { ComposioController } from './modules/composio/composio.controller.js';
 import { TickController } from './modules/tick/tick.controller.js';
-import { TickScheduler } from './modules/tick/tick.scheduler.js';
 import { SettingsController } from './modules/settings/settings.controller.js';
 import { SettingsService } from './modules/settings/settings.service.js';
+import { SchedulesController } from './modules/settings/schedules.controller.js';
+import { WorkspaceFactory, SharedServices } from './infrastructure/workspace.factory.js';
 import { PodcastController } from './modules/podcast/podcast.controller.js';
-import { PodcastScheduler } from './modules/podcast/podcast.scheduler.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 
 /**
@@ -20,7 +19,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
  * not the controllers. Each controller is a thin translation of one context's use cases.
  */
 @Module({
-  imports: [InfrastructureModule, UseCasesModule, AuthModule],
+  imports: [InfrastructureModule, AuthModule],
   controllers: [
     HealthController,
     LoopsController,
@@ -30,8 +29,9 @@ import { AuthModule } from './modules/auth/auth.module.js';
     ComposioController,
     TickController,
     SettingsController,
+    SchedulesController,
     PodcastController,
   ],
-  providers: [SettingsService, TickScheduler, PodcastScheduler],
+  providers: [SettingsService, WorkspaceFactory, SharedServices],
 })
 export class AppModule {}

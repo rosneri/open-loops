@@ -18,7 +18,8 @@ export const toDomain = (row: IntegrationRow): Integration =>
     ...optional('connectedAt', row.connectedAt === null ? null : toInstant(row.connectedAt)),
   });
 
-export const toRow = (props: IntegrationProps): IntegrationRow => ({
+/** Owner is added by the repository, which is the only thing that knows whose row this is. */
+export const toRow = (props: IntegrationProps): Omit<IntegrationRow, 'ownerId'> => ({
   id: props.id,
   provider: props.provider,
   mode: props.mode,

@@ -115,9 +115,9 @@ const writeBrief = (view: TodayDto): string => {
   const lines: string[] = [
     `Daily briefing for ${view.day}.`,
     '',
-    `There are ${count(view.counts.OPEN, 'open loop')}, ` +
-      `${count(view.counts.IN_PROGRESS, 'in progress')}, and ` +
-      `${count(view.counts.DONE_UNCONFIRMED, 'finished but unconfirmed')}.`,
+    `There are ${count(view.counts.OPEN, 'open loop')}. ` +
+      `${String(view.counts.IN_PROGRESS)} in progress, and ` +
+      `${String(view.counts.DONE_UNCONFIRMED)} finished but not yet confirmed.`,
     '',
   ];
 

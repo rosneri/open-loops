@@ -9,18 +9,29 @@ const INCLUDE = { criteria: true, evidence: true } as const;
  * Writes the whole aggregate in one transaction. Criteria are replaced wholesale — they are the
  * model's revisable opinion of "done" — while evidence is only ever appended, because losing an
  * observation would silently reopen a closed loop.
+ *
+ * The owner is fixed at construction rather than passed to every method. That is what keeps the
+ * domain port free of tenancy: a use case cannot read another person's loops because the object
+ * it was handed cannot express the question.
  */
 export class PrismaOpenLoopRepository implements OpenLoopRepository {
-  public constructor(private readonly prisma: PrismaClient) {}
+  public constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ownerId: string,
+  ) {}
 
+  /** `findFirst` rather than `findUnique`: the id alone is unique, but not owned. */
   public async findById(id: OpenLoopId): Promise<OpenLoop | undefined> {
-    const row = await this.prisma.openLoop.findUnique({ where: { id }, include: INCLUDE });
+    const row = await this.prisma.openLoop.findFirst({
+      where: { id, ownerId: this.ownerId },
+      include: INCLUDE,
+    });
     return row === null ? undefined : toDomain(row);
   }
 
   public async findBySourceKey(key: string): Promise<OpenLoop | undefined> {
     const row = await this.prisma.openLoop.findUnique({
-      where: { sourceKey: key },
+      where: { ownerId_sourceKey: { ownerId: this.ownerId, sourceKey: key } },
       include: INCLUDE,
     });
     return row === null ? undefined : toDomain(row);
@@ -29,6 +40,7 @@ export class PrismaOpenLoopRepository implements OpenLoopRepository {
   public async list(query: OpenLoopQuery): Promise<readonly OpenLoop[]> {
     const rows = await this.prisma.openLoop.findMany({
       where: {
+        ownerId: this.ownerId,
         ...(query.providers === undefined ? {} : { provider: { in: [...query.providers] } }),
         ...(query.updatedSince === undefined
           ? {}
@@ -52,7 +64,7 @@ export class PrismaOpenLoopRepository implements OpenLoopRepository {
   }
 
   public async delete(id: OpenLoopId): Promise<void> {
-    await this.prisma.openLoop.deleteMany({ where: { id } });
+    await this.prisma.openLoop.deleteMany({ where: { id, ownerId: this.ownerId } });
   }
 
   /**
@@ -69,7 +81,9 @@ export class PrismaOpenLoopRepository implements OpenLoopRepository {
     await this.prisma.$transaction([
       this.prisma.openLoop.upsert({
         where: { id: props.id },
-        create: { id: props.id, ...scalars },
+        create: { id: props.id, ownerId: this.ownerId, ...scalars },
+        // `ownerId` is deliberately absent: an existing loop never changes hands, and leaving
+        // it out means a mis-scoped save cannot quietly steal a row from someone else.
         update: scalars,
       }),
       this.prisma.criterion.deleteMany({
