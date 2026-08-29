@@ -1,10 +1,13 @@
 import type {
   BeginConnectionDto,
+  EpisodeDto,
   IngestResultDto,
   IntegrationDto,
   LoopDto,
+  SettingsDto,
   TickReportDto,
   TodayDto,
+  UpdateSettingsDto,
 } from '@open-loops/contracts';
 
 export interface DiscoveredTool {
@@ -51,7 +54,13 @@ export const UNAUTHORIZED_EVENT = 'open-loops:unauthorized';
  * A tick can legitimately run for minutes, so it gets a longer leash than the rest.
  */
 const DEFAULT_TIMEOUT_MS = 30_000;
-const SLOW_PATHS = ['/api/tick', '/api/plan/rebalance', '/api/composio/execute'];
+const SLOW_PATHS = [
+  '/api/tick',
+  '/api/plan/rebalance',
+  '/api/composio/execute',
+  // Recording a podcast is minutes of work at the provider, not seconds.
+  '/api/podcast/generate',
+];
 const SLOW_TIMEOUT_MS = 300_000;
 
 const timeoutFor = (path: string): number =>
@@ -156,4 +165,18 @@ export const api = {
 
   ingest: async (signals: readonly unknown[]): Promise<IngestResultDto> =>
     await post<IngestResultDto>('/api/agent/ingest', { signals }),
+
+  settings: async (): Promise<SettingsDto> => await request<SettingsDto>('/api/settings'),
+
+  saveSettings: async (patch: UpdateSettingsDto): Promise<SettingsDto> =>
+    await request<SettingsDto>('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+
+  episodes: async (): Promise<readonly EpisodeDto[]> =>
+    await request<readonly EpisodeDto[]>('/api/podcast/episodes'),
+
+  generatePodcast: async (force = false): Promise<EpisodeDto> =>
+    await post<EpisodeDto>('/api/podcast/generate', { force }),
 };

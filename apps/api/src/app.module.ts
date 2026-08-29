@@ -9,6 +9,10 @@ import { AgentController } from './modules/agent/agent.controller.js';
 import { ComposioController } from './modules/composio/composio.controller.js';
 import { TickController } from './modules/tick/tick.controller.js';
 import { TickScheduler } from './modules/tick/tick.scheduler.js';
+import { SettingsController } from './modules/settings/settings.controller.js';
+import { SettingsService } from './modules/settings/settings.service.js';
+import { PodcastController } from './modules/podcast/podcast.controller.js';
+import { PodcastScheduler } from './modules/podcast/podcast.scheduler.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 
 /**
@@ -25,7 +29,9 @@ import { AuthModule } from './modules/auth/auth.module.js';
     AgentController,
     ComposioController,
     TickController,
+    SettingsController,
+    PodcastController,
   ],
-  providers: [TickScheduler],
+  providers: [SettingsService, TickScheduler, PodcastScheduler],
 })
 export class AppModule {}

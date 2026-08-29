@@ -203,3 +203,42 @@ model User {
   /// "log out everywhere" and a password reset the same operation.
   tokenVersion Int      @default(0)
 }
+
+/// One row, always. Settings that a person changes from the app belong in the database rather
+/// than in environment variables — changing a schedule should not be a redeploy. The env vars
+/// remain the seed for the first row and nothing more.
+model AppSettings {
+  id String @id @default("singleton")
+
+  /// Cron expressions, read in OPEN_LOOPS_TIMEZONE.
+  sweepCron   String
+  podcastCron String
+
+  podcastEnabled     Boolean @default(false)
+  podcastLength      String  @default("default")
+  podcastHostVoiceId String?
+  podcastGuestVoiceId String?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// One episode per day. `brief` is the text the generator was given, kept because a disappointing
+/// episode is almost always a disappointing brief.
+model PodcastEpisode {
+  id     String @id @default(uuid())
+  day    String @unique
+  status String
+
+  title String
+  brief String @db.Text
+
+  audioUrl        String?
+  durationSeconds Int?
+  externalRef     String?
+  error           String? @db.Text
+
+  requestedAt DateTime
+  completedAt DateTime?
+
+  @@index([requestedAt])
+}

@@ -15,5 +15,8 @@ export const ApiRoutes = {
   agentEvidence: '/api/agent/evidence',
   composioTools: '/api/composio/tools',
   composioExecute: '/api/composio/execute',
+  settings: '/api/settings',
+  podcastEpisodes: '/api/podcast/episodes',
+  podcastGenerate: '/api/podcast/generate',
   health: '/api/health',
 } as const;

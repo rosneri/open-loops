@@ -1,0 +1,18 @@
+{
+  "name": "@open-loops/connectors-elevenlabs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Podcast adapter: ElevenLabs Studio turns the day's brief into a two-host conversation.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/podcast": "workspace:*"
+  }
+}

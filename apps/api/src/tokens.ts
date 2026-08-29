@@ -19,6 +19,8 @@ export const Tokens = {
   BusyTimeProvider: 'OL_BUSY_TIME_PROVIDER',
   ProbeTaskStore: 'OL_PROBE_TASK_STORE',
   UserRepository: 'OL_USER_REPOSITORY',
+  SettingsRepository: 'OL_SETTINGS_REPOSITORY',
+  EpisodeRepository: 'OL_EPISODE_REPOSITORY',
 
   SourceConnectors: 'OL_SOURCE_CONNECTORS',
   ConnectionBroker: 'OL_CONNECTION_BROKER',
@@ -26,6 +28,8 @@ export const Tokens = {
   ConnectableProviders: 'OL_CONNECTABLE_PROVIDERS',
   ConnectionMode: 'OL_CONNECTION_MODE',
   ToolExplorer: 'OL_TOOL_EXPLORER',
+  PodcastGenerator: 'OL_PODCAST_GENERATOR',
+  AudioStore: 'OL_AUDIO_STORE',
 
   StructuredGenerator: 'OL_STRUCTURED_GENERATOR',
   LoopExtractor: 'OL_LOOP_EXTRACTOR',
@@ -39,5 +43,6 @@ export const Tokens = {
   IngestSignals: 'OL_UC_INGEST_SIGNALS',
   ManageIntegrations: 'OL_UC_MANAGE_INTEGRATIONS',
   LoopCommands: 'OL_UC_LOOP_COMMANDS',
+  GenerateDailyPodcast: 'OL_UC_GENERATE_DAILY_PODCAST',
   TodayView: 'OL_Q_TODAY_VIEW',
 } as const;

@@ -17,6 +17,7 @@
     "@open-loops/planning": "workspace:*",
     "@open-loops/integrations": "workspace:*",
     "@open-loops/signals": "workspace:*",
-    "@open-loops/contracts": "workspace:*"
+    "@open-loops/contracts": "workspace:*",
+    "@open-loops/podcast": "workspace:*"
   }
 }

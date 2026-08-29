@@ -4,9 +4,11 @@ import type { ConnectionBroker, ConnectionMode, IntegrationRepository } from '@o
 import type { LoopEventPublisher, OpenLoopRepository, ProbeRunner } from '@open-loops/loops';
 import type { BusyTimeProvider, DailyPlanRepository } from '@open-loops/planning';
 import type { SignalStore, SourceConnector, SyncCursorStore } from '@open-loops/signals';
+import type { AudioStore, EpisodeRepository, PodcastGenerator } from '@open-loops/podcast';
 import type { LoopExtractor, LoopReconciler } from '@open-loops/orchestration';
 import {
   ExtractLoopsUseCase,
+  GenerateDailyPodcastUseCase,
   IngestSignalsUseCase,
   LoopCommandsUseCase,
   ManageIntegrationsUseCase,
@@ -188,6 +190,27 @@ const providers: Provider[] = [
       clock: Clock,
       config: AppConfig,
     ) => new TodayViewQuery({ loops, plans, clock, timeZone: config.OPEN_LOOPS_TIMEZONE }),
+  },
+  {
+    provide: Tokens.GenerateDailyPodcast,
+    inject: [
+      Tokens.TodayView,
+      Tokens.EpisodeRepository,
+      Tokens.PodcastGenerator,
+      Tokens.AudioStore,
+      Tokens.Clock,
+      Tokens.Ids,
+      Tokens.Logger,
+    ],
+    useFactory: (
+      today: TodayViewQuery,
+      episodes: EpisodeRepository,
+      generator: PodcastGenerator,
+      audio: AudioStore,
+      clock: Clock,
+      ids: IdGenerator,
+      logger: Logger,
+    ) => new GenerateDailyPodcastUseCase({ today, episodes, generator, audio, clock, ids, logger }),
   },
 ];
 

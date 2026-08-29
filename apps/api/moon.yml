@@ -19,6 +19,8 @@ dependsOn:
   - reasoning
   - connectors-composio
   - connectors-local
+  - connectors-elevenlabs
+  - podcast
 
 tags:
   - 'app'

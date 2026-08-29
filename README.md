@@ -42,6 +42,43 @@ the network, not just this machine.
 
 `bun run tick` runs one heartbeat by hand instead of waiting for the hour.
 
+## Settings, and where a schedule actually runs
+
+Both schedules — the sweep and the podcast — live in the database, not in the environment. The
+`TICK_CRON` and `PODCAST_CRON` variables seed the row on a fresh install and are ignored after
+that, so changing a schedule is a save rather than a redeploy. The Settings screen validates the
+expression with cron's own parser and says what it means in words before you commit to it.
+
+Where that schedule is honoured depends on what is running the API:
+
+- **A long-lived process** — this repo on your own machine — holds the cron job itself, so any
+  expression is honoured exactly. This is the `IN_PROCESS` case.
+- **A serverless deployment** has nothing that outlives a request, so the platform's cron drives
+  `POST /api/tick` and `POST /api/podcast/generate` over HTTP instead. On Vercel's Hobby plan
+  that means once a day, ±59 minutes. This is `PLATFORM_CRON`, and the screen says so rather
+  than pretending a five-minute sweep is possible there.
+
+The distinction is drawn from `VERCEL` being set, not from `OPEN_LOOPS_MODE`: a machine running
+in `HOSTED` mode is still a long-lived process that can schedule.
+
+## The podcast of the day
+
+The day, read aloud by two voices, on whatever schedule you set. The brief handed to the
+generator is prose assembled from the same view the Today screen renders — the plan, what is
+overdue, and what is done but unconfirmed — so an episode can only be as good as the day is
+legible.
+
+Generation goes through the `PodcastGenerator` port. The adapter in the box is ElevenLabs
+Studio, which is a hosted service and needs only `ELEVENLABS_API_KEY`. The obvious alternative,
+[podcastfy](https://github.com/souzatharsis/podcastfy), is Python and needs ffmpeg — there is
+nowhere for either to live inside a bundled Node function, so it would have to run as its own
+container. The port is the seam that keeps that a one-adapter change rather than a rewrite.
+
+Finished audio goes to Vercel Blob (`BLOB_READ_WRITE_TOKEN`) because a function's filesystem
+does not outlive the request that wrote to it. Episodes are keyed by day, so re-recording a day
+replaces it. A failure is stored with its reason and shown in Settings — the reason is almost
+always a missing key or a provider quota, and neither is discoverable from an empty list.
+
 ## Signing in
 
 Every route is behind a login except three: `POST /api/auth/login`, a bare `GET /api/health`

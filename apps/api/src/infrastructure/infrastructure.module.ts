@@ -14,6 +14,8 @@ import {
   PrismaSignalStore,
   PrismaSyncCursorStore,
   PrismaUserRepository,
+  PrismaSettingsRepository,
+  PrismaEpisodeRepository,
   SignalBusyTimeProvider,
   createPrismaClient,
   type PrismaClient,
@@ -31,6 +33,8 @@ import {
   LocalConnectionBroker,
   LocalProbeRunner,
 } from '@open-loops/connectors-local';
+import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
+import { ElevenLabsPodcastGenerator } from '@open-loops/connectors-elevenlabs';
 import type { StructuredGenerator } from '@open-loops/reasoning';
 import {
   AiSdkGenerator,
@@ -42,6 +46,7 @@ import {
 } from '@open-loops/reasoning';
 import type { AppConfig } from '../config/env.js';
 import { aiModel, aiProvider, isLocalMode, loadConfig, meHandles } from '../config/env.js';
+import { BlobAudioStore } from './blob-audio-store.js';
 import { SystemClock } from '../system/system-clock.js';
 import { UuidIdGenerator } from '../system/uuid-id-generator.js';
 import { JsonLogger } from '../system/json-logger.js';
@@ -72,6 +77,16 @@ const persistence: Provider[] = [
     provide: Tokens.UserRepository,
     inject: [Tokens.Prisma],
     useFactory: (prisma: PrismaClient) => new PrismaUserRepository(prisma),
+  },
+  {
+    provide: Tokens.SettingsRepository,
+    inject: [Tokens.Prisma],
+    useFactory: (prisma: PrismaClient) => new PrismaSettingsRepository(prisma),
+  },
+  {
+    provide: Tokens.EpisodeRepository,
+    inject: [Tokens.Prisma],
+    useFactory: (prisma: PrismaClient) => new PrismaEpisodeRepository(prisma),
   },
   {
     provide: Tokens.LoopRepository,
@@ -120,6 +135,31 @@ const persistence: Provider[] = [
  * The strategy switch, and the only branch in the system that knows local from hosted. Every
  * use case above it is written against ports and has no idea which world it is running in.
  */
+const podcast: Provider[] = [
+  {
+    provide: Tokens.PodcastGenerator,
+    inject: [Tokens.Config, Tokens.Logger],
+    useFactory: (config: AppConfig, logger: Logger): PodcastGenerator =>
+      new ElevenLabsPodcastGenerator(
+        {
+          apiKey: config.ELEVENLABS_API_KEY,
+          modelId: config.ELEVENLABS_MODEL_ID,
+          hostVoiceId: config.ELEVENLABS_HOST_VOICE_ID,
+          guestVoiceId: config.ELEVENLABS_GUEST_VOICE_ID,
+          timeoutMs: config.ELEVENLABS_TIMEOUT_MS,
+          pollIntervalMs: config.ELEVENLABS_POLL_MS,
+        },
+        logger,
+      ),
+  },
+  {
+    provide: Tokens.AudioStore,
+    inject: [Tokens.Config],
+    useFactory: (config: AppConfig): AudioStore =>
+      new BlobAudioStore(config.BLOB_READ_WRITE_TOKEN),
+  },
+];
+
 const dataStrategy: Provider[] = [
   {
     provide: Tokens.ConnectionMode,
@@ -267,7 +307,7 @@ const keyedGenerator = (input: {
 /** `sonnet` is a CLI alias; the API needs a real model id. */
 const FALLBACK_MODEL = 'claude-sonnet-5';
 
-const ALL = [...base, ...persistence, ...dataStrategy, ...reasoning];
+const ALL = [...base, ...persistence, ...podcast, ...dataStrategy, ...reasoning];
 
 /**
  * The composition root: the single place where interfaces meet implementations. It is global

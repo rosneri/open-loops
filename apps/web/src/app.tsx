@@ -2,14 +2,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, UNAUTHORIZED_EVENT, type SessionUser } from './api.js';
 import { TodayPage } from './pages/today.js';
 import { IntegrationsPage } from './pages/integrations.js';
+import { SettingsPage } from './pages/settings.js';
 import { SignInPage } from './pages/sign-in.js';
 
 const TABS = [
   { path: '/', label: 'Today' },
   { path: '/integrations', label: 'Integrations' },
+  { path: '/settings', label: 'Settings' },
 ] as const;
 
-const normalise = (path: string): string => (path.startsWith('/integrations') ? '/integrations' : '/');
+const normalise = (path: string): string => {
+  if (path.startsWith('/integrations')) return '/integrations';
+  if (path.startsWith('/settings')) return '/settings';
+  return '/';
+};
 
 /** `undefined` while the cold-load check is in flight, `null` once we know there is no session. */
 type Session = SessionUser | null | undefined;
@@ -125,7 +131,9 @@ export function App(): React.ReactElement {
       </header>
 
       <main className="mx-auto max-w-6xl px-8 py-10">
-        {path === '/integrations' ? <IntegrationsPage /> : <TodayPage />}
+        {path === '/integrations' && <IntegrationsPage />}
+        {path === '/settings' && <SettingsPage />}
+        {path === '/' && <TodayPage />}
       </main>
     </div>
   );
