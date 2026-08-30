@@ -26,6 +26,8 @@ export const Tokens = {
   ConnectionMode: 'OL_CONNECTION_MODE',
   PodcastGenerator: 'OL_PODCAST_GENERATOR',
   AudioStore: 'OL_AUDIO_STORE',
+  /** Both halves of the podcast — a generator and somewhere to keep what it makes. */
+  PodcastReadiness: 'OL_PODCAST_READINESS',
 
   StructuredGenerator: 'OL_STRUCTURED_GENERATOR',
   LoopExtractor: 'OL_LOOP_EXTRACTOR',

@@ -25,7 +25,7 @@ import {
   lazyModel,
 } from '@open-loops/reasoning';
 import type { AppConfig } from '../config/env.js';
-import { aiModel, aiProvider, isLocalMode, loadConfig } from '../config/env.js';
+import { aiModel, aiProvider, isLocalMode, isLongLived, loadConfig } from '../config/env.js';
 import { AccountIdentities } from './account-identity.service.js';
 import { SourceStackFactory } from './source-stack.factory.js';
 import { BlobAudioStore } from './blob-audio-store.js';
@@ -109,16 +109,28 @@ const podcast: Provider[] = [
   },
   {
     /**
-     * Blob when a token exists, disk otherwise. Falling back rather than failing is what lets a
-     * developer hear an episode without attaching a store first; a deployment always has the
-     * token, and its filesystem would not survive the request anyway.
+     * Blob when a token exists, disk otherwise — but only where a disk means anything. Falling
+     * back to the filesystem is what lets a developer hear an episode without attaching a store
+     * first; on a serverless function the same fallback writes to a read-only directory that
+     * would not outlive the request, so there the answer is "no store", said out loud.
      */
     provide: Tokens.AudioStore,
     inject: [Tokens.Config],
     useFactory: (config: AppConfig): AudioStore =>
-      (config.BLOB_READ_WRITE_TOKEN ?? '').length > 0
+      (config.BLOB_READ_WRITE_TOKEN ?? '').length > 0 || !isLongLived(config)
         ? new BlobAudioStore(config.BLOB_READ_WRITE_TOKEN)
         : new FileAudioStore(config.PODCAST_DIR),
+  },
+  {
+    /**
+     * Whether an episode can actually be produced *and* kept. The generator needs no key, so it
+     * alone always says yes — and the Settings screen would offer a button that fails on the
+     * write. Both halves have to be ready for the answer to be true.
+     */
+    provide: Tokens.PodcastReadiness,
+    inject: [Tokens.PodcastGenerator, Tokens.AudioStore],
+    useFactory: (generator: PodcastGenerator, audio: AudioStore): boolean =>
+      generator.isConfigured() && audio.isConfigured(),
   },
 ];
 

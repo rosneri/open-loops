@@ -3,7 +3,6 @@ import { CronTime } from 'cron';
 import type { SettingsDto, UpdateSettingsDto } from '@open-loops/contracts';
 import type { PrismaSettingsRepository, UserSettingsRecord } from '@open-loops/persistence';
 import type { ScheduleDto } from './schedules.controller.js';
-import type { PodcastGenerator } from '@open-loops/podcast';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 
@@ -17,7 +16,7 @@ export class SettingsService {
   public constructor(
     @Inject(Tokens.SettingsRepository) private readonly repository: PrismaSettingsRepository,
     @Inject(Tokens.Config) private readonly config: AppConfig,
-    @Inject(Tokens.PodcastGenerator) private readonly generator: PodcastGenerator,
+    @Inject(Tokens.PodcastReadiness) private readonly podcastReady: boolean,
   ) {}
 
   public get timeZone(): string {
@@ -79,7 +78,7 @@ export class SettingsService {
       // there is only as precise as the platform's own cron. Saying so is what stops the
       // Settings screen from promising a five-minute sweep it cannot deliver.
       schedulerKind: 'EXTERNAL',
-      podcastConfigured: this.generator.isConfigured(),
+      podcastConfigured: this.podcastReady,
       updatedAt: record.updatedAt,
     };
   }
