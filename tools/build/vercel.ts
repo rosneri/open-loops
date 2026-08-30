@@ -1,5 +1,6 @@
 import { mkdir, rm, writeFile, cp } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { BunPlugin } from 'bun';
 
 /**
  * Builds Vercel's Build Output directly instead of letting the Node builder trace the source
@@ -22,6 +23,21 @@ const OPTIONAL_NEST_DEPS = [
   'pg-native',
 ];
 
+/**
+ * `msedge-tts` requires `buffer/index` rather than `buffer` — deliberately, so a browser bundler
+ * picks up the polyfill. Bun leaves that subpath external for a Node target, which produced a
+ * bundle that died on its first invocation with "Cannot find module 'buffer/index'": the build
+ * was green and every request was a 500. The shim points it at Node's own Buffer instead.
+ */
+const nodeBuffer: BunPlugin = {
+  name: 'buffer-subpath-to-node-builtin',
+  setup(build) {
+    build.onResolve({ filter: /^buffer\/index$/ }, () => ({
+      path: join(ROOT, 'tools/build/node-buffer.cjs'),
+    }));
+  },
+};
+
 const run = async (command: readonly string[]): Promise<void> => {
   const result = Bun.spawnSync(command, { cwd: ROOT, stdout: 'inherit', stderr: 'inherit' });
   if (result.exitCode !== 0) {
@@ -31,15 +47,26 @@ const run = async (command: readonly string[]): Promise<void> => {
 
 const bundleApi = async (): Promise<void> => {
   await mkdir(FUNCTION, { recursive: true });
-  await run([
-    'bun',
-    'build',
-    'apps/api/src/vercel-entry.ts',
-    '--target=node',
-    '--format=esm',
-    `--outfile=${join(FUNCTION, 'index.mjs')}`,
-    ...OPTIONAL_NEST_DEPS.map((dependency) => `--external=${dependency}`),
-  ]);
+
+  // The API rather than the CLI, because the bundle needs a resolver plugin and `bun build`
+  // has no flag for one.
+  const built = await Bun.build({
+    entrypoints: ['apps/api/src/vercel-entry.ts'],
+    target: 'node',
+    format: 'esm',
+    external: [...OPTIONAL_NEST_DEPS],
+    plugins: [nodeBuffer],
+  });
+  if (!built.success) {
+    throw new AggregateError(built.logs, 'Bundling the API failed.');
+  }
+  const [artifact] = built.outputs;
+  if (artifact === undefined) throw new Error('Bundling the API produced no output.');
+  await writeFile(join(FUNCTION, 'index.mjs'), Buffer.from(await artifact.arrayBuffer()));
+
+  // A require the runtime cannot satisfy is a function that dies on its first request, and the
+  // build is the last place that can see it. Anything genuinely optional is listed above.
+  assertResolvable(await Bun.file(join(FUNCTION, 'index.mjs')).text());
 
   await writeFile(
     join(FUNCTION, '.vc-config.json'),
@@ -57,6 +84,45 @@ const bundleApi = async (): Promise<void> => {
   );
   await writeFile(join(FUNCTION, 'package.json'), `${JSON.stringify({ type: 'module' })}\n`);
 };
+
+/**
+ * Every bare `require` left in the bundle, minus Node's own modules and the optional Nest
+ * dependencies we chose not to ship. The list should be empty; anything in it would surface in
+ * production as FUNCTION_INVOCATION_FAILED on the first request rather than as a build error.
+ */
+const assertResolvable = (bundle: string): void => {
+  const required = new Set(
+    [...bundle.matchAll(/__require\("([^"]+)"\)/g)].map(([, specifier]) => specifier ?? ''),
+  );
+  const unresolved = [...required].filter(
+    (specifier) =>
+      !specifier.startsWith('node:') &&
+      !isNodeBuiltin(specifier) &&
+      !OPTIONAL_NEST_DEPS.some(
+        (dependency) => specifier === dependency || specifier.startsWith(`${dependency}/`),
+      ) &&
+      // Nest reaches into these two by path when the feature is used; the packages are external.
+      !specifier.startsWith('@nestjs/websockets/') &&
+      !specifier.startsWith('@nestjs/microservices/'),
+  );
+  if (unresolved.length > 0) {
+    throw new Error(
+      `The bundle requires modules it does not contain: ${unresolved.join(', ')}. ` +
+        'Bundle them, or add them to OPTIONAL_NEST_DEPS if nothing here uses them.',
+    );
+  }
+};
+
+/**
+ * Node's own list, matched whole. `util/types` is a builtin and `buffer/index` is a package, so
+ * anything that reasons about the part before the slash gets one of the two wrong.
+ */
+const isNodeBuiltin = (specifier: string): boolean => BUILTINS.has(specifier);
+
+/** `module.builtinModules` without the `node:`-prefixed duplicates. */
+const BUILTINS = new Set(
+  (await import('node:module')).builtinModules.filter((name) => !name.startsWith('node:')),
+);
 
 const config = {
   version: 3,
