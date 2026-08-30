@@ -14,6 +14,12 @@ const schema = z.object({
    */
   OPEN_LOOPS_MODE: z.enum(['LOCAL', 'HOSTED']).default('LOCAL'),
   OPEN_LOOPS_TIMEZONE: z.string().default('UTC'),
+  /**
+   * Seeds the *first* account's identity — the Composio user its connected apps hang off, and
+   * the handles that make a signal "to me" — and nothing more. Both live on the account row
+   * once claimed, so a second account never shares the first one's OAuth grants and a change of
+   * handles is a save rather than a redeploy.
+   */
   OPEN_LOOPS_USER_ID: z.string().default('local-user'),
   OPEN_LOOPS_HANDLES: z.string().default(''),
   OPEN_LOOPS_AGENT_TOKEN: z.string().optional(),
@@ -119,8 +125,11 @@ const DEFAULT_MODELS: Record<AiProvider, string> = {
 export const aiModel = (config: AppConfig): string =>
   config.AI_MODEL ?? DEFAULT_MODELS[aiProvider(config)];
 
-/** Handles that identify the user across providers, used to tell "I said" from "they said". */
-export const meHandles = (config: AppConfig): readonly string[] =>
+/**
+ * The handles the first account starts life with, used to tell "I said" from "they said". Read
+ * once, when that account claims its identity; `AccountIdentities` is the answer after that.
+ */
+export const seedHandles = (config: AppConfig): readonly string[] =>
   [config.OPEN_LOOPS_USER_ID, ...config.OPEN_LOOPS_HANDLES.split(',')]
     .map((value) => value.trim())
     .filter((value) => value.length > 0);

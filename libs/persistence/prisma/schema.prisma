@@ -228,6 +228,17 @@ model User {
   /// "log out everywhere" and a password reset the same operation.
   tokenVersion Int      @default(0)
 
+  /// The identity Composio scopes this person's connected accounts to. Stored rather than
+  /// derived from the id: the account that connected Slack and GitHub before this app had
+  /// accounts keyed them to OPEN_LOOPS_USER_ID, and it keeps them by claiming that value once.
+  /// Unique, so two people can never end up sharing one set of upstream OAuth connections.
+  composioUserId String? @unique
+
+  /// The names this person answers to across providers — the addresses and usernames that make
+  /// a message "to me" rather than about someone else. Per account, because a shared list would
+  /// attribute one person's mail to everybody.
+  handles String[] @default([])
+
   settings     UserSettings?
   loops        OpenLoop[]
   plans        DailyPlan[]

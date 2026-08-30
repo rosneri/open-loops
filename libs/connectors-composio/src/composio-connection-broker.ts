@@ -9,7 +9,11 @@ import type { ComposioSessionProvider } from './composio-session.js';
 import { providerForToolkit, toolkitSlugFor } from './composio-session.js';
 
 /**
- * Why this exists at all: Composio owns the OAuth applications, so the user never registers a
+ * Bound to one account's session, so every question it asks Composio — start a handshake, read
+ * back what is connected, drop a connection — is asked as that person and can only ever see
+ * that person's connected apps.
+ *
+ * Why it exists at all: Composio owns the OAuth applications, so the user never registers a
  * redirect URI in Slack, GitHub, Google or Linear. Connecting is one `authorize` call and one
  * browser round-trip, and the token never touches this process.
  */
@@ -52,13 +56,14 @@ export class ComposioConnectionBroker implements ConnectionBroker {
     return {
       active: match.connection?.isActive === true,
       scopes: [],
-      accountLabel: `${match.name} · ${this.deps.sessions.userId}`,
+      accountLabel: `${match.name} · ${await this.deps.sessions.userId$()}`,
     };
   }
 
   public async listConnected(): Promise<readonly UpstreamConnection[]> {
     const session = await this.deps.sessions.session$();
     const { items } = await session.toolkits();
+    const userId = await this.deps.sessions.userId$();
 
     return items.flatMap((item) => {
       const provider = providerForToolkit(item.slug);
@@ -70,7 +75,7 @@ export class ComposioConnectionBroker implements ConnectionBroker {
         {
           provider,
           externalAccountRef: accountId,
-          accountLabel: `${item.name} · ${this.deps.sessions.userId}`,
+          accountLabel: `${item.name} · ${userId}`,
         },
       ];
     });

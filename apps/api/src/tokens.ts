@@ -17,11 +17,13 @@ export const Tokens = {
   UserRepository: 'OL_USER_REPOSITORY',
   SettingsRepository: 'OL_SETTINGS_REPOSITORY',
 
-  SourceConnectors: 'OL_SOURCE_CONNECTORS',
-  ConnectionBroker: 'OL_CONNECTION_BROKER',
+  /**
+   * The Composio session cache, not a session: a session belongs to one account, and the only
+   * way to reach one is to name that account. Undefined when no key is configured.
+   */
+  ComposioSessions: 'OL_COMPOSIO_SESSIONS',
   ConnectableProviders: 'OL_CONNECTABLE_PROVIDERS',
   ConnectionMode: 'OL_CONNECTION_MODE',
-  ToolExplorer: 'OL_TOOL_EXPLORER',
   PodcastGenerator: 'OL_PODCAST_GENERATOR',
   AudioStore: 'OL_AUDIO_STORE',
 

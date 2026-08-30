@@ -47,11 +47,11 @@ export class SettingsService {
     return { sweepCron: this.config.TICK_CRON, podcastCron: this.config.PODCAST_CRON };
   }
 
-  public async view(userId: string): Promise<SettingsDto> {
+  public async view(userId: string): Promise<StoredSettings> {
     return this.toDto(await this.current(userId));
   }
 
-  public async update(userId: string, patch: UpdateSettingsDto): Promise<SettingsDto> {
+  public async update(userId: string, patch: UpdateSettingsDto): Promise<StoredSettings> {
     if (patch.sweepCron !== undefined) assertCron(patch.sweepCron, 'sweepCron');
     if (patch.podcastCron !== undefined) assertCron(patch.podcastCron, 'podcastCron');
 
@@ -59,10 +59,10 @@ export class SettingsService {
     await this.current(userId);
     // No in-process listener to notify: the scheduler lives in its own process and re-reads
     // every schedule on a short poll, so a save is picked up without anything to wire here.
-    return this.toDto(await this.repository.update(userId, patch));
+    return this.toDto(await this.repository.update(userId, withoutHandles(patch)));
   }
 
-  private toDto(record: UserSettingsRecord): SettingsDto {
+  private toDto(record: UserSettingsRecord): StoredSettings {
     return {
       sweepCron: record.sweepCron,
       podcastCron: record.podcastCron,
@@ -84,6 +84,18 @@ export class SettingsService {
     };
   }
 }
+
+/**
+ * The settings row knows nothing about handles — they are who the account *is*, not something
+ * it configured — so the one place they meet is the controller that answers the screen.
+ */
+export type StoredSettings = Omit<SettingsDto, 'handles'>;
+
+/** Keeps a patch aimed at the settings row from carrying a field that lives on the account. */
+const withoutHandles = (patch: UpdateSettingsDto): UpdateSettingsDto => {
+  const { handles: _handles, ...rest } = patch;
+  return rest;
+};
 
 /**
  * `cron`'s own parser, so the app and the scheduler agree on exactly which expressions are

@@ -37,7 +37,11 @@ const INTENTS: Partial<Record<SourceProvider, readonly string[]>> = {
 export interface ComposioSourceConnectorDeps {
   readonly explorer: ComposioToolExplorer;
   readonly logger: Logger;
-  readonly meHandles: readonly string[];
+  /**
+   * The handles that make a signal "mine", read per sync rather than captured at construction:
+   * they live on the account row and can change between one tick and the next.
+   */
+  readonly meHandles: () => Promise<readonly string[]>;
 }
 
 /**
@@ -89,7 +93,7 @@ export class ComposioSourceConnector implements SourceConnector {
         payload: execution.data,
         ctx: {
           provider: context.input.provider,
-          meHandles: this.deps.meHandles,
+          meHandles: await this.deps.meHandles(),
           fallbackAt: context.input.since,
         },
       });

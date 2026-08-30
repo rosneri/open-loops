@@ -53,9 +53,22 @@ The child tables — criteria, evidence, plan blocks, the event log — delibera
 column. They are reachable only through a parent that already has one, and a second copy of the
 answer could disagree with it.
 
-One thing is not yet per-account: Composio's connected apps are keyed by `OPEN_LOOPS_USER_ID`, so
-every account shares the same upstream OAuth connections. Splitting that would orphan the
-connections already made, so it is left as a known limit rather than quietly broken.
+Identity is per-account too, which is the part that is easy to get wrong. Composio keys connected
+apps to a user id, and that id now lives on the account row rather than in `OPEN_LOOPS_USER_ID` —
+otherwise connecting Slack once would connect it for everyone. Every session, broker, tool call
+and probe is built from `SourceStackFactory.for(ownerId)`, so there is no object in the process
+that can reach Composio without having said whose connections it wants.
+
+The first account claims the old `OPEN_LOOPS_USER_ID` verbatim the first time it is used, so the
+apps already connected under it stay connected; everyone after that gets their own identity, and
+a unique index on the column is what makes "share someone else's OAuth grants" unrepresentable.
+The same claim seeds that account's handles from `OPEN_LOOPS_HANDLES` once — the addresses and
+usernames that make a message *to you* rather than about you. After that they are a field on the
+Settings screen, per account, because one shared list attributes one person's mail to everybody.
+
+Podcast audio is written under `podcast/<ownerId>/<day>.mp3` for the same reason: two people
+recording the same day used to write the same object, and both rows then pointed at one person's
+episode. The route that serves an episode from disk checks the file belongs to the caller.
 
 ## Settings, and where a schedule actually runs
 

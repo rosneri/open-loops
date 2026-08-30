@@ -7,10 +7,12 @@ import type {
   PodcastGenerator,
   PodcastLength,
 } from '@open-loops/podcast';
-import { Episode } from '@open-loops/podcast';
+import { audioKeyFor, Episode } from '@open-loops/podcast';
 import type { TodayViewQuery } from '../queries/today-view.query.js';
 
 export interface GenerateDailyPodcastDeps {
+  /** Whose day this is. It is part of where the audio is written, not only of the row. */
+  readonly ownerId: string;
   readonly today: TodayViewQuery;
   readonly episodes: EpisodeRepository;
   readonly generator: PodcastGenerator;
@@ -78,7 +80,7 @@ export class GenerateDailyPodcastUseCase {
       episode.accepted(generated.externalRef);
 
       const stored = await this.deps.audio.put({
-        key: `podcast/${view.day}.mp3`,
+        key: audioKeyFor({ ownerId: this.deps.ownerId, day: view.day }),
         body: generated.audio,
         contentType: generated.contentType,
       });

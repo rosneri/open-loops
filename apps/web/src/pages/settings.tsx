@@ -5,6 +5,7 @@ import { useAsyncAction } from '../hooks/use-async-action.js';
 import { CronField } from '../components/cron-field.js';
 import { EpisodeList } from '../components/episode-list.js';
 import { ErrorPanel } from '../components/error-panel.js';
+import { HandlesField } from '../components/handles-field.js';
 import { PlatformCronNotice } from '../components/platform-cron-notice.js';
 import { PodcastSettings } from '../components/podcast-settings.js';
 
@@ -22,6 +23,7 @@ const merge = (saved: SettingsDto, draft: UpdateSettingsDto): SettingsDto => {
     podcastCron: draft.podcastCron ?? saved.podcastCron,
     podcastEnabled: draft.podcastEnabled ?? saved.podcastEnabled,
     podcastLength: draft.podcastLength ?? saved.podcastLength,
+    handles: draft.handles ?? saved.handles,
     ...(host === undefined ? {} : { podcastHostVoiceId: host }),
     ...(guest === undefined ? {} : { podcastGuestVoiceId: guest }),
   };
@@ -105,6 +107,16 @@ export function SettingsPage(): React.ReactElement {
           value={value.sweepCron}
           onChange={(sweepCron) => {
             edit({ sweepCron });
+          }}
+        />
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">You</h2>
+        <HandlesField
+          value={value.handles}
+          onChange={(handles) => {
+            edit({ handles });
           }}
         />
       </section>

@@ -1,26 +1,14 @@
 import { Global, Module, type Provider } from '@nestjs/common';
 import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/kernel';
 import { ALL_SOURCE_PROVIDERS } from '@open-loops/kernel';
-import type { ConnectionBroker } from '@open-loops/integrations';
 import { ConnectionMode } from '@open-loops/integrations';
-import type { SourceConnector } from '@open-loops/signals';
 import {
   PrismaUserRepository,
   PrismaSettingsRepository,
   createPrismaClient,
   type PrismaClient,
 } from '@open-loops/persistence';
-import {
-  COMPOSIO_PROVIDERS,
-  ComposioConnectionBroker,
-  ComposioSessionProvider,
-  ComposioSourceConnector,
-  ComposioToolExplorer,
-} from '@open-loops/connectors-composio';
-import {
-  LocalAgentSourceConnector,
-  LocalConnectionBroker,
-} from '@open-loops/connectors-local';
+import { COMPOSIO_PROVIDERS, ComposioSessionRegistry } from '@open-loops/connectors-composio';
 import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
 import { ElevenLabsPodcastGenerator } from '@open-loops/connectors-elevenlabs';
 import {
@@ -37,7 +25,9 @@ import {
   lazyModel,
 } from '@open-loops/reasoning';
 import type { AppConfig } from '../config/env.js';
-import { aiModel, aiProvider, isLocalMode, loadConfig, meHandles } from '../config/env.js';
+import { aiModel, aiProvider, isLocalMode, loadConfig } from '../config/env.js';
+import { AccountIdentities } from './account-identity.service.js';
+import { SourceStackFactory } from './source-stack.factory.js';
 import { BlobAudioStore } from './blob-audio-store.js';
 import { FileAudioStore } from './file-audio-store.js';
 import { SystemClock } from '../system/system-clock.js';
@@ -140,18 +130,26 @@ const dataStrategy: Provider[] = [
       isLocalMode(config) ? ConnectionMode.LocalAgent : ConnectionMode.Hosted,
   },
   {
-    provide: Tokens.ToolExplorer,
-    inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger): ComposioToolExplorer | undefined => {
+    /**
+     * A registry, not a session. Composio keys connected accounts to a user id, and that id now
+     * comes from the account row — so nothing here can talk to Composio without first saying
+     * whose connections it wants.
+     */
+    provide: Tokens.ComposioSessions,
+    inject: [Tokens.Config, Tokens.Logger, AccountIdentities],
+    useFactory: (
+      config: AppConfig,
+      logger: Logger,
+      identities: AccountIdentities,
+    ): ComposioSessionRegistry | undefined => {
       if (config.COMPOSIO_API_KEY === undefined || config.COMPOSIO_API_KEY.length === 0) {
         return undefined;
       }
-      const sessions = new ComposioSessionProvider({
-        userId: config.OPEN_LOOPS_USER_ID,
+      return new ComposioSessionRegistry({
         apiKey: config.COMPOSIO_API_KEY,
         logger,
+        identity: async (ownerId) => await identities.composioUserId(ownerId),
       });
-      return new ComposioToolExplorer({ sessions, logger });
     },
   },
   {
@@ -160,34 +158,14 @@ const dataStrategy: Provider[] = [
     useFactory: (config: AppConfig): readonly SourceProvider[] =>
       isLocalMode(config) ? ALL_SOURCE_PROVIDERS : COMPOSIO_PROVIDERS,
   },
-  {
-    provide: Tokens.SourceConnectors,
-    inject: [Tokens.Config, Tokens.Logger, Tokens.ToolExplorer],
-    useFactory: (
-      config: AppConfig,
-      logger: Logger,
-      explorer: ComposioToolExplorer | undefined,
-    ): readonly SourceConnector[] =>
-      isLocalMode(config) || explorer === undefined
-        ? [new LocalAgentSourceConnector(logger)]
-        : [new ComposioSourceConnector({ explorer, logger, meHandles: meHandles(config) })],
-  },
-  {
-    provide: Tokens.ConnectionBroker,
-    inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger): ConnectionBroker => {
-      if (isLocalMode(config) || config.COMPOSIO_API_KEY === undefined) {
-        return new LocalConnectionBroker();
-      }
-      const sessions = new ComposioSessionProvider({
-        userId: config.OPEN_LOOPS_USER_ID,
-        apiKey: config.COMPOSIO_API_KEY,
-        logger,
-      });
-      return new ComposioConnectionBroker({ sessions, logger });
-    },
-  },
 ];
+
+/**
+ * Per-account services. They are singletons in the container and factories in behaviour: each
+ * hands out an object already bound to one owner, which is the same trick `WorkspaceFactory`
+ * plays for the database.
+ */
+const identity: Provider[] = [AccountIdentities, SourceStackFactory];
 
 const reasoning: Provider[] = [
   {
@@ -266,12 +244,17 @@ const keyedGenerator = (input: {
 /** `sonnet` is a CLI alias; the API needs a real model id. */
 const FALLBACK_MODEL = 'claude-sonnet-5';
 
-const ALL = [...base, ...persistence, ...podcast, ...dataStrategy, ...reasoning];
+const ALL = [...base, ...persistence, ...podcast, ...dataStrategy, ...identity, ...reasoning];
 
 /**
  * The composition root: the single place where interfaces meet implementations. It is global
  * so feature modules can inject ports without re-declaring providers.
  */
 @Global()
-@Module({ providers: ALL, exports: ALL.map((provider) => (provider as { provide: string }).provide) })
+@Module({
+  providers: ALL,
+  exports: ALL.map((provider) =>
+    typeof provider === 'function' ? provider : (provider as { provide: string }).provide,
+  ),
+})
 export class InfrastructureModule {}

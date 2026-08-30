@@ -1,10 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/kernel';
-import type { ConnectionBroker, ConnectionMode } from '@open-loops/integrations';
+import type { ConnectionMode } from '@open-loops/integrations';
 import type { ProbeRunner } from '@open-loops/loops';
 import { LocalProbeRunner } from '@open-loops/connectors-local';
 import { ComposioProbeRunner, type ComposioToolExplorer } from '@open-loops/connectors-composio';
-import type { SourceConnector } from '@open-loops/signals';
 import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
 import type { LoopExtractor, LoopReconciler } from '@open-loops/orchestration';
 import {
@@ -33,10 +32,13 @@ import {
 } from '@open-loops/persistence';
 import type { AppConfig } from '../config/env.js';
 import { Tokens } from '../tokens.js';
+import { SourceStackFactory } from './source-stack.factory.js';
 
 /**
  * The singletons a workspace is assembled from. Grouped into one injected object because a
- * constructor taking eleven of them separately is unreadable, and none of them are per-owner.
+ * constructor taking nine of them separately is unreadable, and none of them are per-owner.
+ * Anything that reaches an upstream account is deliberately not here: those come from
+ * `SourceStackFactory`, which cannot hand one out without being told whose it is.
  *
  * Declared before the factory that injects it: Nest reads constructor types from decorator
  * metadata at class-definition time, so a forward reference here is a runtime error rather than
@@ -48,12 +50,9 @@ export class SharedServices {
     @Inject(Tokens.Clock) public readonly clock: Clock,
     @Inject(Tokens.Ids) public readonly ids: IdGenerator,
     @Inject(Tokens.Logger) public readonly logger: Logger,
-    @Inject(Tokens.SourceConnectors) public readonly connectors: readonly SourceConnector[],
-    @Inject(Tokens.ConnectionBroker) public readonly broker: ConnectionBroker,
     @Inject(Tokens.ConnectionMode) public readonly mode: ConnectionMode,
     @Inject(Tokens.ConnectableProviders)
     public readonly connectableProviders: readonly SourceProvider[],
-    @Inject(Tokens.ToolExplorer) public readonly explorer: ComposioToolExplorer | undefined,
     @Inject(Tokens.LoopExtractor) public readonly extractor: LoopExtractor,
     @Inject(Tokens.LoopReconciler) public readonly reconciler: LoopReconciler,
     @Inject(Tokens.PodcastGenerator) public readonly generator: PodcastGenerator,
@@ -64,6 +63,8 @@ export class SharedServices {
 /** Everything one person can do, already bound to that person. */
 export interface Workspace {
   readonly ownerId: string;
+  /** This account's window onto Composio's tools; undefined in local mode or without a key. */
+  readonly explorer: ComposioToolExplorer | undefined;
   readonly tick: RunTickUseCase;
   readonly today: TodayViewQuery;
   readonly commands: LoopCommandsUseCase;
@@ -91,6 +92,7 @@ export class WorkspaceFactory {
     @Inject(Tokens.Prisma) private readonly prisma: PrismaClient,
     @Inject(Tokens.Config) private readonly config: AppConfig,
     private readonly shared: SharedServices,
+    private readonly stacks: SourceStackFactory,
   ) {}
 
   public for(ownerId: string): Workspace {
@@ -110,16 +112,20 @@ export class WorkspaceFactory {
 
     const { clock, ids, logger } = this.shared;
 
-    // In local mode the probe runner reads from this owner's queue, so it cannot be a singleton
-    // the way the hosted one can. Building it here is what keeps the queue per person.
+    // Sources, the OAuth broker and the tool explorer, all bound to this owner: two accounts
+    // that both connected Slack are two Composio identities, not one shared connection.
+    const stack = this.stacks.for(ownerId);
+
+    // Local mode answers probes out of band, from this owner's own queue. Hosted mode asks
+    // Composio as this owner. Neither can read another account's answer.
     const probeRunners: readonly ProbeRunner[] =
-      this.shared.explorer === undefined || this.config.OPEN_LOOPS_MODE === 'LOCAL'
+      stack.explorer === undefined
         ? [new LocalProbeRunner(probes)]
-        : [new ComposioProbeRunner({ explorer: this.shared.explorer, logger })];
+        : [new ComposioProbeRunner({ explorer: stack.explorer, logger })];
 
     const integrations = new ManageIntegrationsUseCase({
       integrations: integrationRepo,
-      broker: this.shared.broker,
+      broker: stack.broker,
       mode: this.shared.mode,
       connectableProviders: this.shared.connectableProviders,
       ids,
@@ -130,7 +136,7 @@ export class WorkspaceFactory {
       integrations: integrationRepo,
       cursors,
       signals,
-      connectors: this.shared.connectors,
+      connectors: stack.connectors,
       clock,
       logger,
     });
@@ -162,6 +168,7 @@ export class WorkspaceFactory {
     return {
       ownerId,
       loops,
+      explorer: stack.explorer,
       episodes,
       probes,
       integrations,
@@ -171,6 +178,7 @@ export class WorkspaceFactory {
       commands: new LoopCommandsUseCase({ loops, plans, events, clock }),
       tick: new RunTickUseCase({ integrations, sync, extract, reconcile, rebalance, clock, logger }),
       podcast: new GenerateDailyPodcastUseCase({
+        ownerId,
         today,
         episodes,
         generator: this.shared.generator,

@@ -8,6 +8,7 @@ import type { EpisodeDto } from '@open-loops/contracts';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import type { Episode, PodcastLength } from '@open-loops/podcast';
+import { audioFilePrefixFor } from '@open-loops/podcast';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
 import { USER_HEADER } from '../agent/agent.controller.js';
 import type { RequestWithUser } from '../auth/jwt-auth.guard.js';
@@ -31,11 +32,24 @@ export class PodcastController {
   /**
    * Serves an episode written by the filesystem store. Only reachable in a deployment that has
    * no blob store — with one, the URL points straight at the blob and never comes back here.
+   *
+   * Every account's files sit in one directory, so the name alone is not authorisation: the
+   * request has to be for a file this account's own episodes are written under. Anything else
+   * is "no such episode" rather than "not yours", which is also all a stranger should learn.
    */
   @Get('audio/:name')
-  public async audio(@Param('name') name: string, @Res() response: Response): Promise<void> {
+  public async audio(
+    @Owner() ownerId: string,
+    @Param('name') name: string,
+    @Res() response: Response,
+  ): Promise<void> {
     // `basename` first: the name comes from a URL, and nothing else stops `../` here.
-    const file = join(resolve(this.config.PODCAST_DIR), basename(name));
+    const requested = basename(name);
+    if (!requested.startsWith(audioFilePrefixFor(ownerId))) {
+      throw new NotFoundException('No such episode.');
+    }
+
+    const file = join(resolve(this.config.PODCAST_DIR), requested);
     const size = await stat(file).catch(() => undefined);
     if (size === undefined) throw new NotFoundException('No such episode.');
 

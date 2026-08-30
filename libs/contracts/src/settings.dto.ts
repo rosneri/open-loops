@@ -16,6 +16,12 @@ export interface SettingsDto {
    */
   readonly schedulerKind: 'EXTERNAL';
   readonly podcastConfigured: boolean;
+  /**
+   * The names this account answers to across providers — what makes a message "to me" rather
+   * than about someone else. Per account, so one person's addresses never speak for another's.
+   * The username is always one of them and is not editable.
+   */
+  readonly handles: readonly string[];
   readonly updatedAt: number;
 }
 
@@ -30,4 +36,5 @@ export interface UpdateSettingsDto {
   readonly podcastLength?: PodcastLengthDto | undefined;
   readonly podcastHostVoiceId?: string | undefined;
   readonly podcastGuestVoiceId?: string | undefined;
+  readonly handles?: readonly string[] | undefined;
 }

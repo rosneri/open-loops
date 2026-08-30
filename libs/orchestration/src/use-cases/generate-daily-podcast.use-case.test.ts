@@ -63,9 +63,17 @@ const repository = (stored?: Episode): EpisodeRepository & { saved: Episode[] } 
   };
 };
 
-const audio: AudioStore = {
-  isConfigured: () => true,
-  put: async () => await Promise.resolve({ url: 'https://blob.example/podcast/2026-08-29.mp3' }),
+/** Remembers the key it was written under; whose episode this is is part of that key. */
+const audioStore = (): AudioStore & { keys: string[] } => {
+  const keys: string[] = [];
+  return {
+    keys,
+    isConfigured: () => true,
+    put: async (input) => {
+      keys.push(input.key);
+      return await Promise.resolve({ url: `https://blob.example/${input.key}` });
+    },
+  };
 };
 
 const generator = (
@@ -79,18 +87,50 @@ const build = (input: {
   today: TodayDto;
   episodes: EpisodeRepository;
   generator: PodcastGenerator;
+  ownerId?: string;
+  audio?: AudioStore;
 }): GenerateDailyPodcastUseCase =>
   new GenerateDailyPodcastUseCase({
+    ownerId: input.ownerId ?? 'user-1',
     today: { execute: async () => await Promise.resolve(input.today) } as TodayViewQuery,
     episodes: input.episodes,
     generator: input.generator,
-    audio,
+    audio: input.audio ?? audioStore(),
     clock,
     ids: { next: () => 'episode-1' },
     logger,
   });
 
+const recorded = async (): Promise<GeneratedPodcast> =>
+  await Promise.resolve({
+    audio: new Uint8Array([1, 2, 3]),
+    contentType: 'audio/mpeg',
+    externalRef: 'project-1',
+  });
+
 describe('GenerateDailyPodcastUseCase', () => {
+  /**
+   * Two people recording the same day must not write the same object. Without the owner in the
+   * key the second episode overwrites the first, and both rows then point at one person's audio.
+   */
+  it('writes each account\'s episode under its own key', async () => {
+    const audio = audioStore();
+    for (const ownerId of ['user-1', 'user-2']) {
+      await build({
+        ownerId,
+        audio,
+        today: view(),
+        episodes: repository(),
+        generator: generator(recorded),
+      }).execute({ length: 'default' });
+    }
+
+    expect(audio.keys).toEqual([
+      'podcast/user-1/2026-08-29.mp3',
+      'podcast/user-2/2026-08-29.mp3',
+    ]);
+  });
+
   it('names the loops in the brief, so the hosts have something concrete to say', async () => {
     let seen: PodcastRequest | undefined;
     const episodes = repository();
@@ -113,7 +153,7 @@ describe('GenerateDailyPodcastUseCase', () => {
     // The count helper only ever pluralises a real noun; the other two are phrases.
     expect(seen?.brief).not.toContain('in progresss');
     expect(seen?.brief).toContain('0 in progress');
-    expect(result.audioUrl).toBe('https://blob.example/podcast/2026-08-29.mp3');
+    expect(result.audioUrl).toBe('https://blob.example/podcast/user-1/2026-08-29.mp3');
   });
 
   /** The state this product is built around deserves its own paragraph in the brief. */
