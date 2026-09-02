@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-documents'
+  description: 'Documents: whether the page that was promised has actually been touched.'
+
+dependsOn:
+  - kernel
+  - loops
+  - plugin-api
+  - plugin-host
+
+tags:
+  - 'plugin'

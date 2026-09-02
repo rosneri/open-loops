@@ -6,7 +6,7 @@ may never conclude.** Everything else is downstream of that.
 ## The dependency rule
 
 ```
-kernel  ←  domain contexts  ←  orchestration  ←  adapters  ←  apps
+kernel  ←  domain contexts  ←  orchestration  ←  plugin-api  ←  adapters  ←  plugins  ←  apps
 ```
 
 Arrows point inward only, and `eslint-plugin-boundaries` fails the build if one turns around.
@@ -57,10 +57,12 @@ earlier positive, because a reverted PR is real news.
 
 Two steps, both structured-output calls through the Vercel AI SDK:
 
-1. `AiLoopExtractor` — signals in, candidate loops with probes out. Anything whose
+1. `ModelLoopExtractor` — signals in, candidate loops with probes out. Anything whose
    `sourceExternalId` was not in the batch it was handed is discarded by the use case, so a
-   hallucinated source produces nothing.
-2. `AiLoopReconciler` — sees the probes' hard verdicts *first*, the chatter second, and may only
+   hallucinated source produces nothing. It is only allowed to propose probe kinds this
+   deployment actually installed, because the prompt it is given and the schema it is held to
+   are both generated from the same registry that holds the runners.
+2. `ModelLoopReconciler` — sees the probes' hard verdicts *first*, the chatter second, and may only
    speak in per-criterion verdicts. It is instructed to prefer `INCONCLUSIVE`, because guessing
    `SATISFIED` closes a loop that is still open — the worst thing this system can do.
 
@@ -90,6 +92,42 @@ same domain code as the hosted one, differing only in which adapter is bound.
 Repositories map rows to aggregates and back. The one subtlety: criteria are replaced wholesale
 on save (they are the model's revisable opinion of "done"), while evidence rows are only ever
 appended. Losing an observation would silently reopen a closed loop.
+
+## Everything at the edge is a plugin
+
+The core decides; the edges are replaceable. A plugin declares an id, what it requires and which
+capabilities it wants, and gets a setup context carrying only the ports it asked for. Registering
+something it did not declare fails the boot, not the first request that needed it.
+
+The rule the whole thing is arranged around is the one the model already lives under: **a plugin
+may propose and observe, and may never conclude.** It is enforced by what it is handed rather
+than by review — `read:loops` grants `findById`, `findBySourceKey` and `list`, and there is no
+`save` on the object at all. `assessCompletion`, the two-axis status model, append-only evidence
+and tenancy-by-construction are not extension points and are not meant to become any.
+
+Probe kinds were the first thing to move out, because they were the clearest case of the same
+list existing four times: a union member in `loops`, a line in the extractor's prompt, a branch
+in a parser and a case in a table of tool calls. Those four could disagree, and did. A
+`ProbeDefinition` states all four once, and only the last of them touches the world.
+
+The domain kept the envelope — kind, description, provider, a parameter bag — and gave up the
+union. It bought less than it looked like it did: every runner already reached into a probe by
+string key, because a tool call is a bag of strings at the far end whatever shape it left in.
+Rows written before the change are read back through `toProbeEnvelope`, which is what made this
+a deployment rather than a migration.
+
+The heartbeat, the HTTP surface and the clock take contributions the same way. `RunTickUseCase`
+still runs its own four steps — sync, extract, reconcile, re-plan *are* the product, and a plugin
+that could remove one could quietly stop the app being honest — and then runs whatever steps were
+registered, each isolated so that a plugin failing cannot discard work the tick already
+committed. Controllers are mounted from the registry at boot, which is why plugins load before
+the container is built rather than as a provider inside it. And a schedule is a registered kind
+rather than a column named after something the app happens to do, so the Settings screen and the
+external scheduler both enumerate instead of branching.
+
+`plugins/` holds them, one directory apiece, and `eslint-plugin-boundaries` forbids a plugin from
+importing another plugin's source. That restriction is the whole value: a feature you can delete
+by deleting a directory is a feature you can also reason about on its own.
 
 ## Size limits as a design tool
 

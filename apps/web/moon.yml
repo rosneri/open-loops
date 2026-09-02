@@ -21,7 +21,7 @@ tasks:
       cache: false
       persistent: true
   build:
-    command: 'vite build'
+    command: 'bun run vite build'
     inputs:
       - '@group(sources)'
       - 'index.html'

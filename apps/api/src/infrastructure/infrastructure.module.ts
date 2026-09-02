@@ -1,14 +1,14 @@
-import { Global, Module, type Provider } from '@nestjs/common';
+import { Global, Module, type DynamicModule, type Provider } from '@nestjs/common';
 import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/kernel';
-import { ALL_SOURCE_PROVIDERS } from '@open-loops/kernel';
 import { ConnectionMode } from '@open-loops/integrations';
 import {
   PrismaUserRepository,
   PrismaSettingsRepository,
+  PrismaScheduleRepository,
   createPrismaClient,
   type PrismaClient,
 } from '@open-loops/persistence';
-import { COMPOSIO_PROVIDERS, ComposioSessionRegistry } from '@open-loops/connectors-composio';
+import { ComposioSessionRegistry } from '@open-loops/connectors-composio';
 import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
 import { ElevenLabsPodcastGenerator } from '@open-loops/connectors-elevenlabs';
 import {
@@ -24,7 +24,11 @@ import {
   ModelLoopReconciler,
   lazyModel,
 } from '@open-loops/reasoning';
+import { PluginHost, ProbeCatalog, ScheduleCatalog, SourceCatalog } from '@open-loops/plugin-host';
 import type { AppConfig } from '../config/env.js';
+import type { BuiltInSchedules } from '../modules/settings/built-in-schedules.js';
+import { builtInSchedules } from '../modules/settings/built-in-schedules.js';
+import type { SettingsStores } from '../modules/settings/settings.service.js';
 import { aiModel, aiProvider, isLocalMode, isLongLived, loadConfig } from '../config/env.js';
 import { AccountIdentities } from './account-identity.service.js';
 import { SourceStackFactory } from './source-stack.factory.js';
@@ -69,6 +73,29 @@ const persistence: Provider[] = [
     provide: Tokens.SettingsRepository,
     inject: [Tokens.Prisma],
     useFactory: (prisma: PrismaClient) => new PrismaSettingsRepository(prisma),
+  },
+  {
+    provide: Tokens.ScheduleRepository,
+    inject: [Tokens.Prisma],
+    useFactory: (prisma: PrismaClient) => new PrismaScheduleRepository(prisma),
+  },
+  {
+    /** Always read together, so they are injected together rather than one argument each. */
+    provide: Tokens.SettingsStores,
+    inject: [Tokens.SettingsRepository, Tokens.ScheduleRepository],
+    useFactory: (
+      settings: PrismaSettingsRepository,
+      schedules: PrismaScheduleRepository,
+    ): SettingsStores => ({ settings, schedules }),
+  },
+  {
+    provide: Tokens.BuiltInSchedules,
+    inject: [Tokens.Config, Tokens.PodcastReadiness, Tokens.SettingsRepository],
+    useFactory: (
+      config: AppConfig,
+      podcastReady: boolean,
+      settings: PrismaSettingsRepository,
+    ): BuiltInSchedules => builtInSchedules({ config, podcastReady, settings }),
   },
 ];
 
@@ -165,10 +192,20 @@ const dataStrategy: Provider[] = [
     },
   },
   {
+    provide: Tokens.KnownProviders,
+    inject: [Tokens.SourceCatalog],
+    useFactory: (sources: SourceCatalog): readonly SourceProvider[] => sources.providers(),
+  },
+  {
+    /**
+     * Locally there is no OAuth to run, so everything the agent could push counts as connectable.
+     * Hosted, only the apps that named a toolkit can actually be authorised — offering the rest
+     * would be a Connect button that fails.
+     */
     provide: Tokens.ConnectableProviders,
-    inject: [Tokens.Config],
-    useFactory: (config: AppConfig): readonly SourceProvider[] =>
-      isLocalMode(config) ? ALL_SOURCE_PROVIDERS : COMPOSIO_PROVIDERS,
+    inject: [Tokens.Config, Tokens.SourceCatalog],
+    useFactory: (config: AppConfig, sources: SourceCatalog): readonly SourceProvider[] =>
+      isLocalMode(config) ? sources.providers() : sources.connectable(),
   },
 ];
 
@@ -179,6 +216,30 @@ const dataStrategy: Provider[] = [
  */
 const identity: Provider[] = [AccountIdentities, SourceStackFactory];
 
+/**
+ * The plugins load before anything that depends on what they registered, which is everything
+ * interesting: the extractor's prompt, the schema it is held to and the runners that answer it
+ * all come out of this. A plugin that fails to set up fails the boot rather than quietly
+ * removing a feature.
+ */
+const plugins: Provider[] = [
+  {
+    provide: Tokens.ProbeCatalog,
+    inject: [Tokens.PluginHost],
+    useFactory: (host: PluginHost): ProbeCatalog => ProbeCatalog.from(host),
+  },
+  {
+    provide: Tokens.SourceCatalog,
+    inject: [Tokens.PluginHost],
+    useFactory: (host: PluginHost): SourceCatalog => SourceCatalog.from(host),
+  },
+  {
+    provide: Tokens.ScheduleCatalog,
+    inject: [Tokens.PluginHost],
+    useFactory: (host: PluginHost): ScheduleCatalog => ScheduleCatalog.from(host),
+  },
+];
+
 const reasoning: Provider[] = [
   {
     provide: Tokens.StructuredGenerator,
@@ -188,9 +249,9 @@ const reasoning: Provider[] = [
   },
   {
     provide: Tokens.LoopExtractor,
-    inject: [Tokens.StructuredGenerator, Tokens.Logger],
-    useFactory: (generator: StructuredGenerator, logger: Logger) =>
-      new ModelLoopExtractor({ generator, logger }),
+    inject: [Tokens.StructuredGenerator, Tokens.ProbeCatalog, Tokens.Logger],
+    useFactory: (generator: StructuredGenerator, catalog: ProbeCatalog, logger: Logger) =>
+      new ModelLoopExtractor({ generator, catalog, logger }),
   },
   {
     provide: Tokens.LoopReconciler,
@@ -256,17 +317,39 @@ const keyedGenerator = (input: {
 /** `sonnet` is a CLI alias; the API needs a real model id. */
 const FALLBACK_MODEL = 'claude-sonnet-5';
 
-const ALL = [...base, ...persistence, ...podcast, ...dataStrategy, ...identity, ...reasoning];
+const ALL = [
+  ...base,
+  ...persistence,
+  ...plugins,
+  ...podcast,
+  ...dataStrategy,
+  ...identity,
+  ...reasoning,
+];
 
 /**
  * The composition root: the single place where interfaces meet implementations. It is global
  * so feature modules can inject ports without re-declaring providers.
  */
+const EXPORTS = ALL.map((provider) =>
+  typeof provider === 'function' ? provider : (provider as { provide: string }).provide,
+);
+
 @Global()
-@Module({
-  providers: ALL,
-  exports: ALL.map((provider) =>
-    typeof provider === 'function' ? provider : (provider as { provide: string }).provide,
-  ),
-})
-export class InfrastructureModule {}
+@Module({})
+export class InfrastructureModule {
+  /**
+   * The plugins are loaded before the container exists, because the container is partly made of
+   * what they registered — the probe catalog, the source catalog, the extractor's prompt. Passing
+   * the loaded host in as a value rather than resolving it as an async provider is what keeps
+   * that order impossible to get wrong.
+   */
+  public static forHost(host: PluginHost): DynamicModule {
+    const providers = [{ provide: Tokens.PluginHost, useValue: host }, ...ALL];
+    return {
+      module: InfrastructureModule,
+      providers,
+      exports: [Tokens.PluginHost, ...EXPORTS],
+    };
+  }
+}

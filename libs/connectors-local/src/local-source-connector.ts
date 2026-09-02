@@ -1,5 +1,4 @@
-import type { Logger } from '@open-loops/kernel';
-import { ALL_SOURCE_PROVIDERS } from '@open-loops/kernel';
+import type { Logger, SourceProvider } from '@open-loops/kernel';
 import type { FetchSignalsInput, FetchSignalsResult, SourceConnector } from '@open-loops/signals';
 
 /**
@@ -9,9 +8,19 @@ import type { FetchSignalsInput, FetchSignalsResult, SourceConnector } from '@op
  * know which mode the app is running in.
  */
 export class LocalAgentSourceConnector implements SourceConnector {
-  public readonly supports = ALL_SOURCE_PROVIDERS;
+  /**
+   * Everything the installed source plugins named. In local mode the agent can push whatever it
+   * can see, so the honest answer is "all of them" — but "all of them" is now a registry rather
+   * than a constant, and a deployment with fewer plugins genuinely supports fewer providers.
+   */
+  public readonly supports: readonly SourceProvider[];
 
-  public constructor(private readonly logger: Logger) {}
+  public constructor(
+    private readonly logger: Logger,
+    supports: readonly SourceProvider[],
+  ) {
+    this.supports = supports;
+  }
 
   public fetchSignals(input: FetchSignalsInput): Promise<FetchSignalsResult> {
     this.logger.debug('local mode: signals arrive by push, not by pull', {

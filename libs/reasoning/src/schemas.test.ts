@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { extractionResultSchema, reconciliationResultSchema } from './schemas.js';
+import { extractionResultSchemaFor, reconciliationResultSchema } from './schemas.js';
+
+/** The kinds the first-party probe plugins register, which is the widest real deployment. */
+const KINDS = [
+  'PULL_REQUEST_EXISTS',
+  'PULL_REQUEST_MERGED',
+  'REVIEW_SUBMITTED',
+  'ISSUE_CLOSED',
+  'ISSUE_STATUS_IS',
+  'REPLIED_IN_THREAD',
+  'MESSAGE_SENT_TO',
+  'EMAIL_SENT',
+  'CALENDAR_EVENT_EXISTS',
+  'DOCUMENT_UPDATED',
+  'MANUAL_CONFIRMATION',
+];
 
 /**
  * Anthropic compiles structured output into a grammar and gives up on objects with too many
@@ -31,7 +46,7 @@ const optionalCount = (node: JsonSchemaNode): number =>
   Object.keys(node.properties ?? {}).filter((key) => !(node.required ?? []).includes(key)).length;
 
 describe.each([
-  ['extraction', extractionResultSchema],
+  ['extraction', extractionResultSchemaFor(KINDS)],
   ['reconciliation', reconciliationResultSchema],
 ])('%s schema', (_name, schema) => {
   const root = z.toJSONSchema(schema, { io: 'output' }) as JsonSchemaNode;

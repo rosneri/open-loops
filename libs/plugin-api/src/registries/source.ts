@@ -1,0 +1,34 @@
+/**
+ * A place work arrives from. Adding one used to mean editing a union in the kernel, a table of
+ * toolkit slugs in a session file and a table of fetch intents in a connector — three files in
+ * three libraries, none of which knew about the other two. All three facts are stated here, once,
+ * by whoever actually knows them.
+ *
+ * The provider id is the string every layer already speaks: `Integration.provider`,
+ * `SyncCursor.provider` and `RawSignal.provider` are plain columns, so a new source is a
+ * registration rather than a migration.
+ */
+export interface SourceDefinition {
+  readonly provider: string;
+  /** What the Integrations screen calls it. */
+  readonly label: string;
+  /**
+   * The broker's own name for this app. `undefined` means there is no hosted connection to make:
+   * Wispr Flow and RiseUp are real sources that arrive by push from the local agent, and offering
+   * a "Connect" button for them would be a lie.
+   */
+  readonly toolkit?: string | undefined;
+  /**
+   * What to ask the broker for, in words, to fetch this provider's recent signals. Phrased as an
+   * intent rather than a tool name, so a renamed or replaced upstream tool keeps working.
+   *
+   * Each intent must name its provider out loud. Tool search treats the toolkit as a ranking hint
+   * rather than a filter, so "list issues assigned to me" alone will happily return a Linear tool
+   * during a GitHub sync; saying "on GitHub" is what pins it.
+   */
+  readonly intents?: readonly string[] | undefined;
+}
+
+export interface SourceRegistry {
+  register(definition: SourceDefinition): void;
+}

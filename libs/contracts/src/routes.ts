@@ -16,6 +16,8 @@ export const ApiRoutes = {
   composioTools: '/api/composio/tools',
   composioExecute: '/api/composio/execute',
   settings: '/api/settings',
+  schedules: '/api/schedules',
+  scheduleRun: (kind: string) => `/api/schedules/${kind}/run`,
   podcastEpisodes: '/api/podcast/episodes',
   podcastGenerate: '/api/podcast/generate',
   health: '/api/health',

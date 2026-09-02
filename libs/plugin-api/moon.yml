@@ -1,0 +1,19 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-api'
+  description: 'The plugin contract: extension points, capabilities, and the setup context.'
+
+dependsOn:
+  - kernel
+  - contracts
+  - loops
+  - signals
+  - integrations
+  - orchestration
+
+tags:
+  - 'plugin-api'

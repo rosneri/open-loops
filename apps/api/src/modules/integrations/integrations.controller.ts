@@ -1,7 +1,8 @@
 import { Controller, Delete, Get, Inject, Param, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { BeginConnectionDto, IntegrationDto } from '@open-loops/contracts';
-import { isSourceProvider, type SourceProvider } from '@open-loops/kernel';
+import type { SourceProvider } from '@open-loops/kernel';
+import type { SourceCatalog } from '@open-loops/plugin-host';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
@@ -24,6 +25,7 @@ export class IntegrationsController {
     private readonly workspaces: WorkspaceFactory,
     private readonly handshakes: HandshakeTokens,
     @Inject(Tokens.Config) private readonly config: AppConfig,
+    @Inject(Tokens.SourceCatalog) private readonly sources: SourceCatalog,
   ) {}
 
   @Get()
@@ -114,7 +116,11 @@ export class IntegrationsController {
 
   private parse(provider: string): SourceProvider {
     const upper = provider.toUpperCase();
-    if (!isSourceProvider(upper)) throw new BadRequestException(`Unknown provider "${provider}".`);
+    // Unknown means "no installed plugin claims this app", which is a client error rather than
+    // a missing feature: the screen only ever offers what the catalog listed.
+    if (!this.sources.providers().includes(upper)) {
+      throw new BadRequestException(`Unknown provider "${provider}".`);
+    }
     return upper;
   }
 

@@ -15,5 +15,11 @@ export interface TickReportDto {
   readonly awaitingAcknowledgement: number;
   readonly blocksPlanned: number;
   readonly deferred: number;
+  /**
+   * Whatever the registered tick steps counted, keyed by step name. The four steps above are the
+   * product and are not extensible; this is where a plugin's own work shows up, so adding one
+   * does not mean adding a field to the report every client already parses.
+   */
+  readonly steps?: Readonly<Record<string, Readonly<Record<string, number>>>>;
   readonly failures: readonly TickFailureDto[];
 }

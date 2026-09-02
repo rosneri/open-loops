@@ -38,6 +38,33 @@
       "path": "./libs/contracts"
     },
     {
+      "path": "./libs/plugin-api"
+    },
+    {
+      "path": "./libs/plugin-host"
+    },
+    {
+      "path": "./plugins/code-review"
+    },
+    {
+      "path": "./plugins/issue-tracker"
+    },
+    {
+      "path": "./plugins/chat"
+    },
+    {
+      "path": "./plugins/mail"
+    },
+    {
+      "path": "./plugins/calendar"
+    },
+    {
+      "path": "./plugins/documents"
+    },
+    {
+      "path": "./plugins/local-sources"
+    },
+    {
       "path": "./apps/api"
     },
     {

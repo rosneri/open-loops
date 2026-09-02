@@ -7,6 +7,7 @@ import { LoopEventType } from './loop-events.js';
 import { LoopKind } from './loop-kind.js';
 import { LoopStatus } from './loop-status.js';
 import { OpenLoop } from './open-loop.js';
+import { manualConfirmation } from './probe.js';
 
 const NOW = asInstant(1_000_000);
 
@@ -22,7 +23,7 @@ const makeLoop = (): OpenLoop =>
         id: asCriterionId('c-pr'),
         role: CriterionRole.Deliverable,
         optional: false,
-        probe: { kind: 'MANUAL_CONFIRMATION', describedAs: 'a PR exists' },
+        probe: manualConfirmation('a PR exists'),
       },
     ],
     evidence: [],

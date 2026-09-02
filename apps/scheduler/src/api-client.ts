@@ -1,12 +1,16 @@
 import type { Logger } from '@open-loops/kernel';
 import type { SchedulerConfig } from './config.js';
 
+export interface ScheduledJob {
+  readonly kind: string;
+  readonly cron: string;
+  readonly enabled: boolean;
+}
+
 export interface Schedule {
   readonly username: string;
-  readonly sweepCron: string;
-  readonly podcastCron: string;
-  readonly podcastEnabled: boolean;
   readonly timeZone: string;
+  readonly schedules: readonly ScheduledJob[];
 }
 
 /**
@@ -28,22 +32,19 @@ export class ApiClient {
     });
   }
 
-  public async sweep(username: string): Promise<void> {
+  /**
+   * Runs one kind of work for one account. This process used to have a method per kind and a
+   * path per kind baked into it, which meant a new kind of scheduled work needed the clock
+   * redeployed. It names the kind now and the deployment decides what that means.
+   */
+  public async run(input: { username: string; kind: string }): Promise<void> {
     await this.send({
       method: 'POST',
-      path: '/api/tick',
-      username,
-      timeoutMs: this.config.SWEEP_TIMEOUT_MS,
-    });
-  }
-
-  public async recordPodcast(username: string): Promise<void> {
-    await this.send({
-      method: 'POST',
-      path: '/api/podcast/generate',
-      username,
-      body: { force: false },
-      timeoutMs: this.config.PODCAST_TIMEOUT_MS,
+      path: `/api/schedules/${input.kind}/run`,
+      username: input.username,
+      // A sweep can legitimately take minutes and a podcast longer; the wider of the two is the
+      // safe deadline now that this process cannot tell which is which.
+      timeoutMs: Math.max(this.config.SWEEP_TIMEOUT_MS, this.config.PODCAST_TIMEOUT_MS),
     });
   }
 

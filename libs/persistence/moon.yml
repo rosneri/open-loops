@@ -8,6 +8,7 @@ project:
   description: 'Prisma adapters implementing every context repository port.'
 
 dependsOn:
+  - plugin-api
   - contracts
   - kernel
   - loops

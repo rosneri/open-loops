@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module.js';
+import { createAppModule } from './app.module.js';
 import { WorkspaceFactory } from './infrastructure/workspace.factory.js';
 import { OwnerResolver } from './modules/auth/owner-resolver.service.js';
 
@@ -9,7 +9,9 @@ import { OwnerResolver } from './modules/auth/owner-resolver.service.js';
  * schedule. The username may be omitted while there is only one account.
  */
 const main = async (): Promise<void> => {
-  const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
+  const app = await NestFactory.createApplicationContext(await createAppModule(), {
+    logger: ['error', 'warn'],
+  });
   try {
     const ownerId = await app.get(OwnerResolver).resolve(process.argv[2]);
     const { tick } = app.get(WorkspaceFactory).for(ownerId);

@@ -16,6 +16,11 @@ export const Tokens = {
 
   UserRepository: 'OL_USER_REPOSITORY',
   SettingsRepository: 'OL_SETTINGS_REPOSITORY',
+  ScheduleRepository: 'OL_SCHEDULE_REPOSITORY',
+  /** The two repositories the Settings screen always reads together. */
+  SettingsStores: 'OL_SETTINGS_STORES',
+  /** The kinds of scheduled work the product owns rather than borrows from a plugin. */
+  BuiltInSchedules: 'OL_BUILT_IN_SCHEDULES',
 
   /**
    * The Composio session cache, not a session: a session belongs to one account, and the only
@@ -28,6 +33,17 @@ export const Tokens = {
   AudioStore: 'OL_AUDIO_STORE',
   /** Both halves of the podcast — a generator and somewhere to keep what it makes. */
   PodcastReadiness: 'OL_PODCAST_READINESS',
+
+  /** What the installed plugins collectively decided this deployment is. */
+  PluginHost: 'OL_PLUGIN_HOST',
+  /** The probe kinds those plugins registered: the prompt, the parse and the runners. */
+  ProbeCatalog: 'OL_PROBE_CATALOG',
+  /** The apps they registered: labels, toolkit slugs and what to ask each one for. */
+  SourceCatalog: 'OL_SOURCE_CATALOG',
+  /** Every app this deployment knows about, in the order the Integrations screen shows them. */
+  KnownProviders: 'OL_KNOWN_PROVIDERS',
+  /** The kinds of scheduled work they registered, beside the two the product owns. */
+  ScheduleCatalog: 'OL_SCHEDULE_CATALOG',
 
   StructuredGenerator: 'OL_STRUCTURED_GENERATOR',
   LoopExtractor: 'OL_LOOP_EXTRACTOR',

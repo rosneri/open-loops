@@ -5,9 +5,12 @@ import type { SourceConnector } from '@open-loops/signals';
 import {
   ComposioConnectionBroker,
   ComposioSourceConnector,
+  ComposioToolBroker,
   ComposioToolExplorer,
   type ComposioSessionRegistry,
 } from '@open-loops/connectors-composio';
+import type { ToolBroker } from '@open-loops/plugin-api';
+import type { SourceCatalog } from '@open-loops/plugin-host';
 import { LocalAgentSourceConnector, LocalConnectionBroker } from '@open-loops/connectors-local';
 import type { AppConfig } from '../config/env.js';
 import { isLocalMode } from '../config/env.js';
@@ -18,8 +21,13 @@ import { AccountIdentities } from './account-identity.service.js';
 export interface SourceStack {
   readonly broker: ConnectionBroker;
   readonly connectors: readonly SourceConnector[];
-  /** Only in hosted mode with a key; the tool bench and the hosted probe runner need it. */
+  /** Only in hosted mode with a key; the tool bench needs the Composio-shaped one. */
   readonly explorer: ComposioToolExplorer | undefined;
+  /**
+   * The same reach, said in the plugin contract's words. `undefined` in local mode, where there
+   * are no keys and a probe is answered out of band instead of being called.
+   */
+  readonly tools: ToolBroker | undefined;
 }
 
 /**
@@ -39,12 +47,14 @@ export class SourceStackFactory {
     @Inject(Tokens.Logger) private readonly logger: Logger,
     @Inject(Tokens.ComposioSessions)
     private readonly sessions: ComposioSessionRegistry | undefined,
+    @Inject(Tokens.SourceCatalog) private readonly sources: SourceCatalog,
     private readonly identities: AccountIdentities,
   ) {
     this.local = {
       broker: new LocalConnectionBroker(),
-      connectors: [new LocalAgentSourceConnector(this.logger)],
+      connectors: [new LocalAgentSourceConnector(this.logger, this.sources.providers())],
       explorer: undefined,
+      tools: undefined,
     };
   }
 
@@ -57,10 +67,12 @@ export class SourceStackFactory {
     const explorer = new ComposioToolExplorer({ sessions, logger: this.logger });
     return {
       explorer,
-      broker: new ComposioConnectionBroker({ sessions, logger: this.logger }),
+      tools: new ComposioToolBroker(explorer, this.sources),
+      broker: new ComposioConnectionBroker({ sessions, sources: this.sources, logger: this.logger }),
       connectors: [
         new ComposioSourceConnector({
           explorer,
+          sources: this.sources,
           logger: this.logger,
           meHandles: async () => await this.identities.meHandles(ownerId),
         }),

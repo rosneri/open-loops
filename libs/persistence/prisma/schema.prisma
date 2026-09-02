@@ -247,6 +247,8 @@ model User {
   signals      RawSignal[]
   probeTasks   ProbeTask[]
   episodes     PodcastEpisode[]
+  pluginRecords PluginRecord[]
+  schedules    ScheduleEntry[]
 }
 
 /// One row per person. Settings that someone changes from the app belong in the database rather
@@ -256,11 +258,6 @@ model UserSettings {
   id     String @id @default(uuid())
   userId String @unique
 
-  /// Cron expressions, read in OPEN_LOOPS_TIMEZONE.
-  sweepCron   String
-  podcastCron String
-
-  podcastEnabled     Boolean @default(false)
   podcastLength      String  @default("default")
   podcastHostVoiceId  String?
   podcastGuestVoiceId String?
@@ -293,4 +290,39 @@ model PodcastEpisode {
 
   @@unique([ownerId, day])
   @@index([ownerId, requestedAt])
+}
+
+/// A plugin's own rows, without a migration each time. Namespaced by plugin and by owner, and
+/// reached only through a store that was built knowing both — the same trick the repositories
+/// play for tenancy, applied to features. Anything the core reasons about still earns a table.
+model PluginRecord {
+  ownerId    String
+  pluginId   String
+  collection String
+  key        String
+  value      Json
+  updatedAt  DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, pluginId, collection, key])
+  @@index([ownerId, pluginId, collection])
+}
+
+/// One row per account per kind of scheduled work. This used to be two columns named after the
+/// two things the app happened to do, which meant a third kind of work needed a migration, a DTO
+/// field and a branch in the scheduler. The kinds are registered now; this is only where the
+/// expressions live.
+model ScheduleEntry {
+  ownerId String
+  kind    String
+  /// A cron expression, read in OPEN_LOOPS_TIMEZONE.
+  cron    String
+  enabled Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, kind])
 }

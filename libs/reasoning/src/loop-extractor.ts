@@ -4,14 +4,16 @@ import type { Party } from '@open-loops/loops';
 import { CriterionRole } from '@open-loops/loops';
 import type { ExtractedLoop, LoopExtractor } from '@open-loops/orchestration';
 import type { Signal } from '@open-loops/signals';
-import { EXTRACTOR_SYSTEM, describeNow } from './prompts.js';
-import { toProbe } from './probe-mapper.js';
+import type { ProbeCatalog } from '@open-loops/plugin-host';
+import { extractorSystem, describeNow } from './prompts.js';
 import type { ExtractedLoopDraft } from './schemas.js';
-import { extractionResultSchema } from './schemas.js';
+import { extractionResultSchemaFor } from './schemas.js';
 import type { StructuredGenerator } from './structured-generator.port.js';
 
 export interface ModelLoopExtractorDeps {
   readonly generator: StructuredGenerator;
+  /** What this deployment can check, and therefore what the model is allowed to propose. */
+  readonly catalog: ProbeCatalog;
   readonly logger: Logger;
 }
 
@@ -31,10 +33,11 @@ export class ModelLoopExtractor implements LoopExtractor {
   }): Promise<readonly ExtractedLoop[]> {
     if (input.signals.length === 0) return [];
 
+    const kinds = this.deps.catalog.kinds();
     const result = await this.deps.generator.generate({
       name: 'open_loops',
-      schema: extractionResultSchema,
-      system: EXTRACTOR_SYSTEM,
+      schema: extractionResultSchemaFor(kinds),
+      system: extractorSystem(this.deps.catalog.guide()),
       prompt: `${describeNow(input.now)}\n\nSignals:\n${render(input.signals)}`,
       temperature: 0.1,
     });
@@ -43,7 +46,9 @@ export class ModelLoopExtractor implements LoopExtractor {
       count: result.loops.length,
       via: this.deps.generator.label,
     });
-    return result.loops.map((draft) => toExtracted({ draft, now: input.now }));
+    return result.loops.map((draft) =>
+      toExtracted({ draft, now: input.now, catalog: this.deps.catalog }),
+    );
   }
 }
 
@@ -78,7 +83,11 @@ const toParty = (draft: ExtractedLoopDraft): Party | undefined => {
   };
 };
 
-const toExtracted = (input: { draft: ExtractedLoopDraft; now: Instant }): ExtractedLoop => {
+const toExtracted = (input: {
+  draft: ExtractedLoopDraft;
+  now: Instant;
+  catalog: ProbeCatalog;
+}): ExtractedLoop => {
   const { draft, now } = input;
   const counterparty = toParty(draft);
   const dueAt = draft.dueAtIso === undefined ? Number.NaN : Date.parse(draft.dueAtIso);
@@ -94,7 +103,7 @@ const toExtracted = (input: { draft: ExtractedLoopDraft; now: Instant }): Extrac
           ? CriterionRole.Acknowledgement
           : CriterionRole.Deliverable,
       optional: criterion.optional,
-      probe: toProbe({ draft: criterion.probe, now }),
+      probe: input.catalog.toProbe({ ...criterion.probe, now }),
     })),
     ...(Number.isNaN(dueAt) ? {} : { dueAt: asInstant(dueAt) }),
     estimate: asMinutes(draft.estimateMinutes),

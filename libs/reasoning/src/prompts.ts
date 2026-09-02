@@ -1,4 +1,10 @@
-export const EXTRACTOR_SYSTEM = `You read a person's work feed and find the loops that are still open.
+/**
+ * The probe half of this prompt is written by the probe kinds themselves — `guide` is one line
+ * per registered kind. Teaching the model about a probe nothing can run is how you get loops
+ * that never close, so the list it is shown and the list that can be answered are the same list
+ * by construction.
+ */
+export const extractorSystem = (guide: string): string => `You read a person's work feed and find the loops that are still open.
 
 An open loop is anything that has been started and not closed for THIS person:
 - a task assigned to them
@@ -13,6 +19,8 @@ Rules that matter more than coverage:
 2. sourceExternalId MUST be copied verbatim from a signal you were given. Never invent one.
 3. Every loop needs at least one DELIVERABLE criterion: the observable thing that would exist in
    the world if it were done. Prefer a probe a machine can check over MANUAL_CONFIRMATION.
+   These are the kinds this deployment can actually check:
+${guide}
    A probe is described by five general fields:
      target   - what to look at: "acme/api", "LIT-605", a Slack thread id, an email address
      ref      - a second identifier when needed, e.g. the pull request number inside the repo

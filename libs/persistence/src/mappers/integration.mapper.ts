@@ -1,4 +1,4 @@
-import { optional, type SourceProvider } from '@open-loops/kernel';
+import { optional } from '@open-loops/kernel';
 import type { IntegrationProps } from '@open-loops/integrations';
 import { Integration, asIntegrationId } from '@open-loops/integrations';
 import type { Integration as IntegrationRow } from '../generated/prisma/client.js';
@@ -7,7 +7,7 @@ import { toDate, toInstant } from './primitives.js';
 export const toDomain = (row: IntegrationRow): Integration =>
   Integration.rehydrate({
     id: asIntegrationId(row.id),
-    provider: row.provider as SourceProvider,
+    provider: row.provider,
     mode: row.mode as IntegrationProps['mode'],
     status: row.status as IntegrationProps['status'],
     scopes: row.scopes,

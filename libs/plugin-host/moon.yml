@@ -1,0 +1,18 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-host'
+  description: 'The plugin runtime: dependency-ordered setup, capability gating, registries.'
+
+dependsOn:
+  - kernel
+  - loops
+  - signals
+  - orchestration
+  - plugin-api
+
+tags:
+  - 'adapter'

@@ -2,14 +2,12 @@ import { CronJob } from 'cron';
 import type { Logger } from '@open-loops/kernel';
 import type { ApiClient, Schedule } from './api-client.js';
 
-type JobKind = 'sweep' | 'podcast';
-
 interface Entry {
   readonly cron: string;
   readonly job: CronJob;
 }
 
-const key = (username: string, kind: JobKind): string => `${username}:${kind}`;
+const key = (username: string, kind: string): string => `${username}:${kind}`;
 
 /**
  * One cron job per account per kind of work, rebuilt whenever the schedules change. This is the
@@ -34,29 +32,22 @@ export class Clock {
     const wanted = new Set<string>();
 
     for (const schedule of schedules) {
-      wanted.add(key(schedule.username, 'sweep'));
-      this.ensure({
-        id: key(schedule.username, 'sweep'),
-        cron: schedule.sweepCron,
-        timeZone: schedule.timeZone,
-        run: async () => {
-          await this.api.sweep(schedule.username);
-        },
-      });
-
-      if (!schedule.podcastEnabled) continue;
-      wanted.add(key(schedule.username, 'podcast'));
-      this.ensure({
-        id: key(schedule.username, 'podcast'),
-        cron: schedule.podcastCron,
-        timeZone: schedule.timeZone,
-        run: async () => {
-          await this.api.recordPodcast(schedule.username);
-        },
-      });
+      for (const job of schedule.schedules) {
+        if (!job.enabled) continue;
+        const id = key(schedule.username, job.kind);
+        wanted.add(id);
+        this.ensure({
+          id,
+          cron: job.cron,
+          timeZone: schedule.timeZone,
+          run: async () => {
+            await this.api.run({ username: schedule.username, kind: job.kind });
+          },
+        });
+      }
     }
 
-    // Accounts that were deleted, or podcasts that were switched off, stop here.
+    // Accounts that were deleted, and anything switched off since the last refresh, stop here.
     for (const [id, entry] of this.jobs) {
       if (wanted.has(id)) continue;
       void entry.job.stop();

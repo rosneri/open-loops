@@ -8,6 +8,8 @@ project:
   description: 'Hosted data adapter: Composio sessions broker OAuth and run provider tools.'
 
 dependsOn:
+  - plugin-api
+  - plugin-host
   - kernel
   - signals
   - integrations

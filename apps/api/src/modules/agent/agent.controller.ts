@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Headers, Inject, Post, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import type { IngestResultDto, PendingProbeDto } from '@open-loops/contracts';
-import { asInstant, isSourceProvider } from '@open-loops/kernel';
+import { asInstant } from '@open-loops/kernel';
+import type { SourceCatalog } from '@open-loops/plugin-host';
 import type { ConnectionMode } from '@open-loops/integrations';
 
 import type { Signal, SignalActor } from '@open-loops/signals';
@@ -76,6 +77,7 @@ export class AgentController {
     private readonly workspaces: WorkspaceFactory,
     private readonly owners: OwnerResolver,
     @Inject(Tokens.ConnectionMode) private readonly mode: ConnectionMode,
+    @Inject(Tokens.SourceCatalog) private readonly sources: SourceCatalog,
   ) {}
 
   @Post('ingest')
@@ -85,7 +87,13 @@ export class AgentController {
   ): Promise<IngestResultDto> {
     const { signals } = ingestSchema.parse(body);
     const workspace = this.workspaces.for(await this.owners.resolve(username));
-    return await workspace.ingest.execute({ mode: this.mode, signals: signals.map(toSignal) });
+    // A provider no installed plugin claims is not rejected — the agent saw something real and
+    // dropping it would lose the signal. It is filed as MANUAL, which is what it is.
+    const known = new Set(this.sources.providers());
+    return await workspace.ingest.execute({
+      mode: this.mode,
+      signals: signals.map((signal) => toSignal(signal, known)),
+    });
   }
 
   @Get('probes')
@@ -126,10 +134,10 @@ const toActor = (actor: z.infer<typeof actorSchema>): SignalActor => ({
   ...(actor.email === undefined ? {} : { email: actor.email }),
 });
 
-const toSignal = (signal: SignalInput): Signal => {
+const toSignal = (signal: SignalInput, known: ReadonlySet<string>): Signal => {
   const provider = signal.provider.toUpperCase();
   return {
-    provider: isSourceProvider(provider) ? provider : 'MANUAL',
+    provider: known.has(provider) ? provider : 'MANUAL',
     externalId: signal.externalId,
     kind: signal.kind,
     title: signal.title,

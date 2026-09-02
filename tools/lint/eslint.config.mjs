@@ -46,15 +46,29 @@ export default tseslint.config(
       parserOptions: { projectService: true, tsconfigRootDir: ROOT },
     },
     settings: {
-      'boundaries/include': ['libs/**/*.ts', 'apps/**/*.ts', 'apps/**/*.tsx'],
+      'boundaries/include': [
+        'libs/**/*.ts',
+        'apps/**/*.ts',
+        'apps/**/*.tsx',
+        'plugins/**/*.ts',
+        'plugins/**/*.tsx',
+      ],
       'boundaries/elements': [
         { type: 'kernel', pattern: 'libs/kernel/src/**/*' },
         { type: 'contract', pattern: 'libs/contracts/src/**/*' },
         { type: 'domain', pattern: 'libs/(loops|planning|integrations|signals)/src/**/*' },
         { type: 'application', pattern: 'libs/orchestration/src/**/*' },
+        { type: 'plugin-api', pattern: 'libs/plugin-api/src/**/*' },
+        {
+          type: 'plugin',
+          pattern: 'plugins/*/src/**/*',
+          capture: ['pluginName'],
+          mode: 'full',
+        },
         {
           type: 'adapter',
-          pattern: 'libs/(persistence|reasoning|connectors-composio|connectors-local)/src/**/*',
+          pattern:
+            'libs/(persistence|reasoning|connectors-composio|connectors-local|plugin-host)/src/**/*',
         },
         { type: 'app', pattern: 'apps/**/*' },
       ],
@@ -94,10 +108,43 @@ export default tseslint.config(
             { from: 'contract', allow: ['kernel', 'contract'] },
             { from: 'domain', allow: ['kernel', 'domain'] },
             { from: 'application', allow: ['kernel', 'contract', 'domain', 'application'] },
-            { from: 'adapter', allow: ['kernel', 'contract', 'domain', 'application', 'adapter'] },
+            {
+              from: 'plugin-api',
+              allow: ['kernel', 'contract', 'domain', 'application', 'plugin-api'],
+            },
+            {
+              from: 'adapter',
+              allow: ['kernel', 'contract', 'domain', 'application', 'plugin-api', 'adapter'],
+            },
+            /**
+             * A plugin may reach everything a plugin needs and exactly one plugin: itself.
+             * Cross-plugin imports are what turn a set of removable features back into a
+             * codebase where deleting a directory breaks three others.
+             */
+            {
+              from: 'plugin',
+              allow: [
+                'kernel',
+                'contract',
+                'domain',
+                'application',
+                'plugin-api',
+                'adapter',
+                ['plugin', { pluginName: '${from.pluginName}' }],
+              ],
+            },
             {
               from: 'app',
-              allow: ['kernel', 'contract', 'domain', 'application', 'adapter', 'app'],
+              allow: [
+                'kernel',
+                'contract',
+                'domain',
+                'application',
+                'plugin-api',
+                'adapter',
+                'plugin',
+                'app',
+              ],
             },
           ],
         },
@@ -110,7 +157,11 @@ export default tseslint.config(
      * The shared kernel and the four domain contexts are pure: no I/O, no framework, no clock,
      * no randomness. Everything time-like arrives as an `Instant` from the caller.
      */
-    files: ['libs/kernel/**/*.ts', 'libs/{loops,planning,integrations,signals}/**/*.ts'],
+    files: [
+      'libs/kernel/**/*.ts',
+      'libs/{loops,planning,integrations,signals}/**/*.ts',
+      'libs/plugin-api/**/*.ts',
+    ],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': [

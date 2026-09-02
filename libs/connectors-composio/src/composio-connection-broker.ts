@@ -6,7 +6,7 @@ import type {
   UpstreamConnection,
 } from '@open-loops/integrations';
 import type { ComposioSessionProvider } from './composio-session.js';
-import { providerForToolkit, toolkitSlugFor } from './composio-session.js';
+import type { SourceCatalog } from '@open-loops/plugin-host';
 
 /**
  * Bound to one account's session, so every question it asks Composio — start a handshake, read
@@ -19,7 +19,12 @@ import { providerForToolkit, toolkitSlugFor } from './composio-session.js';
  */
 export class ComposioConnectionBroker implements ConnectionBroker {
   public constructor(
-    private readonly deps: { sessions: ComposioSessionProvider; logger: Logger },
+    private readonly deps: {
+      sessions: ComposioSessionProvider;
+      /** Which app each toolkit slug is, according to the installed source plugins. */
+      sources: SourceCatalog;
+      logger: Logger;
+    },
   ) {}
 
   public async beginConnection(input: {
@@ -66,7 +71,7 @@ export class ComposioConnectionBroker implements ConnectionBroker {
     const userId = await this.deps.sessions.userId$();
 
     return items.flatMap((item) => {
-      const provider = providerForToolkit(item.slug);
+      const provider = this.deps.sources.providerForToolkit(item.slug);
       const accountId = item.connection?.connectedAccount?.id;
       if (provider === undefined || item.connection?.isActive !== true || accountId === undefined) {
         return [];
@@ -88,7 +93,7 @@ export class ComposioConnectionBroker implements ConnectionBroker {
   }
 
   private toolkitFor(provider: SourceProvider): string {
-    const toolkit = toolkitSlugFor(provider);
+    const toolkit = this.deps.sources.toolkitFor(provider);
     if (toolkit === undefined) {
       throw new Error(`${provider} has no Composio toolkit mapping yet.`);
     }

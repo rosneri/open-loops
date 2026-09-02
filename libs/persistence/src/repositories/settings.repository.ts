@@ -7,9 +7,6 @@ import type { PrismaClient } from '../prisma-client.js';
  */
 export interface UserSettingsRecord {
   readonly userId: string;
-  readonly sweepCron: string;
-  readonly podcastCron: string;
-  readonly podcastEnabled: boolean;
   readonly podcastLength: string;
   readonly podcastHostVoiceId?: string;
   readonly podcastGuestVoiceId?: string;
@@ -23,30 +20,22 @@ export type UserSettingsPatch = {
     | undefined;
 };
 
-export interface SettingsDefaults {
-  readonly sweepCron: string;
-  readonly podcastCron: string;
-}
-
 export class PrismaSettingsRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
   /**
-   * Creates the row on first read from the environment defaults, so a new account has working
-   * schedules before anyone opens the Settings screen.
+   * Creates the row on first read, so a caller never has to check whether it exists.
    *
    * Read-then-create rather than `upsert`: both schedulers ask for this at once, and two
    * concurrent upserts of the same key make one of them lose on the unique constraint. Losing
    * that race is expected here, so it is caught and re-read instead of thrown.
    */
-  public async get(userId: string, defaults: SettingsDefaults): Promise<UserSettingsRecord> {
+  public async get(userId: string): Promise<UserSettingsRecord> {
     const existing = await this.prisma.userSettings.findUnique({ where: { userId } });
     if (existing !== null) return toRecord(existing);
 
     try {
-      const created = await this.prisma.userSettings.create({
-        data: { userId, sweepCron: defaults.sweepCron, podcastCron: defaults.podcastCron },
-      });
+      const created = await this.prisma.userSettings.create({ data: { userId } });
       return toRecord(created);
     } catch {
       const row = await this.prisma.userSettings.findUnique({ where: { userId } });
@@ -71,9 +60,7 @@ export class PrismaSettingsRepository {
    * than being silently skipped. The username comes along because the scheduler names the
    * account back to the API in a header, and it should not need a second query to learn it.
    */
-  public async listAll(
-    defaults: SettingsDefaults,
-  ): Promise<readonly (UserSettingsRecord & { username: string })[]> {
+  public async listAll(): Promise<readonly (UserSettingsRecord & { username: string })[]> {
     const users = await this.prisma.user.findMany({
       select: { id: true, username: true },
       orderBy: { createdAt: 'asc' },
@@ -81,7 +68,7 @@ export class PrismaSettingsRepository {
 
     const settings: (UserSettingsRecord & { username: string })[] = [];
     for (const user of users) {
-      settings.push({ ...(await this.get(user.id, defaults)), username: user.username });
+      settings.push({ ...(await this.get(user.id)), username: user.username });
     }
     return settings;
   }
@@ -92,18 +79,12 @@ const compact = (patch: UserSettingsPatch): Record<string, unknown> =>
 
 const toRecord = (row: {
   userId: string;
-  sweepCron: string;
-  podcastCron: string;
-  podcastEnabled: boolean;
   podcastLength: string;
   podcastHostVoiceId: string | null;
   podcastGuestVoiceId: string | null;
   updatedAt: Date;
 }): UserSettingsRecord => ({
   userId: row.userId,
-  sweepCron: row.sweepCron,
-  podcastCron: row.podcastCron,
-  podcastEnabled: row.podcastEnabled,
   podcastLength: row.podcastLength,
   ...(row.podcastHostVoiceId === null ? {} : { podcastHostVoiceId: row.podcastHostVoiceId }),
   ...(row.podcastGuestVoiceId === null ? {} : { podcastGuestVoiceId: row.podcastGuestVoiceId }),

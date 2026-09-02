@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { EpisodeDto, SettingsDto, UpdateSettingsDto } from '@open-loops/contracts';
+import type {
+  EpisodeDto,
+  SettingsDto,
+  UpdateScheduleDto,
+  UpdateSettingsDto,
+} from '@open-loops/contracts';
 import { api } from '../api.js';
 import { useAsyncAction } from '../hooks/use-async-action.js';
-import { CronField } from '../components/cron-field.js';
+import { ScheduleList } from '../components/schedule-list.js';
 import { EpisodeList } from '../components/episode-list.js';
 import { ErrorPanel } from '../components/error-panel.js';
 import { HandlesField } from '../components/handles-field.js';
@@ -17,17 +22,27 @@ import { PodcastSettings } from '../components/podcast-settings.js';
 const merge = (saved: SettingsDto, draft: UpdateSettingsDto): SettingsDto => {
   const host = draft.podcastHostVoiceId ?? saved.podcastHostVoiceId;
   const guest = draft.podcastGuestVoiceId ?? saved.podcastGuestVoiceId;
+  const edits = new Map((draft.schedules ?? []).map((entry) => [entry.kind, entry]));
   return {
     ...saved,
-    sweepCron: draft.sweepCron ?? saved.sweepCron,
-    podcastCron: draft.podcastCron ?? saved.podcastCron,
-    podcastEnabled: draft.podcastEnabled ?? saved.podcastEnabled,
+    schedules: saved.schedules.map((schedule) => {
+      const edit = edits.get(schedule.kind);
+      return {
+        ...schedule,
+        cron: edit?.cron ?? schedule.cron,
+        enabled: edit?.enabled ?? schedule.enabled,
+      };
+    }),
     podcastLength: draft.podcastLength ?? saved.podcastLength,
     handles: draft.handles ?? saved.handles,
     ...(host === undefined ? {} : { podcastHostVoiceId: host }),
     ...(guest === undefined ? {} : { podcastGuestVoiceId: guest }),
   };
 };
+
+/** Whether this deployment can actually record one — the schedule list is where that is said. */
+const podcastAvailable = (settings: SettingsDto): boolean =>
+  settings.schedules.some((schedule) => schedule.kind === 'podcast' && schedule.available);
 
 const editedKeys = (draft: UpdateSettingsDto): readonly string[] =>
   Object.entries(draft)
@@ -58,6 +73,16 @@ export function SettingsPage(): React.ReactElement {
   /** The draft holds only what changed, so a save never writes back a field it did not touch. */
   const edit = useCallback((patch: UpdateSettingsDto): void => {
     setDraft((current) => ({ ...current, ...patch }));
+    setSaved(false);
+  }, []);
+
+  /** Schedules accumulate by kind, so editing two of them before saving keeps both edits. */
+  const editSchedule = useCallback((patch: UpdateScheduleDto): void => {
+    setDraft((current) => {
+      const rest = (current.schedules ?? []).filter((entry) => entry.kind !== patch.kind);
+      const previous = (current.schedules ?? []).find((entry) => entry.kind === patch.kind);
+      return { ...current, schedules: [...rest, { ...previous, ...patch }] };
+    });
     setSaved(false);
   }, []);
 
@@ -99,17 +124,7 @@ export function SettingsPage(): React.ReactElement {
       {action.error !== undefined && <ErrorPanel message={action.error} />}
       <PlatformCronNotice />
 
-      <section className="space-y-6">
-        <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">The sweep</h2>
-        <CronField
-          label="Sweep schedule"
-          hint="Pulls every source, re-checks evidence and re-plans the day."
-          value={value.sweepCron}
-          onChange={(sweepCron) => {
-            edit({ sweepCron });
-          }}
-        />
-      </section>
+      <ScheduleList schedules={value.schedules} onEdit={editSchedule} />
 
       <section className="space-y-6">
         <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">You</h2>
@@ -121,7 +136,7 @@ export function SettingsPage(): React.ReactElement {
         />
       </section>
 
-      <PodcastSettings value={value} configured={settings.podcastConfigured} onEdit={edit} />
+      <PodcastSettings value={value} onEdit={edit} />
 
       <div className="flex items-center gap-3">
         <button
@@ -135,7 +150,7 @@ export function SettingsPage(): React.ReactElement {
         <button
           type="button"
           onClick={generate}
-          disabled={action.busy || !settings.podcastConfigured}
+          disabled={action.busy || !podcastAvailable(settings)}
           className="rounded border border-ink-700 px-4 py-1.5 text-[12px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Record today now

@@ -40,6 +40,15 @@
         "@open-loops/orchestration": "workspace:*",
         "@open-loops/persistence": "workspace:*",
         "@open-loops/planning": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-calendar": "workspace:*",
+        "@open-loops/plugin-chat": "workspace:*",
+        "@open-loops/plugin-code-review": "workspace:*",
+        "@open-loops/plugin-documents": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+        "@open-loops/plugin-issue-tracker": "workspace:*",
+        "@open-loops/plugin-local-sources": "workspace:*",
+        "@open-loops/plugin-mail": "workspace:*",
         "@open-loops/podcast": "workspace:*",
         "@open-loops/reasoning": "workspace:*",
         "@open-loops/signals": "workspace:*",
@@ -95,6 +104,8 @@
         "@open-loops/integrations": "workspace:*",
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
         "@open-loops/signals": "workspace:*",
       },
     },
@@ -174,6 +185,7 @@
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
         "@open-loops/planning": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
         "@open-loops/podcast": "workspace:*",
         "@open-loops/signals": "workspace:*",
         "@prisma/adapter-pg": "^7.10.0",
@@ -194,6 +206,30 @@
         "@open-loops/kernel": "workspace:*",
       },
     },
+    "libs/plugin-api": {
+      "name": "@open-loops/plugin-api",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/contracts": "workspace:*",
+        "@open-loops/integrations": "workspace:*",
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/orchestration": "workspace:*",
+        "@open-loops/signals": "workspace:*",
+        "zod": "^4.4.3",
+      },
+    },
+    "libs/plugin-host": {
+      "name": "@open-loops/plugin-host",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/orchestration": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/signals": "workspace:*",
+      },
+    },
     "libs/podcast": {
       "name": "@open-loops/podcast",
       "version": "0.1.0",
@@ -210,6 +246,8 @@
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
         "@open-loops/orchestration": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
         "@open-loops/signals": "workspace:*",
         "ai": "^7.0.79",
         "zod": "^4.4.3",
@@ -223,6 +261,73 @@
       "version": "0.1.0",
       "dependencies": {
         "@open-loops/kernel": "workspace:*",
+      },
+    },
+    "plugins/calendar": {
+      "name": "@open-loops/plugin-calendar",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/chat": {
+      "name": "@open-loops/plugin-chat",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/code-review": {
+      "name": "@open-loops/plugin-code-review",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/documents": {
+      "name": "@open-loops/plugin-documents",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/issue-tracker": {
+      "name": "@open-loops/plugin-issue-tracker",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/local-sources": {
+      "name": "@open-loops/plugin-local-sources",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/plugin-api": "workspace:*",
+      },
+    },
+    "plugins/mail": {
+      "name": "@open-loops/plugin-mail",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/loops": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
       },
     },
     "tools/lint": {
@@ -377,6 +482,24 @@
     "@open-loops/persistence": ["@open-loops/persistence@workspace:libs/persistence"],
 
     "@open-loops/planning": ["@open-loops/planning@workspace:libs/planning"],
+
+    "@open-loops/plugin-api": ["@open-loops/plugin-api@workspace:libs/plugin-api"],
+
+    "@open-loops/plugin-calendar": ["@open-loops/plugin-calendar@workspace:plugins/calendar"],
+
+    "@open-loops/plugin-chat": ["@open-loops/plugin-chat@workspace:plugins/chat"],
+
+    "@open-loops/plugin-code-review": ["@open-loops/plugin-code-review@workspace:plugins/code-review"],
+
+    "@open-loops/plugin-documents": ["@open-loops/plugin-documents@workspace:plugins/documents"],
+
+    "@open-loops/plugin-host": ["@open-loops/plugin-host@workspace:libs/plugin-host"],
+
+    "@open-loops/plugin-issue-tracker": ["@open-loops/plugin-issue-tracker@workspace:plugins/issue-tracker"],
+
+    "@open-loops/plugin-local-sources": ["@open-loops/plugin-local-sources@workspace:plugins/local-sources"],
+
+    "@open-loops/plugin-mail": ["@open-loops/plugin-mail@workspace:plugins/mail"],
 
     "@open-loops/podcast": ["@open-loops/podcast@workspace:libs/podcast"],
 

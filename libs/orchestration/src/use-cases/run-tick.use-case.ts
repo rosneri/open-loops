@@ -5,6 +5,7 @@ import type { RebalanceDayResult, RebalanceDayUseCase } from './rebalance-day.us
 import type { ReconcileLoopsResult, ReconcileLoopsUseCase } from './reconcile-loops.use-case.js';
 import type { SyncSourcesResult, SyncSourcesUseCase } from './sync-sources.use-case.js';
 import type { ManageIntegrationsUseCase } from './manage-integrations.use-case.js';
+import type { TickStep, TickStepReport } from '../ports/tick-step.port.js';
 
 export interface RunTickDeps {
   readonly integrations: ManageIntegrationsUseCase;
@@ -12,6 +13,14 @@ export interface RunTickDeps {
   readonly extract: ExtractLoopsUseCase;
   readonly reconcile: ReconcileLoopsUseCase;
   readonly rebalance: RebalanceDayUseCase;
+  /**
+   * What the installed plugins added, already in dependency order. They run after the product's
+   * own four steps and never instead of them: sync, extract, reconcile and re-plan *are* the
+   * heartbeat, and a plugin that could remove one of them could quietly stop the app from being
+   * honest about what is open.
+   */
+  readonly steps: readonly TickStep[];
+  readonly ownerId: string;
   readonly clock: Clock;
   readonly logger: Logger;
 }
@@ -37,14 +46,37 @@ export class RunTickUseCase {
     const extract = await this.step('extract', failures, async () => await this.deps.extract.execute());
     const reconcile = await this.step('reconcile', failures, async () => await this.deps.reconcile.execute());
     const plan = await this.step('plan', failures, async () => await this.deps.rebalance.execute());
+    const extra = await this.runPlugins(failures);
 
     const report = toReport({
       window: { startedAt, finishedAt: this.deps.clock.now() },
       steps: { sync, extract, reconcile, plan },
+      extra,
       failures,
     });
     this.deps.logger.info('tick finished', { ...report });
     return report;
+  }
+
+  /**
+   * Each plugin step is isolated exactly like a core one. A podcast that cannot reach its voice
+   * API must not lose the loops the tick already closed.
+   */
+  private async runPlugins(
+    failures: TickFailureDto[],
+  ): Promise<Record<string, TickStepReport>> {
+    const collected: Record<string, TickStepReport> = {};
+    for (const step of this.deps.steps) {
+      const counted = await this.step(step.name, failures, async () =>
+        await step.run({
+          ownerId: this.deps.ownerId,
+          clock: this.deps.clock,
+          logger: this.deps.logger,
+        }),
+      );
+      if (counted !== undefined) collected[step.name] = counted;
+    }
+    return collected;
   }
 
   /**
@@ -85,6 +117,7 @@ const SKIPPED = {
 const toReport = (input: {
   window: { startedAt: Instant; finishedAt: Instant };
   steps: StepResults;
+  extra: Readonly<Record<string, TickStepReport>>;
   failures: readonly TickFailureDto[];
 }): TickReportDto => {
   const extract = input.steps.extract ?? SKIPPED.extract;
@@ -101,6 +134,7 @@ const toReport = (input: {
     awaitingAcknowledgement: reconcile.awaitingAcknowledgement,
     blocksPlanned: plan.blocks.length,
     deferred: plan.deferred,
+    ...(Object.keys(input.extra).length === 0 ? {} : { steps: input.extra }),
     failures: input.failures,
   };
 };

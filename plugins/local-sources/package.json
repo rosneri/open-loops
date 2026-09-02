@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/plugin-local-sources",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sources that only ever arrive by push from the local agent.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/plugin-api": "workspace:*"
+  }
+}

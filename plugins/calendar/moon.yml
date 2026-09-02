@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-calendar'
+  description: 'Calendar entries: whether the meeting somebody promised to book exists.'
+
+dependsOn:
+  - kernel
+  - loops
+  - plugin-api
+  - plugin-host
+
+tags:
+  - 'plugin'

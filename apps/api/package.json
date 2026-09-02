@@ -39,7 +39,16 @@
     "zod": "^4.4.3",
     "@open-loops/podcast": "workspace:*",
     "@open-loops/connectors-elevenlabs": "workspace:*",
-    "@open-loops/connectors-studio": "workspace:*"
+    "@open-loops/connectors-studio": "workspace:*",
+    "@open-loops/plugin-calendar": "workspace:*",
+    "@open-loops/plugin-chat": "workspace:*",
+    "@open-loops/plugin-code-review": "workspace:*",
+    "@open-loops/plugin-documents": "workspace:*",
+    "@open-loops/plugin-issue-tracker": "workspace:*",
+    "@open-loops/plugin-mail": "workspace:*",
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/plugin-host": "workspace:*",
+    "@open-loops/plugin-local-sources": "workspace:*"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

@@ -72,10 +72,17 @@ episode. The route that serves an episode from disk checks the file belongs to t
 
 ## Settings, and where a schedule actually runs
 
-Both schedules — the sweep and the podcast — live in the database, not in the environment. The
-`TICK_CRON` and `PODCAST_CRON` variables seed the row on a fresh install and are ignored after
-that, so changing a schedule is a save rather than a redeploy. The Settings screen validates the
-expression with cron's own parser and says what it means in words before you commit to it.
+Schedules live in the database, not in the environment. `TICK_CRON` and `PODCAST_CRON` seed the
+rows on a fresh install and are ignored after that, so changing a schedule is a save rather than
+a redeploy. The Settings screen validates the expression with cron's own parser and says what it
+means in words before you commit to it.
+
+There is a row per account per *kind* of scheduled work rather than a column per thing the app
+happens to do. The sweep and the podcast are the two kinds the product owns; anything else is a
+kind a plugin registered, and it gets a cron field on the Settings screen and a job in the
+scheduler without either of them being changed. A kind whose work could not possibly run — a
+podcast with nowhere to write the audio — says so and stays switched off, because a schedule that
+fails every night is worse than one that was never offered.
 
 Nothing schedules itself. A serverless deployment has no process that outlives a request, and
 the platform's own cron is capped at one run a day on a Hobby plan — so `apps/scheduler` is a
@@ -88,10 +95,12 @@ moon run scheduler:start
 ```
 
 It reads `GET /api/schedules` — the one endpoint that spans accounts, which is why it takes the
-shared secret rather than a session — and keeps one cron job per account per kind of work. A
-change made in Settings is picked up on the next refresh rather than on a restart, a bad
-expression from one person is logged and skipped instead of stopping everyone's clock, and a run
-that is still going is never started again on top of itself.
+shared secret rather than a session — and keeps one cron job per account per kind of work. It
+knows the name of no particular kind: every run is `POST /api/schedules/<kind>/run`, so a plugin
+that adds a third kind of work is scheduled by a process that was never redeployed. A change made
+in Settings is picked up on the next refresh rather than on a restart, a bad expression from one
+person is logged and skipped instead of stopping everyone's clock, and a run that is still going
+is never started again on top of itself.
 
 It holds no data and no database URL. Every schedule is read from the API and every run is a call
 back to it, so the deployment stays the only thing that touches the database and tenancy is

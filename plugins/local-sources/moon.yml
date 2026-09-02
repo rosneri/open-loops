@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-local-sources'
+  description: 'Sources that only ever arrive by push from the local agent.'
+
+dependsOn:
+  - plugin-api
+
+tags:
+  - 'plugin'

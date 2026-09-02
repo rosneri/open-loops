@@ -1,5 +1,4 @@
 import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/kernel';
-import { ALL_SOURCE_PROVIDERS } from '@open-loops/kernel';
 import type {
   ConnectionBroker,
   ConnectionMode,
@@ -13,6 +12,12 @@ export interface ManageIntegrationsDeps {
   readonly integrations: IntegrationRepository;
   readonly broker: ConnectionBroker;
   readonly mode: ConnectionMode;
+  /**
+   * Every app this deployment knows about, in the order the Integrations screen shows them. It
+   * used to be a constant in the kernel; it is now whatever the installed source plugins add up
+   * to, so an app nothing can reach is not offered.
+   */
+  readonly knownProviders: readonly SourceProvider[];
   readonly connectableProviders: readonly SourceProvider[];
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -30,7 +35,7 @@ export class ManageIntegrationsUseCase {
   public async list(): Promise<readonly IntegrationDto[]> {
     const stored = await this.deps.integrations.listAll();
     const byProvider = new Map(stored.map((item) => [item.provider, item]));
-    return ALL_SOURCE_PROVIDERS.map((provider) => {
+    return this.deps.knownProviders.map((provider) => {
       const props = byProvider.get(provider)?.snapshot();
       return {
         provider,

@@ -1,0 +1,23 @@
+{
+  "name": "@open-loops/plugin-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The plugin contract: what a feature must say about itself to become part of the app.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/contracts": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/signals": "workspace:*",
+    "@open-loops/integrations": "workspace:*",
+    "@open-loops/orchestration": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

@@ -9,6 +9,8 @@ project:
 
 dependsOn:
   - orchestration
+  - plugin-api
+  - plugin-host
   - kernel
   - loops
   - signals

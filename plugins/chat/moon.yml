@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-chat'
+  description: 'Threads and direct messages: whether the reply anybody is waiting on was sent.'
+
+dependsOn:
+  - kernel
+  - loops
+  - plugin-api
+  - plugin-host
+
+tags:
+  - 'plugin'

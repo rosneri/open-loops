@@ -8,6 +8,15 @@ project:
   description: 'NestJS host for every bounded context. Adding a client never touches this app.'
 
 dependsOn:
+  - plugin-api
+  - plugin-host
+  - plugin-calendar
+  - plugin-chat
+  - plugin-code-review
+  - plugin-documents
+  - plugin-local-sources
+  - plugin-issue-tracker
+  - plugin-mail
   - kernel
   - contracts
   - loops

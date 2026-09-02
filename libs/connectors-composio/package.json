@@ -16,6 +16,8 @@
     "@open-loops/signals": "workspace:*",
     "@open-loops/integrations": "workspace:*",
     "@open-loops/loops": "workspace:*",
-    "@composio/core": "^0.17.0"
+    "@composio/core": "^0.17.0",
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/plugin-host": "workspace:*"
   }
 }

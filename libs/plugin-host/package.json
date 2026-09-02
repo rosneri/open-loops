@@ -1,0 +1,21 @@
+{
+  "name": "@open-loops/plugin-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Loads plugins in dependency order and holds what they registered.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/orchestration": "workspace:*",
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/signals": "workspace:*"
+  }
+}

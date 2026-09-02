@@ -1,15 +1,19 @@
 import { optional } from '@open-loops/kernel';
-import type { SourceProvider } from '@open-loops/kernel';
 import { asMinutes } from '@open-loops/kernel';
 import type {
   CompletionCriterion,
   Evidence,
   OpenLoopProps,
   Party,
-  Probe,
   SourceRef,
 } from '@open-loops/loops';
-import { OpenLoop, asCriterionId, asOpenLoopId, sourceKey } from '@open-loops/loops';
+import {
+  OpenLoop,
+  asCriterionId,
+  asOpenLoopId,
+  sourceKey,
+  toProbeEnvelope,
+} from '@open-loops/loops';
 import type {
   Criterion,
   EvidenceRecord,
@@ -31,7 +35,8 @@ const toCriterion = (row: Criterion): CompletionCriterion => ({
   id: asCriterionId(row.id),
   role: row.role as CompletionCriterion['role'],
   optional: row.optional,
-  probe: row.probe as unknown as Probe,
+  // Rows written before probes were open carry their fields inline rather than under `params`.
+  probe: toProbeEnvelope(row.probe),
 });
 
 const toEvidence = (row: EvidenceRecord): Evidence => ({
@@ -43,7 +48,7 @@ const toEvidence = (row: EvidenceRecord): Evidence => ({
 });
 
 const toSource = (row: OpenLoopRow): SourceRef => ({
-  provider: row.provider as SourceProvider,
+  provider: row.provider,
   externalId: row.externalId,
   occurredAt: toInstant(row.occurredAt),
   ...optional('threadRef', row.threadRef),

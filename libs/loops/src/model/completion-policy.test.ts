@@ -7,13 +7,14 @@ import type { Evidence, EvidenceVerdict } from './evidence.js';
 import { EvidenceVerdict as Verdict } from './evidence.js';
 import { asCriterionId } from './ids.js';
 import { LoopKind } from './loop-kind.js';
+import { manualConfirmation } from './probe.js';
 import { AcknowledgementState, LoopStatus, WorkState } from './loop-status.js';
 
 const criterion = (id: string, role: CriterionRole): CompletionCriterion => ({
   id: asCriterionId(id),
   role,
   optional: false,
-  probe: { kind: 'MANUAL_CONFIRMATION', describedAs: id },
+  probe: manualConfirmation(id),
 });
 
 const evidence = (id: string, verdict: EvidenceVerdict, at = 1): Evidence => ({

@@ -1,10 +1,10 @@
-import { optional, type SourceProvider } from '@open-loops/kernel';
+import { optional } from '@open-loops/kernel';
 import type { Signal, SignalActor } from '@open-loops/signals';
 import type { Prisma, RawSignal } from '../generated/prisma/client.js';
 import { toDate, toInstant, toJson } from './primitives.js';
 
 export const toDomain = (row: RawSignal): Signal => ({
-  provider: row.provider as SourceProvider,
+  provider: row.provider,
   externalId: row.externalId,
   kind: row.kind as Signal['kind'],
   title: row.title,

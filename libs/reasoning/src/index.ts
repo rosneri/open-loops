@@ -6,5 +6,4 @@ export * from './fallback-generator.js';
 export * from './model-registry.js';
 export * from './loop-extractor.js';
 export * from './loop-reconciler.js';
-export * from './probe-mapper.js';
 export * from './schemas.js';

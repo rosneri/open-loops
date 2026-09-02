@@ -1,5 +1,4 @@
 import type { SettingsDto, UpdateSettingsDto } from '@open-loops/contracts';
-import { CronField } from './cron-field.js';
 
 const LENGTHS = [
   { value: 'short', label: 'Short', hint: 'under 3 min' },
@@ -10,50 +9,20 @@ const LENGTHS = [
 interface PodcastSettingsProps {
   /** Saved settings merged with unsaved edits, so the controls show what the user just typed. */
   readonly value: SettingsDto;
-  readonly configured: boolean;
   readonly onEdit: (patch: UpdateSettingsDto) => void;
 }
 
-export function PodcastSettings({
-  value,
-  configured,
-  onEdit,
-}: PodcastSettingsProps): React.ReactElement {
+/**
+ * What the podcast sounds like. When and whether it runs are not here — those are a schedule,
+ * and schedules are all rendered from one list so that every kind of work is configured the same
+ * way whether or not this app shipped with it.
+ */
+export function PodcastSettings({ value, onEdit }: PodcastSettingsProps): React.ReactElement {
   return (
     <section className="space-y-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">
-          Podcast of the day
-        </h2>
-        <label className="flex items-center gap-2 text-[11px] text-chalk-500">
-          <input
-            type="checkbox"
-            checked={value.podcastEnabled}
-            onChange={(event) => {
-              onEdit({ podcastEnabled: event.target.checked });
-            }}
-            className="accent-chalk-100"
-          />
-          Enabled
-        </label>
-      </div>
-
-      {!configured && (
-        <p className="text-[11px] text-signal-unconfirmed">
-          No podcast provider is configured — set ELEVENLABS_API_KEY and the schedule will have
-          nothing to run until you do.
-        </p>
-      )}
-
-      <CronField
-        label="Podcast schedule"
-        hint="Records the day as a two-host conversation."
-        value={value.podcastCron}
-        disabled={!value.podcastEnabled}
-        onChange={(podcastCron) => {
-          onEdit({ podcastCron });
-        }}
-      />
+      <h2 className="text-[11px] tracking-[0.14em] text-chalk-600 uppercase">
+        Podcast of the day
+      </h2>
 
       <div>
         <span className="block text-[11px] tracking-[0.14em] text-chalk-600 uppercase">Length</span>

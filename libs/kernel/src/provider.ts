@@ -1,7 +1,19 @@
 /**
  * Provider identity is shared-kernel vocabulary: loops, signals and integrations all need to
  * name the same apps, and disagreeing about that name would be worse than the coupling.
- * Adding a provider is one entry here plus one adapter binding.
+ *
+ * The *set* of names is not the kernel's business, though. It used to be a closed union here and
+ * adding an app meant editing this file, a toolkit table and a table of fetch intents in a
+ * connector — so the type is open and the registry of what actually exists is assembled from
+ * whatever source plugins this deployment loaded. Every column that stores one of these is a
+ * plain `String` in Postgres and always was, so opening it costs no migration.
+ */
+export type SourceProvider = string;
+
+/**
+ * The ids the first-party plugins register. Deliberately *not* exhaustive and not a validator:
+ * it exists so code and tests can say `SourceProvider.Slack` instead of a bare string and get a
+ * typo caught. A provider absent from this list is not an invalid provider.
  */
 export const SourceProvider = {
   Slack: 'SLACK',
@@ -24,10 +36,3 @@ export const SourceProvider = {
   Outlook: 'OUTLOOK',
   Manual: 'MANUAL',
 } as const;
-
-export type SourceProvider = (typeof SourceProvider)[keyof typeof SourceProvider];
-
-export const ALL_SOURCE_PROVIDERS: readonly SourceProvider[] = Object.values(SourceProvider);
-
-export const isSourceProvider = (value: string): value is SourceProvider =>
-  (ALL_SOURCE_PROVIDERS as readonly string[]).includes(value);

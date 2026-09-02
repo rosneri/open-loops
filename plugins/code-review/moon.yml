@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-code-review'
+  description: 'Pull requests and reviews: what "shipped" looks like in a code host.'
+
+dependsOn:
+  - kernel
+  - loops
+  - plugin-api
+  - plugin-host
+
+tags:
+  - 'plugin'

@@ -14,6 +14,8 @@ const schema = z.object({
    */
   OPEN_LOOPS_MODE: z.enum(['LOCAL', 'HOSTED']).default('LOCAL'),
   OPEN_LOOPS_TIMEZONE: z.string().default('UTC'),
+  /** Comma-separated plugin ids. Empty means everything this build shipped with. */
+  OPEN_LOOPS_PLUGINS: z.string().optional(),
   /**
    * Seeds the *first* account's identity — the Composio user its connected apps hang off, and
    * the handles that make a signal "to me" — and nothing more. Both live on the account row

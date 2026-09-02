@@ -1,0 +1,20 @@
+{
+  "name": "@open-loops/plugin-calendar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Calendar entries: whether the meeting somebody promised to book exists.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/loops": "workspace:*",
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/plugin-host": "workspace:*"
+  }
+}

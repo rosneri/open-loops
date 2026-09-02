@@ -19,7 +19,9 @@
     "ai": "^7.0.79",
     "@ai-sdk/anthropic": "^4.0.42",
     "@ai-sdk/openai": "^4.0.47",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@open-loops/plugin-host": "workspace:*",
+    "@open-loops/plugin-api": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.10.1"

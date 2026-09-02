@@ -7,35 +7,17 @@ import type {
   SourceConnector,
 } from '@open-loops/signals';
 import type { ComposioToolExplorer } from './composio-tool-explorer.js';
-import { COMPOSIO_PROVIDERS, toolkitSlugFor } from './composio-session.js';
+import type { SourceCatalog } from '@open-loops/plugin-host';
 import { normalise } from './normalizers.js';
-
-/**
- * What we want from each provider, phrased as an intent rather than a tool name. Composio's
- * search resolves the intent to a real tool at run time, so a renamed or replaced tool keeps
- * working and we never hard-code a slug.
- *
- * Each intent names its provider out loud. Composio treats the `toolkits` argument as a ranking
- * hint rather than a filter, so "list issues assigned to me" alone will happily return a Linear
- * tool for a GitHub sync; saying "on GitHub" is what pins it.
- */
-const INTENTS: Partial<Record<SourceProvider, readonly string[]>> = {
-  SLACK: ['search Slack messages that mention me or are addressed to me'],
-  GITHUB: [
-    'list my GitHub notifications and issues assigned to me',
-    'search GitHub for open pull requests I authored or that await my review',
-  ],
-  LINEAR: ['list Linear issues assigned to me that are not done'],
-  GMAIL: ['list unread Gmail messages in my inbox'],
-  GOOGLE_CALENDAR: ["list today's events from my primary Google Calendar"],
-  JIRA: ['search Jira for unresolved issues assigned to me'],
-  NOTION: ['search Notion for pages I recently edited'],
-  GOOGLE_DRIVE: ['list files recently modified in my Google Drive'],
-  WHATSAPP: ['list my recent WhatsApp messages and unread chats'],
-};
 
 export interface ComposioSourceConnectorDeps {
   readonly explorer: ComposioToolExplorer;
+  /**
+   * Which apps exist, what upstream calls each of them and what to ask each one for. All three
+   * used to be tables in this library; they belong to whoever knows the app, not to the
+   * transport that happens to carry it.
+   */
+  readonly sources: SourceCatalog;
   readonly logger: Logger;
   /**
    * The handles that make a signal "mine", read per sync rather than captured at construction:
@@ -49,14 +31,17 @@ export interface ComposioSourceConnectorDeps {
  * back and stops there — no interpretation, and no writes to any aggregate.
  */
 export class ComposioSourceConnector implements SourceConnector {
-  public readonly supports = COMPOSIO_PROVIDERS;
+  public readonly supports: readonly SourceProvider[];
 
-  public constructor(private readonly deps: ComposioSourceConnectorDeps) {}
+  public constructor(private readonly deps: ComposioSourceConnectorDeps) {
+    this.supports = deps.sources.connectable();
+  }
 
   public async fetchSignals(input: FetchSignalsInput): Promise<FetchSignalsResult> {
-    const toolkit = toolkitSlugFor(input.provider);
-    const intents = INTENTS[input.provider];
-    if (toolkit === undefined || intents === undefined) {
+    const toolkit = this.deps.sources.toolkitFor(input.provider);
+    const intents = this.deps.sources.intentsFor(input.provider);
+    // A provider with no toolkit cannot be called, and one with no intents has nothing to ask.
+    if (toolkit === undefined || intents.length === 0) {
       return { signals: [], cursor: input.since };
     }
 
