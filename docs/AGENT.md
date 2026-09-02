@@ -120,6 +120,56 @@ on or is owed become loops — "Dana to review" is Dana's problem, not yours.
 Use `Copy to Markdown` in Notetaker for the body; the headings it emits (`## Flow Summary`,
 `## Pre-read`) are stable regardless of what the UI labels them.
 
+## Personal cashflow (RiseUp)
+
+[RiseUp](https://github.com/riseup-oss/mcp) exposes a read-only MCP server over a Personal Access
+Token. Like Wispr Flow it has no hosted OAuth we can broker, so it arrives the same way: the agent
+runs the server locally and pushes what matters here. The PAT stays in your MCP client config and
+is never sent to this app.
+
+```jsonc
+{
+  "mcpServers": {
+    "riseup": {
+      "command": "npx",
+      "args": ["-y", "@riseup-oss/mcp"],
+      "env": { "RISEUP_PAT": "riseup_pat_…" }
+    }
+  }
+}
+```
+
+It offers `get_budget` (envelopes with planned amounts, by `YYYY-MM` / `current` / `previous`) and
+`get_transactions` (filtered by month, date or business name).
+
+**Push the loop, not the ledger.** Most of this data is not an open loop — a supermarket charge is
+something that already happened and asks nothing of anybody. Send a signal only where there is
+something the person actually owes attention to: an envelope that has gone over plan, a
+subscription that renewed at a new price, a charge they do not recognise. A month of transactions
+dumped in as signals will produce a month of junk loops.
+
+```jsonc
+{
+  "signals": [
+    {
+      "provider": "RISEUP",
+      "externalId": "riseup:envelope:2026-09:groceries",
+      "kind": "DOCUMENT",
+      "title": "Groceries is ₪420 over plan with 9 days left",
+      "body": "Planned ₪2,400, spent ₪2,820 as of 2 Sep. Largest: Shufersal ₪612 on 28 Aug.",
+      "author": { "displayName": "RiseUp", "isMe": false },
+      "participants": [{ "displayName": "Neri", "isMe": true }],
+      "occurredAtIso": "2026-09-02T06:00:00.000Z",
+      "isDirectedAtMe": true
+    }
+  ]
+}
+```
+
+There is no finance-shaped `kind` — `DOCUMENT` is the honest fit for a summary you assembled.
+Nothing downstream is finance-aware, so whether this becomes a loop is up to the extractor reading
+your `title` and `body`; write them as the thing to be done, not as a statistic.
+
 ## A reasonable loop for an agent
 
 1. `GET /api/agent/probes` — answer anything outstanding.

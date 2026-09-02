@@ -34,6 +34,7 @@ export const probeDraftSchema = z.object({
       'ASANA',
       'WHATSAPP',
       'WISPR_FLOW',
+      'RISEUP',
       'DISCORD',
       'MICROSOFT_TEAMS',
       'OUTLOOK',

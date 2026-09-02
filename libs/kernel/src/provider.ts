@@ -1,6 +1,6 @@
 /**
  * Provider identity is shared-kernel vocabulary: loops, signals and integrations all need to
- * name the same twelve apps, and disagreeing about that name would be worse than the coupling.
+ * name the same apps, and disagreeing about that name would be worse than the coupling.
  * Adding a provider is one entry here plus one adapter binding.
  */
 export const SourceProvider = {
@@ -17,6 +17,8 @@ export const SourceProvider = {
   WhatsApp: 'WHATSAPP',
   /** Meeting notes and action items. No hosted API — it arrives over MCP via the local agent. */
   WisprFlow: 'WISPR_FLOW',
+  /** Personal cashflow. Read-only, PAT-authenticated MCP — same local-agent route as Wispr. */
+  RiseUp: 'RISEUP',
   Discord: 'DISCORD',
   MicrosoftTeams: 'MICROSOFT_TEAMS',
   Outlook: 'OUTLOOK',
