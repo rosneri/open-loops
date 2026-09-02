@@ -78,11 +78,15 @@ a redeploy. The Settings screen validates the expression with cron's own parser 
 means in words before you commit to it.
 
 There is a row per account per *kind* of scheduled work rather than a column per thing the app
-happens to do. The sweep and the podcast are the two kinds the product owns; anything else is a
-kind a plugin registered, and it gets a cron field on the Settings screen and a job in the
+happens to do. The sweep is the one kind the product owns; everything else — the podcast included
+— is a kind a plugin registered, and it gets a cron field on the Settings screen and a job in the
 scheduler without either of them being changed. A kind whose work could not possibly run — a
 podcast with nowhere to write the audio — says so and stays switched off, because a schedule that
 fails every night is worse than one that was never offered.
+
+What a plugin lets you configure is the same story: it registers a schema and ships the panel
+that edits it, and the values live in that plugin's own records. The Settings screen renders
+whatever panels the installed plugins contributed and knows the contents of none of them.
 
 Nothing schedules itself. A serverless deployment has no process that outlives a request, and
 the platform's own cron is capped at one run a day on a Hobby plan — so `apps/scheduler` is a
@@ -108,12 +112,16 @@ enforced in exactly one place.
 
 ## The podcast of the day
 
-The day, read aloud by two voices, on whatever schedule you set. The brief handed to the
-generator is prose assembled from the same view the Today screen renders — the plan, what is
-overdue, and what is done but unconfirmed — so an episode can only be as good as the day is
-legible.
+The day, read aloud by two voices, on whatever schedule you set. It ships as a plugin —
+`plugins/podcast` — and the core knows nothing about it: the schedule, the settings panel, the
+routes, the episode store and the script writer all arrive through the same seams any other
+plugin uses. Delete the directory and the podcast is gone, along with its column-free storage.
 
-Generation goes through the `PodcastGenerator` port. The default adapter is
+The brief handed to the generator is prose assembled from the same view the Today screen renders
+— the plan, what is overdue, and what is done but unconfirmed — so an episode can only be as good
+as the day is legible.
+
+Generation goes through the plugin's `PodcastGenerator` port. The default adapter is
 [podcastfy](https://github.com/souzatharsis/podcastfy)'s pipeline rewritten in TypeScript: the
 model this deployment already uses writes a two-speaker script, and each turn is spoken by the
 free Edge Read Aloud voices — the same backend podcastfy reaches for by default. MP3 frames
@@ -126,9 +134,14 @@ a key.
 
 Finished audio goes to Vercel Blob (`BLOB_READ_WRITE_TOKEN`) because a function's filesystem
 does not outlive the request that wrote to it. Without a token it falls back to a directory on
-disk served by the API, so a developer can hear an episode without attaching a store first. Episodes are keyed by day, so re-recording a day
-replaces it. A failure is stored with its reason and shown in Settings — the reason is almost
-always a missing key or a provider quota, and neither is discoverable from an empty list.
+disk served by the API, so a developer can hear an episode without attaching a store first.
+Episodes are keyed by day, so re-recording a day replaces it. A failure is stored with its reason
+and shown in Settings — the reason is almost always a missing key or a provider quota, and neither
+is discoverable from an empty list.
+
+The podcast's own variables — `PODCAST_PROVIDER`, `PODCAST_CRON`, the voices, the ElevenLabs and
+Blob keys — are read by the plugin from the environment it is handed at boot, not by the app's
+config. Removing the plugin removes them.
 
 ## Signing in
 
@@ -226,21 +239,31 @@ libs/
   planning/             bounded context: the one-day plan, ordering, slippage
   integrations/         bounded context: connections and what each may write
   signals/              bounded context: the normalised feed
-  orchestration/        the context map — the hourly tick, the read models
+  orchestration/        the context map — the hourly tick, the read models, the ports
   reasoning/            adapter: the two AI steps, via the Vercel AI SDK
   persistence/          adapter: Prisma repositories
   connectors-composio/  adapter: hosted data + probes
   connectors-local/     adapter: local push + the probe queue
   contracts/            wire DTOs every client reads
+  plugin-api/           the plugin contract: manifest, capabilities, registries, the owner scope
+  plugin-host/          loads plugins in order and holds what they registered
+  plugin-nest/          what a plugin's controllers need: @Owner(), @Public(), its own scope
+  plugin-ui/            what a plugin may contribute to the client, and what it is handed back
+plugins/
+  chat/ mail/ calendar/ documents/ code-review/ issue-tracker/ local-sources/
+                        the apps this build knows and the probes that check them
+  podcast/              the day, read aloud — a schedule, a panel, routes, its own records
 apps/
   api/                  NestJS host — controllers only translate HTTP
   web/                  React client
+  scheduler/            the always-on process that holds the clocks
 tools/
   lint/                 the linter and its own TypeScript (see below)
 ```
 
 Every rule lives in `libs/`. `apps/` are clients, and a second one — a CLI, a mobile app, an MCP
-server — is a new entry in `.moon/workspace.yml` and nothing else.
+server — is a new entry in `.moon/workspace.yml` and nothing else. Everything at the edge is a
+plugin; see [docs/PLUGINS.md](docs/PLUGINS.md) for how to write one.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the reasoning, and
 [docs/AGENT.md](docs/AGENT.md) for the local-agent contract.

@@ -6,7 +6,7 @@ import type { PrismaUserRepository } from '@open-loops/persistence';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { SESSION_COOKIE } from './cookie.js';
-import type { AuthenticatedUser } from './auth.service.js';
+import { type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 /** What we put in the token. `ver` is the row's `tokenVersion` at the time it was issued. */
 export interface SessionPayload {

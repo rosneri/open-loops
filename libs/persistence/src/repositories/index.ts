@@ -7,6 +7,5 @@ export * from './busy-time.provider.js';
 export * from './probe-task.store.js';
 export * from './user.repository.js';
 export * from './settings.repository.js';
-export * from './episode.repository.js';
 export * from './plugin-record.store.js';
 export * from './schedule.repository.js';

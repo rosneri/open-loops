@@ -129,6 +129,18 @@ external scheduler both enumerate instead of branching.
 importing another plugin's source. That restriction is the whole value: a feature you can delete
 by deleting a directory is a feature you can also reason about on its own.
 
+The podcast was the test of whether the seams were honest. It had been the one feature the core
+owned outright — its own bounded context, two adapter libraries, a table, three columns on the
+settings row, a controller, a token for its readiness and two components in the client. It is a
+directory now. Three things had to exist first for that to be a relocation rather than a rewrite:
+`StructuredGenerator` moved from the reasoning adapter down to an orchestration port so a scope
+can hand the model out under a capability; the auth decorators and a per-plugin `PluginScopes`
+moved into `libs/plugin-nest` so a plugin can write an authenticated controller without importing
+the app; and `libs/plugin-ui` gave a plugin somewhere to put a settings panel that the client
+mounts by id. What a plugin lets a person configure is validated against the schema it registered
+and kept in its own records, which is why the podcast leaving took columns *off* the settings row
+rather than adding a flag to say it was gone.
+
 ## Size limits as a design tool
 
 500 lines per file, 100 per function, 3 parameters. These are not style preferences — they are

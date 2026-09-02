@@ -17,9 +17,9 @@ export const Tokens = {
   UserRepository: 'OL_USER_REPOSITORY',
   SettingsRepository: 'OL_SETTINGS_REPOSITORY',
   ScheduleRepository: 'OL_SCHEDULE_REPOSITORY',
-  /** The two repositories the Settings screen always reads together. */
+  /** The three stores the Settings screen always reads together. */
   SettingsStores: 'OL_SETTINGS_STORES',
-  /** The kinds of scheduled work the product owns rather than borrows from a plugin. */
+  /** The kind of scheduled work the product owns rather than borrows from a plugin. */
   BuiltInSchedules: 'OL_BUILT_IN_SCHEDULES',
 
   /**
@@ -29,10 +29,6 @@ export const Tokens = {
   ComposioSessions: 'OL_COMPOSIO_SESSIONS',
   ConnectableProviders: 'OL_CONNECTABLE_PROVIDERS',
   ConnectionMode: 'OL_CONNECTION_MODE',
-  PodcastGenerator: 'OL_PODCAST_GENERATOR',
-  AudioStore: 'OL_AUDIO_STORE',
-  /** Both halves of the podcast — a generator and somewhere to keep what it makes. */
-  PodcastReadiness: 'OL_PODCAST_READINESS',
 
   /** What the installed plugins collectively decided this deployment is. */
   PluginHost: 'OL_PLUGIN_HOST',
@@ -42,7 +38,7 @@ export const Tokens = {
   SourceCatalog: 'OL_SOURCE_CATALOG',
   /** Every app this deployment knows about, in the order the Integrations screen shows them. */
   KnownProviders: 'OL_KNOWN_PROVIDERS',
-  /** The kinds of scheduled work they registered, beside the two the product owns. */
+  /** The kinds of scheduled work they registered, beside the one the product owns. */
   ScheduleCatalog: 'OL_SCHEDULE_CATALOG',
 
   StructuredGenerator: 'OL_STRUCTURED_GENERATOR',

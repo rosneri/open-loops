@@ -1,6 +1,3 @@
-/** What the Settings screen reads and writes. Schedules are cron expressions in the app's zone. */
-export type PodcastLengthDto = 'short' | 'default' | 'long';
-
 /**
  * One kind of scheduled work, as the Settings screen shows it. The screen renders this list
  * rather than a fixed pair of fields, so a plugin that registers a third kind of work gets a
@@ -11,6 +8,7 @@ export interface ScheduleDto {
   readonly label: string;
   /** One line under the field saying what this actually does when it fires. */
   readonly description: string;
+  /** A cron expression, read in the account's zone. */
   readonly cron: string;
   readonly enabled: boolean;
   /**
@@ -20,11 +18,20 @@ export interface ScheduleDto {
   readonly available: boolean;
 }
 
+/**
+ * One plugin's slice of the Settings screen. The value is opaque to the core: the plugin
+ * registered the schema it is validated against and ships the panel that edits it, and neither
+ * this DTO nor the screen that carries it knows what is inside.
+ */
+export interface PluginSettingsDto {
+  readonly id: string;
+  readonly label: string;
+  readonly value: unknown;
+}
+
 export interface SettingsDto {
   readonly schedules: readonly ScheduleDto[];
-  readonly podcastLength: PodcastLengthDto;
-  readonly podcastHostVoiceId?: string;
-  readonly podcastGuestVoiceId?: string;
+  readonly plugins: readonly PluginSettingsDto[];
   readonly timeZone: string;
   /**
    * Who holds the clock. `EXTERNAL` means a separate always-on scheduler reads these schedules
@@ -51,10 +58,14 @@ export interface UpdateScheduleDto {
   readonly enabled?: boolean | undefined;
 }
 
+/** A whole value, not a patch: the plugin's panel holds the entire object and hands it back. */
+export interface UpdatePluginSettingsDto {
+  readonly id: string;
+  readonly value: unknown;
+}
+
 export interface UpdateSettingsDto {
   readonly schedules?: readonly UpdateScheduleDto[] | undefined;
-  readonly podcastLength?: PodcastLengthDto | undefined;
-  readonly podcastHostVoiceId?: string | undefined;
-  readonly podcastGuestVoiceId?: string | undefined;
+  readonly plugins?: readonly UpdatePluginSettingsDto[] | undefined;
   readonly handles?: readonly string[] | undefined;
 }

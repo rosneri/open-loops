@@ -30,9 +30,7 @@
         "@nestjs/passport": "^12.0.0",
         "@nestjs/platform-express": "^11.2.3",
         "@open-loops/connectors-composio": "workspace:*",
-        "@open-loops/connectors-elevenlabs": "workspace:*",
         "@open-loops/connectors-local": "workspace:*",
-        "@open-loops/connectors-studio": "workspace:*",
         "@open-loops/contracts": "workspace:*",
         "@open-loops/integrations": "workspace:*",
         "@open-loops/kernel": "workspace:*",
@@ -49,10 +47,10 @@
         "@open-loops/plugin-issue-tracker": "workspace:*",
         "@open-loops/plugin-local-sources": "workspace:*",
         "@open-loops/plugin-mail": "workspace:*",
-        "@open-loops/podcast": "workspace:*",
+        "@open-loops/plugin-nest": "workspace:*",
+        "@open-loops/plugin-podcast": "workspace:*",
         "@open-loops/reasoning": "workspace:*",
         "@open-loops/signals": "workspace:*",
-        "@vercel/blob": "^2.8.0",
         "bcryptjs": "^3.0.3",
         "cookie-parser": "^1.4.7",
         "cron": "^4.3.5",
@@ -84,6 +82,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@open-loops/contracts": "workspace:*",
+        "@open-loops/plugin-podcast": "workspace:*",
+        "@open-loops/plugin-ui": "workspace:*",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
       },
@@ -109,14 +109,6 @@
         "@open-loops/signals": "workspace:*",
       },
     },
-    "libs/connectors-elevenlabs": {
-      "name": "@open-loops/connectors-elevenlabs",
-      "version": "0.1.0",
-      "dependencies": {
-        "@open-loops/kernel": "workspace:*",
-        "@open-loops/podcast": "workspace:*",
-      },
-    },
     "libs/connectors-local": {
       "name": "@open-loops/connectors-local",
       "version": "0.1.0",
@@ -125,17 +117,6 @@
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
         "@open-loops/signals": "workspace:*",
-      },
-    },
-    "libs/connectors-studio": {
-      "name": "@open-loops/connectors-studio",
-      "version": "0.1.0",
-      "dependencies": {
-        "@open-loops/kernel": "workspace:*",
-        "@open-loops/podcast": "workspace:*",
-        "@open-loops/reasoning": "workspace:*",
-        "msedge-tts": "^2.0.7",
-        "zod": "^4.4.3",
       },
     },
     "libs/contracts": {
@@ -172,8 +153,8 @@
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
         "@open-loops/planning": "workspace:*",
-        "@open-loops/podcast": "workspace:*",
         "@open-loops/signals": "workspace:*",
+        "zod": "^4.4.3",
       },
     },
     "libs/persistence": {
@@ -186,7 +167,6 @@
         "@open-loops/loops": "workspace:*",
         "@open-loops/planning": "workspace:*",
         "@open-loops/plugin-api": "workspace:*",
-        "@open-loops/podcast": "workspace:*",
         "@open-loops/signals": "workspace:*",
         "@prisma/adapter-pg": "^7.10.0",
         "@prisma/client": "^7.10.0",
@@ -230,11 +210,25 @@
         "@open-loops/signals": "workspace:*",
       },
     },
-    "libs/podcast": {
-      "name": "@open-loops/podcast",
+    "libs/plugin-nest": {
+      "name": "@open-loops/plugin-nest",
       "version": "0.1.0",
       "dependencies": {
-        "@open-loops/kernel": "workspace:*",
+        "@nestjs/common": "^11.2.3",
+        "@open-loops/plugin-api": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/express": "^5.0.0",
+      },
+    },
+    "libs/plugin-ui": {
+      "name": "@open-loops/plugin-ui",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/react": "^19.2.7",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
       },
     },
     "libs/reasoning": {
@@ -328,6 +322,30 @@
         "@open-loops/loops": "workspace:*",
         "@open-loops/plugin-api": "workspace:*",
         "@open-loops/plugin-host": "workspace:*",
+      },
+    },
+    "plugins/podcast": {
+      "name": "@open-loops/plugin-podcast",
+      "version": "0.1.0",
+      "dependencies": {
+        "@nestjs/common": "^11.2.3",
+        "@open-loops/contracts": "workspace:*",
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/orchestration": "workspace:*",
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-nest": "workspace:*",
+        "@open-loops/plugin-ui": "workspace:*",
+        "@vercel/blob": "^2.8.0",
+        "msedge-tts": "^2.0.7",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@open-loops/plugin-host": "workspace:*",
+        "@types/express": "^5.0.0",
+        "@types/react": "^19.2.7",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
       },
     },
     "tools/lint": {
@@ -461,11 +479,7 @@
 
     "@open-loops/connectors-composio": ["@open-loops/connectors-composio@workspace:libs/connectors-composio"],
 
-    "@open-loops/connectors-elevenlabs": ["@open-loops/connectors-elevenlabs@workspace:libs/connectors-elevenlabs"],
-
     "@open-loops/connectors-local": ["@open-loops/connectors-local@workspace:libs/connectors-local"],
-
-    "@open-loops/connectors-studio": ["@open-loops/connectors-studio@workspace:libs/connectors-studio"],
 
     "@open-loops/contracts": ["@open-loops/contracts@workspace:libs/contracts"],
 
@@ -501,7 +515,11 @@
 
     "@open-loops/plugin-mail": ["@open-loops/plugin-mail@workspace:plugins/mail"],
 
-    "@open-loops/podcast": ["@open-loops/podcast@workspace:libs/podcast"],
+    "@open-loops/plugin-nest": ["@open-loops/plugin-nest@workspace:libs/plugin-nest"],
+
+    "@open-loops/plugin-podcast": ["@open-loops/plugin-podcast@workspace:plugins/podcast"],
+
+    "@open-loops/plugin-ui": ["@open-loops/plugin-ui@workspace:libs/plugin-ui"],
 
     "@open-loops/reasoning": ["@open-loops/reasoning@workspace:libs/reasoning"],
 

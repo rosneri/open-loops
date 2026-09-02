@@ -134,10 +134,9 @@ const config = {
   // Hobby allows one run per day per job, with up to an hour of imprecision. That is the
   // ceiling for a serverless deployment; the schedules in Settings are honoured exactly only
   // where a long-lived process holds the cron, which is what `schedulerKind` reports.
-  crons: [
-    { path: '/api/tick', schedule: '0 6 * * *' },
-    { path: '/api/podcast/generate', schedule: '0 7 * * *' },
-  ],
+  // Only the sweep: anything else on a clock is a kind a plugin registered, and the process
+  // that honours those is `apps/scheduler`, which enumerates them from the API at run time.
+  crons: [{ path: '/api/tick', schedule: '0 6 * * *' }],
 };
 
 const main = async (): Promise<void> => {

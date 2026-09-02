@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Logger } from '@open-loops/kernel';
 import { MANUAL_CONFIRMATION } from '@open-loops/loops';
 import { Capability, definePlugin } from '@open-loops/plugin-api';
-import { PluginHost, ProbeCatalog, SourceCatalog } from '@open-loops/plugin-host';
+import type { OwnerScope } from '@open-loops/plugin-api';
+import { PluginHost, ProbeCatalog, ScheduleCatalog, SourceCatalog } from '@open-loops/plugin-host';
 import { enabledPlugins } from './enabled.js';
 
 const logger: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -144,6 +145,19 @@ describe('the plugins this build ships', () => {
     });
 
     expect(probe.kind).toBe(MANUAL_CONFIRMATION);
+  });
+
+  /** The flagship feature is a plugin now; the core owns the sweep and nothing else on a clock. */
+  it('puts the podcast on the clock through the same registry as anything else', async () => {
+    const kinds = ScheduleCatalog.from(await host()).kinds(() => ({}) as OwnerScope);
+    expect(kinds.map((kind) => kind.kind)).toEqual(['podcast']);
+    expect((await host()).settings().map((entry) => entry.pluginId)).toEqual(['podcast']);
+  });
+
+  it('ships no podcast when the podcast plugin is switched off', async () => {
+    const bare = await host('chat');
+    expect(ScheduleCatalog.from(bare).kinds(() => ({}) as OwnerScope)).toEqual([]);
+    expect(bare.http()).toEqual([]);
   });
 
   it('refuses a plugin id that does not exist instead of silently shipping less', () => {

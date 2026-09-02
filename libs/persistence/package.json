@@ -23,7 +23,6 @@
     "dotenv": "^17.4.2",
     "pg": "^8.16.3",
     "zod": "^4.4.3",
-    "@open-loops/podcast": "workspace:*",
     "@open-loops/plugin-api": "workspace:*"
   },
   "devDependencies": {

@@ -2,10 +2,9 @@ import { Body, Controller, Headers, Post, Req, UseGuards } from '@nestjs/common'
 import type { TickReportDto } from '@open-loops/contracts';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
 import { USER_HEADER } from '../agent/agent.controller.js';
-import type { RequestWithUser } from '../auth/jwt-auth.guard.js';
 import { OwnerResolver } from '../auth/owner-resolver.service.js';
-import { Public } from '../auth/public.decorator.js';
 import { SessionOrTokenGuard } from '../auth/session-or-token.guard.js';
+import { Public, type RequestWithUser } from '@open-loops/plugin-nest';
 
 /**
  * Two callers: the button in the client, which has a session and means itself, and the

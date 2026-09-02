@@ -1,6 +1,5 @@
 import type {
   BeginConnectionDto,
-  EpisodeDto,
   IngestResultDto,
   IntegrationDto,
   LoopDto,
@@ -9,6 +8,7 @@ import type {
   TodayDto,
   UpdateSettingsDto,
 } from '@open-loops/contracts';
+import type { PluginRequest } from '@open-loops/plugin-ui';
 
 export interface DiscoveredTool {
   readonly slug: string;
@@ -54,23 +54,23 @@ export const UNAUTHORIZED_EVENT = 'open-loops:unauthorized';
  * A tick can legitimately run for minutes, so it gets a longer leash than the rest.
  */
 const DEFAULT_TIMEOUT_MS = 30_000;
-const SLOW_PATHS = [
-  '/api/tick',
-  '/api/plan/rebalance',
-  '/api/composio/execute',
-  // Recording a podcast is minutes of work at the provider, not seconds.
-  '/api/podcast/generate',
-];
+const SLOW_PATHS = ['/api/tick', '/api/plan/rebalance', '/api/composio/execute'];
 const SLOW_TIMEOUT_MS = 300_000;
 
-const timeoutFor = (path: string): number =>
-  SLOW_PATHS.some((slow) => path.startsWith(slow)) ? SLOW_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+const timeoutFor = (path: string, slow: boolean): number =>
+  slow || SLOW_PATHS.some((prefix) => path.startsWith(prefix))
+    ? SLOW_TIMEOUT_MS
+    : DEFAULT_TIMEOUT_MS;
 
-const request = async <TResult>(path: string, init: RequestInit = {}): Promise<TResult> => {
+const request = async <TResult>(
+  path: string,
+  init: RequestInit = {},
+  options: { readonly slow?: boolean } = {},
+): Promise<TResult> => {
   const headers = new Headers(init.headers);
   headers.set('content-type', 'application/json');
 
-  const limit = timeoutFor(path);
+  const limit = timeoutFor(path, options.slow === true);
   let response: Response;
   try {
     // `same-origin` is the default, but the session lives in a cookie now — saying so keeps the
@@ -109,6 +109,13 @@ const post = async <TResult>(path: string, body?: unknown): Promise<TResult> =>
     method: 'POST',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
+
+/**
+ * The same fetch, handed to plugin panels. They get the session, the 401 hand-off and the
+ * timeout for free, and the core never learns which paths they call.
+ */
+export const pluginRequest: PluginRequest = async (path, init, options) =>
+  await request(path, init, options);
 
 const returnTo = (): string =>
   encodeURIComponent(`${window.location.origin}/integrations`);
@@ -173,10 +180,4 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(patch),
     }),
-
-  episodes: async (): Promise<readonly EpisodeDto[]> =>
-    await request<readonly EpisodeDto[]>('/api/podcast/episodes'),
-
-  generatePodcast: async (force = false): Promise<EpisodeDto> =>
-    await post<EpisodeDto>('/api/podcast/generate', { force }),
 };

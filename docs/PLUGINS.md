@@ -57,6 +57,11 @@ Reading a port the manifest did not ask for throws a `CapabilityError` naming th
 capability. Ports you did declare are typed as present, because you should not have to prove the
 same thing twice at every call site.
 
+`scope.reasoning` is the same `StructuredGenerator` the extractor runs on — the same fallback
+chain, the same bill. A plugin never brings a model of its own, so "which model" stays one
+decision made in one place. `scope.ids` and `scope.clock` are there so a plugin that mints an id
+or reads the time does it the way the core does, deterministically under test.
+
 ## Defining a probe kind
 
 Four things, stated once:
@@ -123,12 +128,70 @@ and the work earlier steps committed survives. Whatever counters it returns appe
 ## Adding routes
 
 ```ts
-context.http.register({ basePath: 'api/digest', controllers: [DigestController] });
+context.http.register({
+  basePath: 'api/digest',
+  controllers: [DigestController],
+  providers: [{ provide: DIGEST_OPTIONS, useValue: options }],
+});
 ```
 
 `basePath` has to match what the controllers themselves declare. Stating it here is what lets the
 host refuse two plugins that would otherwise quietly fight over the same path — it fails at boot,
-naming both.
+naming both. `providers` are whatever the controllers inject; the contract does not know they are
+Nest providers, and the host is the one place that does.
+
+A controller reaches a person's data the same way a schedule does, through `OwnerScope`. The
+host binds one `PluginScopes` per plugin that mounted routes, already closed over that plugin's
+id, and `@open-loops/plugin-nest` is how a controller asks for it — along with `@Owner()`, which
+is the signed-in user's id and nothing a caller can tamper with:
+
+```ts
+@Controller('api/digest')
+export class DigestController {
+  public constructor(@InjectPluginScopes('digest') private readonly scopes: PluginScopes) {}
+
+  @Get('latest')
+  public async latest(@Owner() ownerId: string): Promise<DigestDto> {
+    const scope = this.scopes.for(ownerId);
+    return await latestFor(scope);
+  }
+}
+```
+
+Every route is behind the session by default. Anything a machine calls on a clock goes through
+`POST /api/schedules/<kind>/run`, which is the host's and takes the shared secret, so a plugin
+never has to know what a bearer token is.
+
+## Settings, and a panel to edit them
+
+A settings fragment is a schema, its defaults and a heading:
+
+```ts
+context.settings.register({
+  label: 'Digest',
+  schema: z.object({ recipients: z.array(z.string().email()).default([]) }),
+  defaults: { recipients: [] },
+});
+```
+
+That one declaration is validation on the way in, the value `scope.settings<T>()` hands back at
+run time, and the row it is stored in — the plugin's own record store, so it needs no column.
+The Settings screen shows each plugin's value as an opaque object; what edits it is the plugin's
+own panel, exported from a second entry that never touches Nest:
+
+```ts
+// plugins/digest/src/ui/index.tsx
+export default defineWebPlugin<DigestSettings>({
+  id: 'digest',
+  settings: { label: 'Digest', Panel: DigestPanel },
+});
+```
+
+The panel receives `value` (saved settings with unsaved edits laid over them), `onEdit` (hands a
+whole new value to the draft; the screen's one Save button writes it) and `request` — the
+client's authenticated fetch, so a panel that lists what the plugin recorded, or fires one of its
+routes, gets the session, the 401 hand-off and the timeout for free. `apps/web/src/plugins/enabled.ts`
+is where the client half is listed, mirroring the server half.
 
 ## Rules
 
@@ -139,3 +202,9 @@ naming both.
   others still run.
 - **`MANUAL_CONFIRMATION` belongs to the core.** A deployment with no plugins at all must still
   be able to track a loop and let a person close it.
+- **A plugin's configuration is its own.** Environment variables it reads come from
+  `context.env` and are parsed by the plugin, never added to the app's config — a feature you can
+  delete by deleting a directory cannot leave its variables behind.
+
+`plugins/podcast` is the reference: a schedule, a settings fragment, routes with a scope, the
+record store for episodes, the model for the script, and a panel — every seam, used once.

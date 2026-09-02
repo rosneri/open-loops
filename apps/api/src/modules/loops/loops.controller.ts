@@ -6,7 +6,7 @@ import type { Clock } from '@open-loops/kernel';
 import { asOpenLoopId } from '@open-loops/loops';
 import { Tokens } from '../../tokens.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
-import { Owner } from '../auth/owner.decorator.js';
+import { Owner } from '@open-loops/plugin-nest';
 
 const snoozeSchema = z.object({ minutes: z.number().int().min(5).max(60 * 24).default(180) });
 const reasonSchema = z.object({ reason: z.string().max(200).default('by hand') });

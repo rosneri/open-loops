@@ -2,24 +2,31 @@ import { BadRequestException, Body, Controller, Get, Put } from '@nestjs/common'
 import { z } from 'zod';
 import type { SettingsDto } from '@open-loops/contracts';
 import { AccountIdentities } from '../../infrastructure/account-identity.service.js';
-import { Owner } from '../auth/owner.decorator.js';
 import { SettingsService } from './settings.service.js';
+import { Owner } from '@open-loops/plugin-nest';
 
 const patchSchema = z.object({
-  sweepCron: z.string().min(1).max(120).optional(),
-  podcastCron: z.string().min(1).max(120).optional(),
-  podcastEnabled: z.boolean().optional(),
-  podcastLength: z.enum(['short', 'default', 'long']).optional(),
-  podcastHostVoiceId: z.string().max(120).optional(),
-  podcastGuestVoiceId: z.string().max(120).optional(),
+  schedules: z
+    .array(
+      z.object({
+        kind: z.string().min(1).max(60),
+        cron: z.string().min(1).max(120).optional(),
+        enabled: z.boolean().optional(),
+      }),
+    )
+    .max(50)
+    .optional(),
+  /** Opaque here; each value is checked against the schema its plugin registered. */
+  plugins: z.array(z.object({ id: z.string().min(1).max(60), value: z.unknown() })).max(50).optional(),
   /** Bounded because it is a list somebody types; a handle is an address, not a paragraph. */
   handles: z.array(z.string().max(200)).max(50).optional(),
 });
 
 /**
- * One screen, two homes. Schedules and podcast preferences are settings; the handles that make a
- * signal "to me" are the account's identity and live on its row — this is where they are shown
- * and saved together, and the only place that knows they are stored apart.
+ * One screen, three homes. Schedules are a table of their own, each plugin's preferences live in
+ * that plugin's records, and the handles that make a signal "to me" are the account's identity
+ * and live on its row — this is where they are shown and saved together, and the only place that
+ * knows they are stored apart.
  */
 @Controller('api/settings')
 export class SettingsController {

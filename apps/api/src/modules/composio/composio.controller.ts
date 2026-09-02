@@ -7,7 +7,7 @@ import type {
   ToolkitState,
 } from '@open-loops/connectors-composio';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
-import { Owner } from '../auth/owner.decorator.js';
+import { Owner } from '@open-loops/plugin-nest';
 
 const searchSchema = z.object({
   query: z.string().min(2).max(300),

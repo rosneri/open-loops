@@ -1,13 +1,7 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
-import type { AuthenticatedUser } from './auth.service.js';
-import { PUBLIC_ROUTE } from './public.decorator.js';
-
-export interface RequestWithUser extends Request {
-  user?: AuthenticatedUser;
-}
+import { PUBLIC_ROUTE } from '@open-loops/plugin-nest';
 
 /**
  * Registered globally, so a route is protected the moment it is written rather than the moment

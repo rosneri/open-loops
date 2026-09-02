@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "React client. One of possibly several — it reads @open-loops/contracts and nothing else.",
+  "description": "React client. One of possibly several \u2014 it reads @open-loops/contracts and the plugins' client halves.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,7 +12,9 @@
   "dependencies": {
     "@open-loops/contracts": "workspace:*",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "@open-loops/plugin-ui": "workspace:*",
+    "@open-loops/plugin-podcast": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -9,13 +9,7 @@ import {
   type PrismaClient,
 } from '@open-loops/persistence';
 import { ComposioSessionRegistry } from '@open-loops/connectors-composio';
-import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
-import { ElevenLabsPodcastGenerator } from '@open-loops/connectors-elevenlabs';
-import {
-  EdgeSpeechSynthesizer,
-  ScriptedPodcastGenerator,
-} from '@open-loops/connectors-studio';
-import type { StructuredGenerator } from '@open-loops/reasoning';
+import type { StructuredGenerator } from '@open-loops/orchestration';
 import {
   AiSdkGenerator,
   ClaudeCodeGenerator,
@@ -29,11 +23,10 @@ import type { AppConfig } from '../config/env.js';
 import type { BuiltInSchedules } from '../modules/settings/built-in-schedules.js';
 import { builtInSchedules } from '../modules/settings/built-in-schedules.js';
 import type { SettingsStores } from '../modules/settings/settings.service.js';
-import { aiModel, aiProvider, isLocalMode, isLongLived, loadConfig } from '../config/env.js';
+import { PluginSettingsStore } from '../modules/settings/plugin-settings.store.js';
+import { aiModel, aiProvider, isLocalMode, loadConfig } from '../config/env.js';
 import { AccountIdentities } from './account-identity.service.js';
 import { SourceStackFactory } from './source-stack.factory.js';
-import { BlobAudioStore } from './blob-audio-store.js';
-import { FileAudioStore } from './file-audio-store.js';
 import { SystemClock } from '../system/system-clock.js';
 import { UuidIdGenerator } from '../system/uuid-id-generator.js';
 import { JsonLogger } from '../system/json-logger.js';
@@ -82,84 +75,21 @@ const persistence: Provider[] = [
   {
     /** Always read together, so they are injected together rather than one argument each. */
     provide: Tokens.SettingsStores,
-    inject: [Tokens.SettingsRepository, Tokens.ScheduleRepository],
+    inject: [Tokens.SettingsRepository, Tokens.ScheduleRepository, Tokens.PluginHost, Tokens.Prisma],
     useFactory: (
       settings: PrismaSettingsRepository,
       schedules: PrismaScheduleRepository,
-    ): SettingsStores => ({ settings, schedules }),
+      host: PluginHost,
+      prisma: PrismaClient,
+    ): SettingsStores => ({ settings, schedules, plugins: new PluginSettingsStore({ host, prisma }) }),
   },
   {
     provide: Tokens.BuiltInSchedules,
-    inject: [Tokens.Config, Tokens.PodcastReadiness, Tokens.SettingsRepository],
-    useFactory: (
-      config: AppConfig,
-      podcastReady: boolean,
-      settings: PrismaSettingsRepository,
-    ): BuiltInSchedules => builtInSchedules({ config, podcastReady, settings }),
+    inject: [Tokens.Config],
+    useFactory: (config: AppConfig): BuiltInSchedules => builtInSchedules({ config }),
   },
 ];
 
-const podcast: Provider[] = [
-  {
-    /**
-     * The in-house studio by default: the model this deployment already pays for writes the
-     * script, and the free Edge voices read it, so a daily episode costs nothing and needs no
-     * new account. ElevenLabs is there for anyone who wants its voices and has a key.
-     */
-    provide: Tokens.PodcastGenerator,
-    inject: [Tokens.Config, Tokens.Logger, Tokens.StructuredGenerator],
-    useFactory: (
-      config: AppConfig,
-      logger: Logger,
-      model: StructuredGenerator,
-    ): PodcastGenerator => {
-      if (config.PODCAST_PROVIDER === 'elevenlabs') {
-        return new ElevenLabsPodcastGenerator(
-          {
-            apiKey: config.ELEVENLABS_API_KEY,
-            modelId: config.ELEVENLABS_MODEL_ID,
-            hostVoiceId: config.ELEVENLABS_HOST_VOICE_ID,
-            guestVoiceId: config.ELEVENLABS_GUEST_VOICE_ID,
-            timeoutMs: config.ELEVENLABS_TIMEOUT_MS,
-            pollIntervalMs: config.ELEVENLABS_POLL_MS,
-          },
-          logger,
-        );
-      }
-      return new ScriptedPodcastGenerator({
-        model,
-        speech: new EdgeSpeechSynthesizer(),
-        voices: { host: config.STUDIO_HOST_VOICE, guest: config.STUDIO_GUEST_VOICE },
-        logger,
-      });
-    },
-  },
-  {
-    /**
-     * Blob when a token exists, disk otherwise — but only where a disk means anything. Falling
-     * back to the filesystem is what lets a developer hear an episode without attaching a store
-     * first; on a serverless function the same fallback writes to a read-only directory that
-     * would not outlive the request, so there the answer is "no store", said out loud.
-     */
-    provide: Tokens.AudioStore,
-    inject: [Tokens.Config],
-    useFactory: (config: AppConfig): AudioStore =>
-      (config.BLOB_READ_WRITE_TOKEN ?? '').length > 0 || !isLongLived(config)
-        ? new BlobAudioStore(config.BLOB_READ_WRITE_TOKEN)
-        : new FileAudioStore(config.PODCAST_DIR),
-  },
-  {
-    /**
-     * Whether an episode can actually be produced *and* kept. The generator needs no key, so it
-     * alone always says yes — and the Settings screen would offer a button that fails on the
-     * write. Both halves have to be ready for the answer to be true.
-     */
-    provide: Tokens.PodcastReadiness,
-    inject: [Tokens.PodcastGenerator, Tokens.AudioStore],
-    useFactory: (generator: PodcastGenerator, audio: AudioStore): boolean =>
-      generator.isConfigured() && audio.isConfigured(),
-  },
-];
 
 const dataStrategy: Provider[] = [
   {
@@ -321,7 +251,6 @@ const ALL = [
   ...base,
   ...persistence,
   ...plugins,
-  ...podcast,
   ...dataStrategy,
   ...identity,
   ...reasoning,

@@ -7,9 +7,8 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
-import { Owner } from '../auth/owner.decorator.js';
-import { Public } from '../auth/public.decorator.js';
 import { HandshakeTokens } from './handshake-tokens.js';
+import { Owner, Public } from '@open-loops/plugin-nest';
 
 interface CallbackQuery {
   readonly returnTo?: string;

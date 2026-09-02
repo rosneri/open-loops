@@ -18,6 +18,6 @@
     "@open-loops/integrations": "workspace:*",
     "@open-loops/signals": "workspace:*",
     "@open-loops/contracts": "workspace:*",
-    "@open-loops/podcast": "workspace:*"
+    "zod": "^4.4.3"
   }
 }

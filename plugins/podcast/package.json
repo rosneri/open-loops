@@ -1,0 +1,38 @@
+{
+  "name": "@open-loops/plugin-podcast",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The day, read aloud by two voices on a schedule the user owns.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.tsx",
+      "default": "./src/ui/index.tsx"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.2.3",
+    "@open-loops/contracts": "workspace:*",
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/orchestration": "workspace:*",
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/plugin-nest": "workspace:*",
+    "@open-loops/plugin-ui": "workspace:*",
+    "@vercel/blob": "^2.8.0",
+    "msedge-tts": "^2.0.7",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/react": "^19.2.7",
+    "@open-loops/plugin-host": "workspace:*"
+  }
+}

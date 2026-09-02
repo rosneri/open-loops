@@ -5,10 +5,12 @@ language: 'typescript'
 stack: 'frontend'
 project:
   name: 'web'
-  description: 'React client. Depends only on contracts, so a second client costs nothing.'
+  description: 'React client. Reads contracts and each plugin''s client half; nothing else.'
 
 dependsOn:
   - contracts
+  - plugin-ui
+  - plugin-podcast
 
 tags:
   - 'app'

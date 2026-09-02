@@ -58,7 +58,7 @@ export default tseslint.config(
         { type: 'contract', pattern: 'libs/contracts/src/**/*' },
         { type: 'domain', pattern: 'libs/(loops|planning|integrations|signals)/src/**/*' },
         { type: 'application', pattern: 'libs/orchestration/src/**/*' },
-        { type: 'plugin-api', pattern: 'libs/plugin-api/src/**/*' },
+        { type: 'plugin-api', pattern: 'libs/(plugin-api|plugin-ui)/src/**/*' },
         {
           type: 'plugin',
           pattern: 'plugins/*/src/**/*',
@@ -68,7 +68,7 @@ export default tseslint.config(
         {
           type: 'adapter',
           pattern:
-            'libs/(persistence|reasoning|connectors-composio|connectors-local|plugin-host)/src/**/*',
+            'libs/(persistence|reasoning|connectors-composio|connectors-local|plugin-host|plugin-nest)/src/**/*',
         },
         { type: 'app', pattern: 'apps/**/*' },
       ],

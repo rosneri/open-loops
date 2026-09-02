@@ -39,12 +39,11 @@ const schema = z.object({
 
   DAY_START_MINUTE: z.coerce.number().int().min(0).max(1439).default(9 * 60),
   DAY_END_MINUTE: z.coerce.number().int().min(1).max(1440).default(18 * 60),
-  TICK_CRON: z.string().default('0 * * * *'),
   /**
-   * Seeds the settings row on a fresh database and nothing more. Once the row exists, the
-   * Settings screen owns both schedules — changing one must not require a redeploy.
+   * Seeds the sweep's schedule row on a fresh database and nothing more. Once the row exists,
+   * the Settings screen owns it — changing a schedule must not require a redeploy.
    */
-  PODCAST_CRON: z.string().default('0 7 * * *'),
+  TICK_CRON: z.string().default('0 * * * *'),
   TICK_ON_BOOT: z
     .string()
     .default('false')
@@ -64,28 +63,6 @@ const schema = z.object({
 
   COMPOSIO_API_KEY: z.string().optional(),
 
-  /**
-   * `studio` runs podcastfy's pipeline in this process — the configured model writes a
-   * two-speaker script and the free Edge Read Aloud voices speak it. No key, no ffmpeg, no
-   * Python, no cost. `elevenlabs` swaps in that hosted service for anyone who prefers its
-   * voices and has a key.
-   */
-  PODCAST_PROVIDER: z.enum(['studio', 'elevenlabs']).default('studio'),
-  /** Edge voice names. `en-US-AndrewNeural` and `en-US-AvaNeural` are the conversational pair. */
-  STUDIO_HOST_VOICE: z.string().default('en-US-AndrewNeural'),
-  STUDIO_GUEST_VOICE: z.string().default('en-US-AvaNeural'),
-
-  ELEVENLABS_API_KEY: z.string().optional(),
-  ELEVENLABS_MODEL_ID: z.string().default('eleven_multilingual_v2'),
-  /** ElevenLabs' stock "Adam" and "Rachel"; overridden per-episode from Settings. */
-  ELEVENLABS_HOST_VOICE_ID: z.string().default('pNInz6obpgDQGcFmaJgB'),
-  ELEVENLABS_GUEST_VOICE_ID: z.string().default('21m00Tcm4TlvDq8ikWAM'),
-  ELEVENLABS_TIMEOUT_MS: z.coerce.number().int().min(30_000).max(1_800_000).default(600_000),
-  ELEVENLABS_POLL_MS: z.coerce.number().int().min(1_000).max(60_000).default(5_000),
-  /** Set automatically when a Vercel Blob store is attached to the project. */
-  BLOB_READ_WRITE_TOKEN: z.string().optional(),
-  /** Where episodes are written when there is no blob store. Gitignored. */
-  PODCAST_DIR: z.string().default('.podcasts'),
 
   /**
    * Set by Vercel on every function invocation. It is the honest test for "can this process

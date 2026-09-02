@@ -12,9 +12,9 @@ import { SettingsService } from './modules/settings/settings.service.js';
 import { SchedulesService } from './modules/settings/schedules.service.js';
 import { SchedulesController } from './modules/settings/schedules.controller.js';
 import { WorkspaceFactory, SharedServices } from './infrastructure/workspace.factory.js';
-import { PodcastController } from './modules/podcast/podcast.controller.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { PluginHost } from '@open-loops/plugin-host';
+import { pluginScopesToken, type PluginScopes } from '@open-loops/plugin-nest';
 import { JsonLogger } from './system/json-logger.js';
 import { enabledPlugins } from './plugins/enabled.js';
 import { isLocalMode, loadConfig } from './config/env.js';
@@ -30,7 +30,6 @@ const CORE_CONTROLLERS = [
   TickController,
   SettingsController,
   SchedulesController,
-  PodcastController,
 ];
 
 /**
@@ -72,6 +71,17 @@ export const createAppModule = async (): Promise<DynamicModule> => {
       // Opaque in the contract, because a plugin library that imported Nest would drag the
       // container into every one of them. This is the one place that knows what they are.
       ...(contributed.flatMap((entry) => entry.definition.providers ?? []) as Provider[]),
+      // One `PluginScopes` per plugin with routes, already closed over that plugin's id: a
+      // controller asks for an owner's scope and gets only what its own manifest declared.
+      ...contributed.map(
+        ({ pluginId }): Provider => ({
+          provide: pluginScopesToken(pluginId),
+          inject: [WorkspaceFactory],
+          useFactory: (workspaces: WorkspaceFactory): PluginScopes => ({
+            for: (ownerId) => workspaces.for(ownerId).scopeFor(pluginId),
+          }),
+        }),
+      ),
     ],
   };
 };

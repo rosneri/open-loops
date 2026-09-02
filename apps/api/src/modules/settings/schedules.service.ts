@@ -5,10 +5,10 @@ import type { BuiltInSchedules } from './built-in-schedules.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
 
 /**
- * What can be put on a clock, for one person. Two kinds are the product's own — a sweep is the
- * heartbeat and a podcast is the flagship feature — and the rest are whatever the installed
- * plugins registered. Everything downstream, the Settings screen and the external scheduler
- * alike, sees one uniform list and no longer knows the names of any particular kind of work.
+ * What can be put on a clock, for one person. One kind is the product's own — the sweep is the
+ * heartbeat — and the rest are whatever the installed plugins registered. Everything downstream,
+ * the Settings screen and the external scheduler alike, sees one uniform list and no longer
+ * knows the names of any particular kind of work.
  */
 @Injectable()
 export class SchedulesService {

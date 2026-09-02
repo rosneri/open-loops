@@ -7,6 +7,7 @@ import type {
   UserSettingsRecord,
 } from '@open-loops/persistence';
 import { SchedulesService } from './schedules.service.js';
+import type { PluginSettingsStore } from './plugin-settings.store.js';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 
@@ -85,7 +86,7 @@ export class SettingsService {
   }
 
   public async view(userId: string): Promise<StoredSettings> {
-    return this.toDto(await this.current(userId), await this.schedules(userId));
+    return await this.toDto(userId, await this.current(userId));
   }
 
   public async update(userId: string, patch: UpdateSettingsDto): Promise<StoredSettings> {
@@ -93,16 +94,12 @@ export class SettingsService {
       if (entry.cron !== undefined) assertCron(entry.cron, entry.kind);
     }
 
-    // Ensures the row exists before an update that assumes it does.
-    const current = await this.current(userId);
     await this.saveSchedules(userId, patch);
+    await this.stores.plugins.save(userId, patch.plugins ?? []);
 
     // No in-process listener to notify: the scheduler lives in its own process and re-reads
     // every schedule on a short poll, so a save is picked up without anything to wire here.
-    const record = hasSettingsFields(patch)
-      ? await this.repository.update(userId, withoutForeignFields(patch))
-      : current;
-    return this.toDto(record, await this.schedules(userId));
+    return await this.toDto(userId, await this.repository.touch(userId));
   }
 
   private async saveSchedules(userId: string, patch: UpdateSettingsDto): Promise<void> {
@@ -123,16 +120,10 @@ export class SettingsService {
     }
   }
 
-  private toDto(record: UserSettingsRecord, schedules: readonly ScheduleDto[]): StoredSettings {
+  private async toDto(userId: string, record: UserSettingsRecord): Promise<StoredSettings> {
     return {
-      schedules,
-      podcastLength: record.podcastLength as SettingsDto['podcastLength'],
-      ...(record.podcastHostVoiceId === undefined
-        ? {}
-        : { podcastHostVoiceId: record.podcastHostVoiceId }),
-      ...(record.podcastGuestVoiceId === undefined
-        ? {}
-        : { podcastGuestVoiceId: record.podcastGuestVoiceId }),
+      schedules: await this.schedules(userId),
+      plugins: await this.stores.plugins.view(userId),
       timeZone: this.config.OPEN_LOOPS_TIMEZONE,
       // A serverless deployment has no long-lived process to hold a cron job, so a schedule
       // there is only as precise as the platform's own cron. Saying so is what stops the
@@ -143,10 +134,11 @@ export class SettingsService {
   }
 }
 
-/** The two rows a person's runtime configuration lives in, injected as one thing. */
+/** The three places a person's runtime configuration lives in, injected as one thing. */
 export interface SettingsStores {
   readonly settings: PrismaSettingsRepository;
   readonly schedules: PrismaScheduleRepository;
+  readonly plugins: PluginSettingsStore;
 }
 
 export interface AccountSchedules {
@@ -160,23 +152,6 @@ export interface AccountSchedules {
  * it configured — so the one place they meet is the controller that answers the screen.
  */
 export type StoredSettings = Omit<SettingsDto, 'handles'>;
-
-const hasSettingsFields = (patch: UpdateSettingsDto): boolean =>
-  patch.podcastLength !== undefined ||
-  patch.podcastHostVoiceId !== undefined ||
-  patch.podcastGuestVoiceId !== undefined;
-
-/** Keeps a patch aimed at the settings row from carrying fields that live somewhere else. */
-const withoutForeignFields = (
-  patch: UpdateSettingsDto,
-): {
-  podcastLength?: string | undefined;
-  podcastHostVoiceId?: string | undefined;
-  podcastGuestVoiceId?: string | undefined;
-} => {
-  const { handles: _handles, schedules: _schedules, ...rest } = patch;
-  return rest;
-};
 
 /**
  * `cron`'s own parser, so the app and the scheduler agree on exactly which expressions are

@@ -1,7 +1,8 @@
-import type { Clock, Logger } from '@open-loops/kernel';
+import type { Clock, IdGenerator, Logger } from '@open-loops/kernel';
 import type { OpenLoopRepository } from '@open-loops/loops';
 import type { SignalStore } from '@open-loops/signals';
 import type { TodayDto } from '@open-loops/contracts';
+import type { StructuredGenerator } from '@open-loops/orchestration';
 import type {
   ToolBroker,
   EventRegistry,
@@ -41,6 +42,7 @@ export interface TodayReader {
 export interface OwnerScope {
   readonly ownerId: string;
   readonly clock: Clock;
+  readonly ids: IdGenerator;
   readonly logger: Logger;
   /** Requires `read:loops`. */
   readonly loops: LoopReader;
@@ -57,6 +59,12 @@ export interface OwnerScope {
    * accessor.
    */
   readonly tools: ToolBroker | undefined;
+  /**
+   * Requires `reasoning`. The model this deployment already thinks with, for structured output.
+   * A plugin gets the same generator the extractor uses — the same fallback chain, the same
+   * bill — and never a provider of its own, so "which model" stays one decision.
+   */
+  readonly reasoning: StructuredGenerator;
   /** This plugin's own settings, parsed through the fragment it registered. */
   settings<TValue>(): Promise<TValue>;
 }

@@ -1,0 +1,21 @@
+{
+  "name": "@open-loops/plugin-nest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "What a plugin's controllers need from the host: who is signed in, and their own scope.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.2.3",
+    "@open-loops/plugin-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0"
+  }
+}

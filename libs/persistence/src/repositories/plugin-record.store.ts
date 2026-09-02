@@ -35,7 +35,11 @@ export class PrismaPluginRecordStore implements PluginRecordStore {
 
   public async list<TValue>(
     collection: string,
-    query?: { readonly prefix?: string; readonly limit?: number },
+    query?: {
+      readonly prefix?: string;
+      readonly limit?: number;
+      readonly order?: 'asc' | 'desc';
+    },
   ): Promise<readonly PluginRecord<TValue>[]> {
     const rows = await this.prisma.pluginRecord.findMany({
       where: {
@@ -43,7 +47,7 @@ export class PrismaPluginRecordStore implements PluginRecordStore {
         collection,
         ...(query?.prefix === undefined ? {} : { key: { startsWith: query.prefix } }),
       },
-      orderBy: { key: 'asc' },
+      orderBy: { key: query?.order ?? 'asc' },
       take: query?.limit ?? 100,
     });
     return rows.map((row) => toRecord<TValue>(row));

@@ -1,9 +1,9 @@
-import type { Clock, Logger } from '@open-loops/kernel';
+import type { Clock, IdGenerator, Logger } from '@open-loops/kernel';
 import type { OpenLoopRepository } from '@open-loops/loops';
 import type { SignalStore } from '@open-loops/signals';
-import type { TodayViewQuery } from '@open-loops/orchestration';
+import type { StructuredGenerator, TodayViewQuery } from '@open-loops/orchestration';
 import type { OwnerScope, Plugin, ToolBroker } from '@open-loops/plugin-api';
-import { Capability, CapabilityError } from '@open-loops/plugin-api';
+import { Capability, CapabilityError, PLUGIN_SETTINGS_RECORD } from '@open-loops/plugin-api';
 import { PrismaPluginRecordStore, type PrismaClient } from '@open-loops/persistence';
 
 export interface OwnerScopeDeps {
@@ -14,14 +14,13 @@ export interface OwnerScopeDeps {
   readonly today: TodayViewQuery;
   readonly signals: SignalStore;
   readonly tools: ToolBroker | undefined;
+  readonly reasoning: StructuredGenerator;
   /** What each plugin registered as its defaults, by plugin id. Nothing saved means these. */
   readonly settingsDefaults: ReadonlyMap<string, unknown>;
   readonly clock: Clock;
+  readonly ids: IdGenerator;
   readonly logger: Logger;
 }
-
-/** Where a plugin's own settings live until they have a screen: its own namespace, one key. */
-const SETTINGS = { collection: '__settings', key: 'value' } as const;
 
 /**
  * One person, one plugin, and only the ports that plugin declared. Ungranted ports are getters
@@ -44,6 +43,7 @@ export const ownerScopeFactory = (deps: OwnerScopeDeps): ((pluginId: string) => 
     return {
       ownerId: deps.ownerId,
       clock: deps.clock,
+      ids: deps.ids,
       logger: deps.logger,
 
       get loops() {
@@ -66,10 +66,17 @@ export const ownerScopeFactory = (deps: OwnerScopeDeps): ((pluginId: string) => 
         need(Capability.Tools);
         return deps.tools;
       },
+      get reasoning() {
+        need(Capability.Reasoning);
+        return deps.reasoning;
+      },
 
       settings: async <TValue>(): Promise<TValue> => {
         need(Capability.Settings);
-        const row = await records.get<TValue>(SETTINGS.collection, SETTINGS.key);
+        const row = await records.get<TValue>(
+          PLUGIN_SETTINGS_RECORD.collection,
+          PLUGIN_SETTINGS_RECORD.key,
+        );
         // Never saved is the common case, not an error: a plugin's defaults are what it runs on
         // until somebody opens the screen and disagrees.
         return row?.value ?? (deps.settingsDefaults.get(pluginId) as TValue);

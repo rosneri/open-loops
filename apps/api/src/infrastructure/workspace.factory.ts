@@ -6,11 +6,13 @@ import { LocalProbeRunner } from '@open-loops/connectors-local';
 import { type ComposioToolExplorer } from '@open-loops/connectors-composio';
 import type { OwnerScope, ToolBroker } from '@open-loops/plugin-api';
 import type { PluginHost, ProbeCatalog } from '@open-loops/plugin-host';
-import type { AudioStore, PodcastGenerator } from '@open-loops/podcast';
-import type { LoopExtractor, LoopReconciler } from '@open-loops/orchestration';
+import type {
+  LoopExtractor,
+  LoopReconciler,
+  StructuredGenerator,
+} from '@open-loops/orchestration';
 import {
   ExtractLoopsUseCase,
-  GenerateDailyPodcastUseCase,
   IngestSignalsUseCase,
   LoopCommandsUseCase,
   ManageIntegrationsUseCase,
@@ -22,7 +24,6 @@ import {
 } from '@open-loops/orchestration';
 import {
   PrismaDailyPlanRepository,
-  PrismaEpisodeRepository,
   PrismaIntegrationRepository,
   PrismaLoopEventPublisher,
   PrismaOpenLoopRepository,
@@ -64,8 +65,7 @@ export class SharedServices {
     public readonly connectableProviders: readonly SourceProvider[],
     @Inject(Tokens.LoopExtractor) public readonly extractor: LoopExtractor,
     @Inject(Tokens.LoopReconciler) public readonly reconciler: LoopReconciler,
-    @Inject(Tokens.PodcastGenerator) public readonly generator: PodcastGenerator,
-    @Inject(Tokens.AudioStore) public readonly audio: AudioStore,
+    @Inject(Tokens.StructuredGenerator) public readonly reasoning: StructuredGenerator,
     @Inject(Tokens.PluginHost) public readonly plugins: PluginHost,
     @Inject(Tokens.ProbeCatalog) public readonly catalog: ProbeCatalog,
   ) {}
@@ -82,9 +82,7 @@ export interface Workspace {
   readonly rebalance: RebalanceDayUseCase;
   readonly integrations: ManageIntegrationsUseCase;
   readonly ingest: IngestSignalsUseCase;
-  readonly podcast: GenerateDailyPodcastUseCase;
   readonly probes: PrismaProbeTaskStore;
-  readonly episodes: PrismaEpisodeRepository;
   readonly loops: PrismaOpenLoopRepository;
   /** A plugin's window onto this person, carrying only what that plugin's manifest asked for. */
   readonly scopeFor: (pluginId: string) => OwnerScope;
@@ -124,7 +122,9 @@ export class WorkspaceFactory {
       prisma: this.prisma,
       plugins: this.shared.plugins.list(),
       settingsDefaults: settingsDefaults(this.shared.plugins),
+      reasoning: this.shared.reasoning,
       clock: this.shared.clock,
+      ids: this.shared.ids,
       logger: this.shared.logger,
     });
   }
@@ -136,7 +136,6 @@ export class WorkspaceFactory {
     const signals = new PrismaSignalStore(this.prisma, ownerId);
     const cursors = new PrismaSyncCursorStore(this.prisma, ownerId);
     const busyTime = new SignalBusyTimeProvider(this.prisma, ownerId);
-    const episodes = new PrismaEpisodeRepository(this.prisma, ownerId);
     const events = new PrismaLoopEventPublisher(this.prisma);
     const probes = new PrismaProbeTaskStore({
       prisma: this.prisma,
@@ -212,7 +211,6 @@ export class WorkspaceFactory {
       scopeFor,
       loops,
       explorer: stack.explorer,
-      episodes,
       probes,
       integrations,
       today,
@@ -228,16 +226,6 @@ export class WorkspaceFactory {
         rebalance,
         steps: this.shared.plugins.tickSteps(scopeFor),
         clock,
-        logger,
-      }),
-      podcast: new GenerateDailyPodcastUseCase({
-        ownerId,
-        today,
-        episodes,
-        generator: this.shared.generator,
-        audio: this.shared.audio,
-        clock,
-        ids,
         logger,
       }),
     };

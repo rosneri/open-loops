@@ -3,22 +3,16 @@ import type { PrismaClient } from '../prisma-client.js';
 /**
  * Runtime configuration, as opposed to deployment configuration. The difference that matters:
  * a person changes these from the Settings screen, so they cannot live in environment variables
- * without making every change a redeploy. One row per person, because the schedule is theirs.
+ * without making every change a redeploy. One row per person, because the settings are theirs.
+ *
+ * The row itself carries nothing but a timestamp now. Schedules are their own table keyed by a
+ * registered kind, and what a plugin lets a person configure lives in that plugin's own records —
+ * so a feature arriving or leaving is never a column arriving or leaving here.
  */
 export interface UserSettingsRecord {
   readonly userId: string;
-  readonly podcastLength: string;
-  readonly podcastHostVoiceId?: string;
-  readonly podcastGuestVoiceId?: string;
   readonly updatedAt: number;
 }
-
-/** Keys admit `undefined` so a caller can spread a partial patch without stripping keys first. */
-export type UserSettingsPatch = {
-  [TKey in keyof Omit<UserSettingsRecord, 'userId' | 'updatedAt'>]?:
-    | UserSettingsRecord[TKey]
-    | undefined;
-};
 
 export class PrismaSettingsRepository {
   public constructor(private readonly prisma: PrismaClient) {}
@@ -44,21 +38,21 @@ export class PrismaSettingsRepository {
     }
   }
 
-  public async update(userId: string, patch: UserSettingsPatch): Promise<UserSettingsRecord> {
+  /** A save happened somewhere in this person's settings; the row records when. */
+  public async touch(userId: string): Promise<UserSettingsRecord> {
+    await this.get(userId);
     const row = await this.prisma.userSettings.update({
       where: { userId },
-      // A key present with `undefined` means "not sent", not "set to null" — dropping those is
-      // what keeps a two-field save from blanking the four fields it did not mention.
-      data: compact(patch),
+      data: { updatedAt: new Date() },
     });
     return toRecord(row);
   }
 
   /**
-   * Every account with its schedule, for the process that holds the clocks. Rows are created on
-   * demand, so an account that has never opened Settings is included with the defaults rather
-   * than being silently skipped. The username comes along because the scheduler names the
-   * account back to the API in a header, and it should not need a second query to learn it.
+   * Every account, for the process that holds the clocks. Rows are created on demand, so an
+   * account that has never opened Settings is included rather than being silently skipped. The
+   * username comes along because the scheduler names the account back to the API in a header,
+   * and it should not need a second query to learn it.
    */
   public async listAll(): Promise<readonly (UserSettingsRecord & { username: string })[]> {
     const users = await this.prisma.user.findMany({
@@ -74,19 +68,7 @@ export class PrismaSettingsRepository {
   }
 }
 
-const compact = (patch: UserSettingsPatch): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
-
-const toRecord = (row: {
-  userId: string;
-  podcastLength: string;
-  podcastHostVoiceId: string | null;
-  podcastGuestVoiceId: string | null;
-  updatedAt: Date;
-}): UserSettingsRecord => ({
+const toRecord = (row: { userId: string; updatedAt: Date }): UserSettingsRecord => ({
   userId: row.userId,
-  podcastLength: row.podcastLength,
-  ...(row.podcastHostVoiceId === null ? {} : { podcastHostVoiceId: row.podcastHostVoiceId }),
-  ...(row.podcastGuestVoiceId === null ? {} : { podcastGuestVoiceId: row.podcastGuestVoiceId }),
   updatedAt: row.updatedAt.getTime(),
 });

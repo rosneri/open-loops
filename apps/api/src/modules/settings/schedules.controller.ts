@@ -1,10 +1,10 @@
 import { Controller, Get, Headers, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import type { ScheduleDto } from '@open-loops/contracts';
 import { AgentTokenGuard } from '../agent/agent-token.guard.js';
-import { Public } from '../auth/public.decorator.js';
 import { OwnerResolver } from '../auth/owner-resolver.service.js';
 import { SettingsService } from './settings.service.js';
 import { SchedulesService } from './schedules.service.js';
+import { Public } from '@open-loops/plugin-nest';
 
 const USER_HEADER = 'x-open-loops-user';
 

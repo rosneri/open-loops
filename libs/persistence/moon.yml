@@ -13,7 +13,6 @@ dependsOn:
   - kernel
   - loops
   - planning
-  - podcast
   - integrations
   - signals
 

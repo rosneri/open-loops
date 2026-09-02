@@ -1,6 +1,6 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AgentTokenGuard } from '../agent/agent-token.guard.js';
-import type { RequestWithUser } from './jwt-auth.guard.js';
+import type { RequestWithUser } from '@open-loops/plugin-nest';
 
 /**
  * For the one endpoint with two legitimate callers: the "Run check now" button in the browser,

@@ -18,7 +18,5 @@ export const ApiRoutes = {
   settings: '/api/settings',
   schedules: '/api/schedules',
   scheduleRun: (kind: string) => `/api/schedules/${kind}/run`,
-  podcastEpisodes: '/api/podcast/episodes',
-  podcastGenerate: '/api/podcast/generate',
   health: '/api/health',
 } as const;

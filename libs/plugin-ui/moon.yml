@@ -1,0 +1,11 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'frontend'
+project:
+  name: 'plugin-ui'
+  description: 'The client-side half of the plugin contract: a settings panel, and how it talks to the API.'
+
+tags:
+  - 'plugin-api'

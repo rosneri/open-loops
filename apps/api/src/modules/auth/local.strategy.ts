@@ -1,7 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
-import { AuthService, type AuthenticatedUser } from './auth.service.js';
+import { AuthService } from './auth.service.js';
+import { type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 /**
  * Username and password on the login route. Passport's default field names already match the

@@ -4,11 +4,7 @@ import type { PrismaUserRepository } from '@open-loops/persistence';
 import { Tokens } from '../../tokens.js';
 import { verifyPassword } from './password.js';
 import type { SessionPayload } from './jwt.strategy.js';
-
-export interface AuthenticatedUser {
-  readonly id: string;
-  readonly username: string;
-}
+import { type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 @Injectable()
 export class AuthService {

@@ -4,7 +4,7 @@ import { asOpenLoopId } from '@open-loops/loops';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
-import { Owner } from '../auth/owner.decorator.js';
+import { Owner } from '@open-loops/plugin-nest';
 
 const reorderSchema = z.object({
   order: z.array(z.string().min(1)).min(1).max(200),

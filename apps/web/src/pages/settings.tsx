@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
-  EpisodeDto,
   SettingsDto,
+  UpdatePluginSettingsDto,
   UpdateScheduleDto,
   UpdateSettingsDto,
 } from '@open-loops/contracts';
 import { api } from '../api.js';
 import { useAsyncAction } from '../hooks/use-async-action.js';
 import { ScheduleList } from '../components/schedule-list.js';
-import { EpisodeList } from '../components/episode-list.js';
 import { ErrorPanel } from '../components/error-panel.js';
 import { HandlesField } from '../components/handles-field.js';
 import { PlatformCronNotice } from '../components/platform-cron-notice.js';
-import { PodcastSettings } from '../components/podcast-settings.js';
+import { PluginPanels } from '../components/plugin-panels.js';
+import { webPlugins } from '../plugins/enabled.js';
 
 /**
  * Saved settings with the unsaved edits laid over them. Written field by field rather than by
@@ -20,9 +20,8 @@ import { PodcastSettings } from '../components/podcast-settings.js';
  * value, which is the difference between "not edited" and "cleared".
  */
 const merge = (saved: SettingsDto, draft: UpdateSettingsDto): SettingsDto => {
-  const host = draft.podcastHostVoiceId ?? saved.podcastHostVoiceId;
-  const guest = draft.podcastGuestVoiceId ?? saved.podcastGuestVoiceId;
   const edits = new Map((draft.schedules ?? []).map((entry) => [entry.kind, entry]));
+  const values = new Map((draft.plugins ?? []).map((entry) => [entry.id, entry.value]));
   return {
     ...saved,
     schedules: saved.schedules.map((schedule) => {
@@ -33,16 +32,12 @@ const merge = (saved: SettingsDto, draft: UpdateSettingsDto): SettingsDto => {
         enabled: edit?.enabled ?? schedule.enabled,
       };
     }),
-    podcastLength: draft.podcastLength ?? saved.podcastLength,
+    plugins: saved.plugins.map((plugin) =>
+      values.has(plugin.id) ? { ...plugin, value: values.get(plugin.id) } : plugin,
+    ),
     handles: draft.handles ?? saved.handles,
-    ...(host === undefined ? {} : { podcastHostVoiceId: host }),
-    ...(guest === undefined ? {} : { podcastGuestVoiceId: guest }),
   };
 };
-
-/** Whether this deployment can actually record one — the schedule list is where that is said. */
-const podcastAvailable = (settings: SettingsDto): boolean =>
-  settings.schedules.some((schedule) => schedule.kind === 'podcast' && schedule.available);
 
 const editedKeys = (draft: UpdateSettingsDto): readonly string[] =>
   Object.entries(draft)
@@ -52,13 +47,10 @@ const editedKeys = (draft: UpdateSettingsDto): readonly string[] =>
 export function SettingsPage(): React.ReactElement {
   const [settings, setSettings] = useState<SettingsDto | undefined>();
   const [draft, setDraft] = useState<UpdateSettingsDto>({});
-  const [episodes, setEpisodes] = useState<readonly EpisodeDto[]>([]);
   const [saved, setSaved] = useState(false);
 
   const load = useCallback(async () => {
-    const [next, recorded] = await Promise.all([api.settings(), api.episodes()]);
-    setSettings(next);
-    setEpisodes(recorded);
+    setSettings(await api.settings());
     setDraft({});
   }, []);
 
@@ -86,6 +78,15 @@ export function SettingsPage(): React.ReactElement {
     setSaved(false);
   }, []);
 
+  /** A plugin hands back its whole value, so the latest edit for a plugin is the only one kept. */
+  const editPlugin = useCallback((patch: UpdatePluginSettingsDto): void => {
+    setDraft((current) => ({
+      ...current,
+      plugins: [...(current.plugins ?? []).filter((entry) => entry.id !== patch.id), patch],
+    }));
+    setSaved(false);
+  }, []);
+
   const save = useCallback((): void => {
     void action
       .run(async () => {
@@ -95,10 +96,6 @@ export function SettingsPage(): React.ReactElement {
         setSaved(true);
       });
   }, [action, draft]);
-
-  const generate = useCallback((): void => {
-    void action.run(async () => await api.generatePodcast(true));
-  }, [action]);
 
   if (settings === undefined) {
     return action.error === undefined ? (
@@ -136,7 +133,12 @@ export function SettingsPage(): React.ReactElement {
         />
       </section>
 
-      <PodcastSettings value={value} onEdit={edit} />
+      <PluginPanels
+        plugins={value.plugins}
+        contributions={webPlugins}
+        busy={action.busy}
+        onEdit={editPlugin}
+      />
 
       <div className="flex items-center gap-3">
         <button
@@ -147,18 +149,8 @@ export function SettingsPage(): React.ReactElement {
         >
           {action.busy ? 'Saving…' : 'Save'}
         </button>
-        <button
-          type="button"
-          onClick={generate}
-          disabled={action.busy || !podcastAvailable(settings)}
-          className="rounded border border-ink-700 px-4 py-1.5 text-[12px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Record today now
-        </button>
         {saved && !dirty && <span className="text-[11px] text-signal-done">Saved.</span>}
       </div>
-
-      <EpisodeList episodes={episodes} />
     </div>
   );
 }

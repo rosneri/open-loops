@@ -10,7 +10,7 @@ import { Tokens } from '../../tokens.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
 import { OwnerResolver } from '../auth/owner-resolver.service.js';
 import { AgentTokenGuard } from './agent-token.guard.js';
-import { Public } from '../auth/public.decorator.js';
+import { Public } from '@open-loops/plugin-nest';
 
 const actorSchema = z.object({
   displayName: z.string().min(1),

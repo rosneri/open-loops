@@ -15,9 +15,14 @@ export interface PluginRecord<TValue = unknown> {
 export interface PluginRecordStore {
   get<TValue>(collection: string, key: string): Promise<PluginRecord<TValue> | undefined>;
   put(collection: string, key: string, value: unknown): Promise<void>;
+  /** Ordered by key, ascending unless asked otherwise — a key that sorts is a key that lists. */
   list<TValue>(
     collection: string,
-    query?: { readonly prefix?: string; readonly limit?: number },
+    query?: {
+      readonly prefix?: string;
+      readonly limit?: number;
+      readonly order?: 'asc' | 'desc';
+    },
   ): Promise<readonly PluginRecord<TValue>[]>;
   delete(collection: string, key: string): Promise<void>;
 }

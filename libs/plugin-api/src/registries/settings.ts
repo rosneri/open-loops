@@ -15,3 +15,9 @@ export interface SettingsFragment<TValue = unknown> {
 export interface SettingsRegistry {
   register<TValue>(fragment: SettingsFragment<TValue>): void;
 }
+
+/**
+ * Where a plugin's saved settings live in its own record store: one collection, one key. Named
+ * here so the scope that reads them and the screen that writes them cannot disagree about it.
+ */
+export const PLUGIN_SETTINGS_RECORD = { collection: '__settings', key: 'value' } as const;

@@ -246,7 +246,6 @@ model User {
   cursors      SyncCursor[]
   signals      RawSignal[]
   probeTasks   ProbeTask[]
-  episodes     PodcastEpisode[]
   pluginRecords PluginRecord[]
   schedules    ScheduleEntry[]
 }
@@ -258,10 +257,6 @@ model UserSettings {
   id     String @id @default(uuid())
   userId String @unique
 
-  podcastLength      String  @default("default")
-  podcastHostVoiceId  String?
-  podcastGuestVoiceId String?
-
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -269,28 +264,6 @@ model UserSettings {
 
 /// One episode per day. `brief` is the text the generator was given, kept because a disappointing
 /// episode is almost always a disappointing brief.
-model PodcastEpisode {
-  id      String @id @default(uuid())
-  ownerId String
-  day     String
-  status  String
-
-  title String
-  brief String @db.Text
-
-  audioUrl        String?
-  durationSeconds Int?
-  externalRef     String?
-  error           String? @db.Text
-
-  requestedAt DateTime
-  completedAt DateTime?
-
-  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-
-  @@unique([ownerId, day])
-  @@index([ownerId, requestedAt])
-}
 
 /// A plugin's own rows, without a migration each time. Namespaced by plugin and by owner, and
 /// reached only through a store that was built knowing both — the same trick the repositories

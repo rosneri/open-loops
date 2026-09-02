@@ -2,8 +2,7 @@ import { Controller, Get, Inject, Req } from '@nestjs/common';
 import type { AppConfig } from '../../config/env.js';
 import { aiModel, aiProvider } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
-import { Public } from '../auth/public.decorator.js';
-import type { RequestWithUser } from '../auth/jwt-auth.guard.js';
+import { Public, type RequestWithUser } from '@open-loops/plugin-nest';
 
 @Controller('api/health')
 export class HealthController {

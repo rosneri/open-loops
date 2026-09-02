@@ -3,10 +3,9 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import type { AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
-import { AuthService, type AuthenticatedUser } from './auth.service.js';
+import { AuthService } from './auth.service.js';
 import { clearSessionCookie, setSessionCookie } from './cookie.js';
-import type { RequestWithUser } from './jwt-auth.guard.js';
-import { Public } from './public.decorator.js';
+import { Public, type RequestWithUser, type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 @Controller('api/auth')
 export class AuthController {
