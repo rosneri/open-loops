@@ -106,6 +106,30 @@ export class PrismaUserRepository {
     return toRecord(row);
   }
 
+  /**
+   * Registration's counterpart to `upsert`: a taken username is `undefined` rather than a
+   * rotated password. The setup script may overwrite an account because whoever runs it already
+   * owns the machine; a signup request must never be able to take one over, which is why the
+   * two are separate methods instead of one with a flag.
+   *
+   * The unique index decides, not a prior read — two requests racing on the same name would
+   * both find it free.
+   */
+  public async create(input: {
+    username: string;
+    passwordHash: string;
+  }): Promise<UserRecord | undefined> {
+    try {
+      const row = await this.prisma.user.create({
+        data: { username: normalise(input.username), passwordHash: input.passwordHash },
+      });
+      return toRecord(row);
+    } catch (error) {
+      if (isUniqueViolation(error)) return undefined;
+      throw error;
+    }
+  }
+
   /** Upsert rather than create, so re-running the setup script rotates a password in place. */
   public async upsert(input: { username: string; passwordHash: string }): Promise<UserRecord> {
     const username = normalise(input.username);

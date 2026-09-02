@@ -1,10 +1,24 @@
-import { Controller, Get, Inject, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import type { AppConfig } from '../../config/env.js';
+import { signupEnabled, type AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { AuthService } from './auth.service.js';
 import { clearSessionCookie, setSessionCookie } from './cookie.js';
+import { CredentialThrottleGuard } from './credential-throttle.guard.js';
+import { registrationSchema } from './registration.js';
 import { Public, type RequestWithUser, type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 @Controller('api/auth')
@@ -21,13 +35,51 @@ export class AuthController {
    * to keep a copy of its own.
    */
   @Public()
-  @UseGuards(AuthGuard('local'))
+  // Ahead of the local strategy on purpose: a rejected request should cost the server nothing,
+  // and the strategy's first act is a bcrypt comparison.
+  @UseGuards(CredentialThrottleGuard, AuthGuard('local'))
+  @Throttle({ credentials: { ttl: 60_000, limit: 10 } })
   @Post('login')
   public async login(
     @Req() request: RequestWithUser,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthenticatedUser> {
     const user = this.require(request);
+    setSessionCookie(response, { token: await this.auth.issue(user), config: this.config });
+    return user;
+  }
+
+  /**
+   * Whether this deployment has a registration route, so the sign-in screen can offer it or
+   * stay a login. Public and anonymous by necessity — the form has to know before anyone signs
+   * in — and it says only that the door exists, never what the code is.
+   */
+  @Public()
+  @Get('registration')
+  public registration(): { enabled: boolean } {
+    return { enabled: signupEnabled(this.config) };
+  }
+
+  /**
+   * Signing up signs you in: the alternative is a screen that congratulates you and then asks
+   * for the password you typed a second ago. The session comes back the same way login's does,
+   * in the cookie and never in the body.
+   */
+  @Public()
+  @UseGuards(CredentialThrottleGuard)
+  // Tighter than login, and over a longer window: a person creates an account roughly once,
+  // so anything above this is someone working through the invite codes rather than typing one.
+  @Throttle({ credentials: { ttl: 15 * 60_000, limit: 5 } })
+  @Post('register')
+  public async register(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthenticatedUser> {
+    const parsed = registrationSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join('; '));
+    }
+    const user = await this.auth.register(parsed.data);
     setSessionCookie(response, { token: await this.auth.issue(user), config: this.config });
     return user;
   }

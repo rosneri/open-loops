@@ -3,10 +3,12 @@ import { loadConfig } from './config/env.js';
 import { hashPassword } from './modules/auth/password.js';
 
 /**
- * The only way an account is created. Deliberately a script and not a signup route: this app has
- * one user, and a public registration endpoint on a deployment anyone can reach would undo the
- * login it sits behind. Re-running it for an existing username sets a new password and ends
- * every session that username already had.
+ * How the first account on a machine is made, and the only way to make one without an invite:
+ * a signup route open to anyone who can reach the deployment would undo the login it sits
+ * behind, so `POST /api/auth/register` exists only where AUTH_SIGNUP_INVITE_CODE is set.
+ *
+ * This script may also overwrite — re-running it for an existing username sets a new password
+ * and ends every session that username already had — which registration deliberately cannot.
  *
  *   bun run apps/api/src/create-user.ts <username> [password]
  *

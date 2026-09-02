@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { JwtService } from '@nestjs/jwt';
 import { hashPassword, verifyPassword } from './password.js';
+import { inviteAccepted, registrationSchema } from './registration.js';
 import type { SessionPayload } from './jwt.strategy.js';
 
 const SECRET = 'a-secret-long-enough-to-be-realistic-32+';
@@ -72,5 +73,67 @@ describe('session tokens', () => {
     expect(() => {
       jwt.verify('nonsense');
     }).toThrow();
+  });
+});
+
+const CODE = 'an-invite-code-long-enough';
+
+describe('invite codes', () => {
+  it('accepts the configured code and rejects a near miss', () => {
+    expect(inviteAccepted(CODE, CODE)).toBe(true);
+    expect(inviteAccepted(`${CODE}x`, CODE)).toBe(false);
+    expect(inviteAccepted(CODE.toUpperCase(), CODE)).toBe(false);
+  });
+
+  /** An unset code closes registration; it must never read as "no code required". */
+  it('rejects everything when no code is configured', () => {
+    expect(inviteAccepted(CODE, undefined)).toBe(false);
+    expect(inviteAccepted('', undefined)).toBe(false);
+  });
+
+  /** Lengths differ on almost every wrong guess; the comparison must survive that, not throw. */
+  it('compares codes of different lengths without throwing', () => {
+    expect(inviteAccepted('short', CODE)).toBe(false);
+    expect(inviteAccepted(`${CODE}${CODE}`, CODE)).toBe(false);
+  });
+});
+
+describe('registration input', () => {
+  const valid = { username: 'neri', password: 'correct horse battery', inviteCode: CODE };
+
+  it('accepts a plausible signup and trims the username', () => {
+    const parsed = registrationSchema.parse({ ...valid, username: '  neri  ' });
+    expect(parsed.username).toBe('neri');
+  });
+
+  it('rejects a password bcrypt would silently truncate', () => {
+    expect(registrationSchema.safeParse({ ...valid, password: 'x'.repeat(73) }).success).toBe(
+      false,
+    );
+    expect(registrationSchema.safeParse({ ...valid, password: 'x'.repeat(72) }).success).toBe(true);
+  });
+
+  it('rejects a password short enough to guess', () => {
+    expect(registrationSchema.safeParse({ ...valid, password: 'hunter2' }).success).toBe(false);
+  });
+
+  it('rejects usernames that are not names', () => {
+    for (const username of ['', 'a', 'has space', 'semi;colon', 'a'.repeat(41)]) {
+      expect(registrationSchema.safeParse({ ...valid, username }).success).toBe(false);
+    }
+  });
+
+  /** The accounts this app already has are email addresses, so one has to be a valid username. */
+  it('accepts an email address as a username', () => {
+    expect(
+      registrationSchema.safeParse({ ...valid, username: 'neri.coder+ol@gmail.com' }).success,
+    ).toBe(true);
+  });
+
+  it('requires an invite code to be present at all', () => {
+    expect(registrationSchema.safeParse({ ...valid, inviteCode: '' }).success).toBe(false);
+    expect(
+      registrationSchema.safeParse({ username: 'neri', password: valid.password }).success,
+    ).toBe(false);
   });
 });

@@ -26,7 +26,7 @@ cp .env.example .env      # DATABASE_URL, and COMPOSIO_API_KEY if you want hoste
 bun run db:up             # Postgres in Docker on :5439
 bun run db:generate
 bun run db:migrate        # or db:push against a throwaway database
-bun run create-user neri  # prints a generated password; there is no signup screen
+bun run create-user neri  # prints a generated password; the first account is made here
 moon run api:dev web:dev  # API on :4455, client on http://localhost:4444
 ```
 
@@ -145,18 +145,36 @@ config. Removing the plugin removes them.
 
 ## Signing in
 
-Every route is behind a login except three: `POST /api/auth/login`, a bare `GET /api/health`
-liveness check, and the OAuth callback Composio redirects the browser to. That is enforced by a
-global guard, so a new controller is protected the day it is written and has to say `@Public()`
-to opt out.
+Every route is behind a login except a handful: `POST /api/auth/login`, the two registration
+routes below, a bare `GET /api/health` liveness check, and the OAuth callback Composio redirects
+the browser to. That is enforced by a global guard, so a new controller is protected the day it
+is written and has to say `@Public()` to opt out.
 
-Accounts are made from the command line, never from a signup page — the app has one user, and a
-public registration route on a deployment anyone can reach would undo the login it sits behind:
+The first account on a machine is made from the command line:
 
 ```bash
 bun run create-user <username>              # generates and prints a password
 bun run create-user <username> <password>   # or set one; also rotates an existing account
 ```
+
+Everyone after that can sign themselves up, but only with an invite code. Set
+`AUTH_SIGNUP_INVITE_CODE` — at least 6 characters, case-sensitive — and the sign-in screen grows
+a "create account" half; leave it unset, which is the default, and `POST /api/auth/register`
+refuses every caller, because an open registration route on a deployment anyone can reach would
+undo the login it sits behind.
+
+`POST /api/auth/register` allows five attempts per address per fifteen minutes and
+`POST /api/auth/login` ten per minute, which is `@nestjs/throttler` counting against the address
+the connection came from — `x-vercel-forwarded-for` where a proxy sets it, because the ordinary
+`x-forwarded-for` is a header the client writes and could rotate every request. The store is in
+process, so on Vercel each warm instance counts on its own and the limit is a speed bump across
+a fleet rather than a wall; a code exposed to the internet should be long enough not to need it. `GET /api/auth/registration` is what the form asks to decide which half to show,
+and it says only whether the door exists.
+
+The code is compared in constant time against a SHA-256 digest of each side, so a wrong guess
+leaks neither its length nor how far it got, and it is checked before any password is hashed.
+Registration creates and never overwrites: a taken username is a `409`, so a signup can't take
+an account over the way a re-run of `create-user` deliberately can.
 
 Rotating a password ends every session that account already had. `AUTH_JWT_SECRET` signs the
 session cookie and is required — at least 32 characters, and changing it logs everyone out.

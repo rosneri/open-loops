@@ -132,6 +132,17 @@ export const api = {
   login: async (username: string, password: string): Promise<SessionUser> =>
     await post<SessionUser>('/api/auth/login', { username, password }),
 
+  /** Whether this deployment offers a signup form, or is a login and nothing else. */
+  registrationEnabled: async (): Promise<boolean> =>
+    (await request<{ enabled: boolean }>('/api/auth/registration')).enabled,
+
+  /** Succeeds signed in, exactly as `login` does — the cookie comes back on the same response. */
+  register: async (input: {
+    username: string;
+    password: string;
+    inviteCode: string;
+  }): Promise<SessionUser> => await post<SessionUser>('/api/auth/register', input),
+
   logout: async (): Promise<{ ok: true }> => await post<{ ok: true }>('/api/auth/logout'),
 
   today: async (): Promise<TodayDto> => await request<TodayDto>('/api/today'),

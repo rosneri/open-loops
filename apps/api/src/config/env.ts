@@ -33,12 +33,42 @@ const schema = z.object({
    * default would be worse than no signature at all. Rotating it ends every session.
    */
   AUTH_JWT_SECRET: z.string().min(32, 'AUTH_JWT_SECRET must be at least 32 characters.'),
-  AUTH_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(24 * 7),
+  AUTH_SESSION_TTL_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 90)
+    .default(24 * 7),
+  /**
+   * The invite code a stranger must present to create an account. Unset means there is no
+   * registration route at all, which is the default and the honest one for a single-user
+   * install: an open signup route on a deployment anyone can reach would undo the login it
+   * sits behind. Setting it opens the door exactly as wide as the people you gave the code to.
+   *
+   * It is a password shared by everyone who may join, not a coupon. Six characters is the floor
+   * because a code people type from memory has to be typeable, and the register route is rate
+   * limited so a short one cannot be worked through quickly — but the limit counts per instance,
+   * so a code protecting a deployment on the public internet should still be much longer.
+   */
+  AUTH_SIGNUP_INVITE_CODE: z
+    .string()
+    .min(6, 'AUTH_SIGNUP_INVITE_CODE must be at least 6 characters.')
+    .optional(),
   /** Set by Vercel Cron on its own requests; accepted alongside the agent token on /api/tick. */
   CRON_SECRET: z.string().optional(),
 
-  DAY_START_MINUTE: z.coerce.number().int().min(0).max(1439).default(9 * 60),
-  DAY_END_MINUTE: z.coerce.number().int().min(1).max(1440).default(18 * 60),
+  DAY_START_MINUTE: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(1439)
+    .default(9 * 60),
+  DAY_END_MINUTE: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .default(18 * 60),
   /**
    * Seeds the sweep's schedule row on a fresh database and nothing more. Once the row exists,
    * the Settings screen owns it — changing a schedule must not require a redeploy.
@@ -62,7 +92,6 @@ const schema = z.object({
 
   COMPOSIO_API_KEY: z.string().optional(),
 
-
   /**
    * Set by Vercel on every function invocation. It is the honest test for "can this process
    * hold a cron job": OPEN_LOOPS_MODE answers a different question — where the data comes from
@@ -81,6 +110,10 @@ export const loadConfig = (source: NodeJS.ProcessEnv = process.env): AppConfig =
 };
 
 export const isLocalMode = (config: AppConfig): boolean => config.OPEN_LOOPS_MODE === 'LOCAL';
+
+/** Whether this deployment has a registration route. Off unless an invite code was configured. */
+export const signupEnabled = (config: AppConfig): boolean =>
+  config.AUTH_SIGNUP_INVITE_CODE !== undefined;
 
 /**
  * Whether this process outlives a request and can therefore own a scheduler. False on a
