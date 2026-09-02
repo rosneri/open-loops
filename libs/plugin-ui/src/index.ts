@@ -30,6 +30,21 @@ export interface SettingsPanel<TValue = unknown> {
   readonly Panel: ComponentType<SettingsPanelProps<TValue>>;
 }
 
+export interface PageProps {
+  readonly request: PluginRequest;
+}
+
+/**
+ * A screen of the plugin's own, with a tab in the header. `path` is the route it answers on —
+ * `/digest` — and the shell hands it the authenticated fetch and nothing else, because a page
+ * that needs more than the API is a page that has grown a second app.
+ */
+export interface PluginPage {
+  readonly path: `/${string}`;
+  readonly label: string;
+  readonly Page: ComponentType<PageProps>;
+}
+
 /**
  * A plugin's contribution to the client. Imported by the web app the same way the API imports
  * the server half — listed, not discovered — so the bundler sees through it and a typo is a
@@ -38,6 +53,7 @@ export interface SettingsPanel<TValue = unknown> {
 export interface WebPlugin {
   readonly id: string;
   readonly settings?: SettingsPanel;
+  readonly pages?: readonly PluginPage[];
 }
 
 /**
@@ -48,4 +64,5 @@ export interface WebPlugin {
 export const defineWebPlugin = <TValue>(plugin: {
   readonly id: string;
   readonly settings?: SettingsPanel<TValue>;
+  readonly pages?: readonly PluginPage[];
 }): WebPlugin => plugin as unknown as WebPlugin;

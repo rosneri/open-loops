@@ -1,0 +1,15 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-reasoning-ai-sdk'
+  description: 'Keyed reasoning providers through the Vercel AI SDK: Anthropic and OpenAI.'
+
+dependsOn:
+  - plugin-api
+  - reasoning
+
+tags:
+  - 'plugin'

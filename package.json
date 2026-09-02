@@ -26,7 +26,8 @@
     "db:push": "bun run --cwd libs/persistence db:push",
     "db:studio": "bun run --cwd libs/persistence db:studio",
     "tick": "bun run --cwd apps/api tick",
-    "create-user": "bun apps/api/src/create-user.ts"
+    "create-user": "bun apps/api/src/create-user.ts",
+    "plugin:new": "bun tools/scaffold/new-plugin.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

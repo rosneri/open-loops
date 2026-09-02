@@ -5,6 +5,7 @@ import { Capability, definePlugin } from '@open-loops/plugin-api';
 import type { OwnerScope } from '@open-loops/plugin-api';
 import { PluginHost, ProbeCatalog, ScheduleCatalog, SourceCatalog } from '@open-loops/plugin-host';
 import { enabledPlugins } from './enabled.js';
+import { generatorFor } from '../infrastructure/reasoning.js';
 
 const logger: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -158,6 +159,34 @@ describe('the plugins this build ships', () => {
     const bare = await host('chat');
     expect(ScheduleCatalog.from(bare).kinds(() => ({}) as OwnerScope)).toEqual([]);
     expect(bare.http()).toEqual([]);
+  });
+
+  it('thinks with Claude Code alone when nothing else has a key', async () => {
+    const generator = generatorFor({
+      host: await host(),
+      preferred: 'claude-code',
+      model: undefined,
+      logger,
+    });
+    expect(generator.label).not.toContain('→');
+  });
+
+  it('puts a keyed provider behind Claude Code as soon as its key exists', async () => {
+    const keyed = await PluginHost.load({
+      plugins: enabledPlugins(undefined),
+      logger,
+      env: { ANTHROPIC_API_KEY: 'sk-test' },
+    });
+    const generator = generatorFor({ host: keyed, preferred: 'claude-code', model: 'opus', logger });
+    // The explicit model goes to the preferred provider only; the fallback keeps its own default.
+    expect(generator.label).toContain('→ anthropic/claude-sonnet-5');
+  });
+
+  it('names the providers that exist when AI_PROVIDER asks for one that does not', async () => {
+    const loaded = await host();
+    expect(() =>
+      generatorFor({ host: loaded, preferred: 'telepathy', model: undefined, logger }),
+    ).toThrow(/claude-code, anthropic, openai/);
   });
 
   it('refuses a plugin id that does not exist instead of silently shipping less', () => {

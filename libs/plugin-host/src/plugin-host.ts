@@ -7,6 +7,7 @@ import {
   type OwnerScope,
   type Plugin,
   type ProbeDefinition,
+  type ReasoningProviderDefinition,
   type ScheduleDefinition,
   type SettingsFragment,
   type SourceDefinition,
@@ -122,6 +123,11 @@ export class PluginHost {
 
   public settings(): readonly Registered<SettingsFragment>[] {
     return this.state.registrations.settings;
+  }
+
+  /** In registration order; the composition root puts the preferred one first. */
+  public reasoningProviders(): readonly Registered<ReasoningProviderDefinition>[] {
+    return this.state.registrations.reasoningProviders;
   }
 
   /**

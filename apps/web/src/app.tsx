@@ -1,21 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, UNAUTHORIZED_EVENT, type SessionUser } from './api.js';
+import { api, pluginRequest, UNAUTHORIZED_EVENT, type SessionUser } from './api.js';
 import { TodayPage } from './pages/today.js';
 import { IntegrationsPage } from './pages/integrations.js';
 import { SettingsPage } from './pages/settings.js';
 import { SignInPage } from './pages/sign-in.js';
+import { webPlugins } from './plugins/enabled.js';
 
-const TABS = [
+const CORE_TABS = [
   { path: '/', label: 'Today' },
   { path: '/integrations', label: 'Integrations' },
   { path: '/settings', label: 'Settings' },
 ] as const;
 
-const normalise = (path: string): string => {
-  if (path.startsWith('/integrations')) return '/integrations';
-  if (path.startsWith('/settings')) return '/settings';
-  return '/';
-};
+/** A plugin's pages get a tab each, after the product's own, in the order plugins are listed. */
+const PLUGIN_PAGES = webPlugins.flatMap((plugin) => plugin.pages ?? []);
+
+const TABS: readonly { readonly path: string; readonly label: string }[] = [
+  ...CORE_TABS,
+  ...PLUGIN_PAGES.map((page) => ({ path: page.path, label: page.label })),
+];
+
+/** The tab a location belongs to: the longest tab path it starts with, or Today. */
+const normalise = (path: string): string =>
+  TABS.filter((tab) => tab.path !== '/' && path.startsWith(tab.path))
+    .map((tab) => tab.path)
+    .sort((a, b) => b.length - a.length)[0] ?? '/';
 
 /** `undefined` while the cold-load check is in flight, `null` once we know there is no session. */
 type Session = SessionUser | null | undefined;
@@ -89,6 +98,28 @@ export function App(): React.ReactElement {
 
   return (
     <div className="min-h-screen">
+      <AppHeader path={path} username={session.username} go={go} signOut={signOut} />
+
+      <main className="mx-auto max-w-6xl px-8 py-10">
+        {path === '/integrations' && <IntegrationsPage />}
+        {path === '/settings' && <SettingsPage />}
+        {path === '/' && <TodayPage />}
+        {PLUGIN_PAGES.filter((page) => page.path === path).map((page) => (
+          <page.Page key={page.path} request={pluginRequest} />
+        ))}
+      </main>
+    </div>
+  );
+}
+
+function AppHeader(props: {
+  readonly path: string;
+  readonly username: string;
+  readonly go: (next: string) => void;
+  readonly signOut: () => void;
+}): React.ReactElement {
+  const { path, username, go, signOut } = props;
+  return (
       <header className="border-b border-ink-800 px-8 py-5">
         <div className="mx-auto flex max-w-6xl items-baseline gap-10">
           <button
@@ -118,7 +149,7 @@ export function App(): React.ReactElement {
           </nav>
 
           <div className="ml-auto flex items-baseline gap-4">
-            <span className="font-mono text-[11px] text-chalk-600">{session.username}</span>
+            <span className="font-mono text-[11px] text-chalk-600">{username}</span>
             <button
               type="button"
               onClick={signOut}
@@ -129,12 +160,5 @@ export function App(): React.ReactElement {
           </div>
         </div>
       </header>
-
-      <main className="mx-auto max-w-6xl px-8 py-10">
-        {path === '/integrations' && <IntegrationsPage />}
-        {path === '/settings' && <SettingsPage />}
-        {path === '/' && <TodayPage />}
-      </main>
-    </div>
   );
 }

@@ -10,21 +10,15 @@ import {
 } from '@open-loops/persistence';
 import { ComposioSessionRegistry } from '@open-loops/connectors-composio';
 import type { StructuredGenerator } from '@open-loops/orchestration';
-import {
-  AiSdkGenerator,
-  ClaudeCodeGenerator,
-  FallbackGenerator,
-  ModelLoopExtractor,
-  ModelLoopReconciler,
-  lazyModel,
-} from '@open-loops/reasoning';
+import { ModelLoopExtractor, ModelLoopReconciler } from '@open-loops/reasoning';
 import { PluginHost, ProbeCatalog, ScheduleCatalog, SourceCatalog } from '@open-loops/plugin-host';
 import type { AppConfig } from '../config/env.js';
 import type { BuiltInSchedules } from '../modules/settings/built-in-schedules.js';
 import { builtInSchedules } from '../modules/settings/built-in-schedules.js';
 import type { SettingsStores } from '../modules/settings/settings.service.js';
 import { PluginSettingsStore } from '../modules/settings/plugin-settings.store.js';
-import { aiModel, aiProvider, isLocalMode, loadConfig } from '../config/env.js';
+import { aiProvider, isLocalMode, loadConfig } from '../config/env.js';
+import { generatorFor } from './reasoning.js';
 import { AccountIdentities } from './account-identity.service.js';
 import { SourceStackFactory } from './source-stack.factory.js';
 import { SystemClock } from '../system/system-clock.js';
@@ -173,9 +167,9 @@ const plugins: Provider[] = [
 const reasoning: Provider[] = [
   {
     provide: Tokens.StructuredGenerator,
-    inject: [Tokens.Config, Tokens.Logger],
-    useFactory: (config: AppConfig, logger: Logger): StructuredGenerator =>
-      generatorFor({ config, logger }),
+    inject: [Tokens.Config, Tokens.Logger, Tokens.PluginHost],
+    useFactory: (config: AppConfig, logger: Logger, host: PluginHost): StructuredGenerator =>
+      generatorFor({ host, preferred: aiProvider(config), model: config.AI_MODEL, logger }),
   },
   {
     provide: Tokens.LoopExtractor,
@@ -191,61 +185,6 @@ const reasoning: Provider[] = [
   },
 ];
 
-/**
- * The one place that decides who does the thinking. Claude Code first when it is the configured
- * provider — it costs nothing and needs no key — with a keyed provider behind it so a usage
- * limit degrades to a bill instead of to an outage.
- */
-const generatorFor = (input: { config: AppConfig; logger: Logger }): StructuredGenerator => {
-  const { config, logger } = input;
-  const provider = aiProvider(config);
-  const chain: StructuredGenerator[] = [];
-
-  if (provider === 'claude-code') {
-    chain.push(
-      new ClaudeCodeGenerator({
-        logger,
-        model: aiModel(config),
-        binary: config.CLAUDE_CODE_BIN,
-        timeoutMs: config.CLAUDE_CODE_TIMEOUT_MS,
-      }),
-    );
-  }
-
-  const keyed = keyedGenerator({ config, provider });
-  if (keyed !== undefined) chain.push(keyed);
-
-  const [first, ...rest] = chain;
-  if (first === undefined) {
-    throw new Error(
-      'No reasoning provider is available. Install Claude Code, or set ANTHROPIC_API_KEY.',
-    );
-  }
-  return rest.length === 0 ? first : new FallbackGenerator({ generators: chain, logger });
-};
-
-const keyedGenerator = (input: {
-  config: AppConfig;
-  provider: ReturnType<typeof aiProvider>;
-}): StructuredGenerator | undefined => {
-  const { config } = input;
-  const provider = input.provider === 'claude-code' ? 'anthropic' : input.provider;
-  const key = provider === 'openai' ? config.OPENAI_API_KEY : config.ANTHROPIC_API_KEY;
-  if (key === undefined || key.length === 0) return undefined;
-
-  const model = input.provider === 'claude-code' ? FALLBACK_MODEL : aiModel(config);
-  return new AiSdkGenerator({
-    label: `${provider}/${model}`,
-    model: lazyModel({
-      provider,
-      model,
-      ...(provider === 'openai' ? { openaiApiKey: key } : { anthropicApiKey: key }),
-    }),
-  });
-};
-
-/** `sonnet` is a CLI alias; the API needs a real model id. */
-const FALLBACK_MODEL = 'claude-sonnet-5';
 
 const ALL = [
   ...base,

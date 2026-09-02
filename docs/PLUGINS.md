@@ -4,6 +4,15 @@ A plugin is a directory under `plugins/` with one default export. Nothing discov
 `apps/api/src/plugins/enabled.ts` and a typo becomes a compile error instead of a feature that
 silently did not load.
 
+```bash
+bun run plugin:new digest "Sends the day as an email."
+```
+
+That copies `plugins/template` — a tick step, a settings fragment, a panel and a test — to
+`plugins/digest`, renames everything, and lists the new plugin in the workspace, the root
+tsconfig, and both apps' enabled lists. Delete what you do not need; a plugin with one
+registration is a normal plugin.
+
 ```ts
 import { Capability, definePlugin } from '@open-loops/plugin-api';
 
@@ -192,6 +201,36 @@ whole new value to the draft; the screen's one Save button writes it) and `reque
 client's authenticated fetch, so a panel that lists what the plugin recorded, or fires one of its
 routes, gets the session, the 401 hand-off and the timeout for free. `apps/web/src/plugins/enabled.ts`
 is where the client half is listed, mirroring the server half.
+
+## Providing the model
+
+The model is a plugin too. `plugins/reasoning-claude-code` offers the CLI already signed in on
+this machine and `plugins/reasoning-ai-sdk` offers Anthropic and OpenAI behind a key; each
+reads its own variables from `context.env`. A provider's `create` returns `undefined` when this
+deployment cannot use it, and the host builds a chain from the rest with `AI_PROVIDER` first —
+so a usage limit on the free path degrades to a bill rather than to an outage, and a local model
+server is one more plugin rather than a branch in the app.
+
+```ts
+context.reasoningProviders.register({
+  id: 'ollama',
+  label: 'Ollama',
+  create: ({ model, logger }) => (host === undefined ? undefined : new OllamaGenerator({ host, model, logger })),
+});
+```
+
+## A page of your own
+
+A plugin's client entry may also contribute pages; each gets a tab in the header after the
+product's own, and the shell hands it the authenticated fetch and nothing else:
+
+```ts
+export default defineWebPlugin<DigestSettings>({
+  id: 'digest',
+  settings: { label: 'Digest', Panel: DigestPanel },
+  pages: [{ path: '/digest', label: 'Digest', Page: DigestPage }],
+});
+```
 
 ## Rules
 

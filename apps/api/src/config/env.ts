@@ -50,16 +50,15 @@ const schema = z.object({
     .transform((value) => value === 'true'),
 
   /**
-   * `claude-code` drives the Claude Code already logged in on this machine, so local runs need
-   * no API key at all. It is the default in LOCAL mode; hosted deployments have no CLI and no
-   * interactive login, so they fall back to a keyed provider.
+   * Which registered reasoning provider thinks first. `claude-code` drives the Claude Code
+   * already logged in on this machine, so local runs need no API key at all; it is the default
+   * in LOCAL mode. Hosted deployments have no CLI and no interactive login, so they default to
+   * `anthropic`. Any id a reasoning plugin registered is valid; the keys and binaries each one
+   * needs are that plugin's own variables.
    */
-  AI_PROVIDER: z.enum(['claude-code', 'anthropic', 'openai']).optional(),
-  AI_MODEL: z.string().optional(),
-  CLAUDE_CODE_BIN: z.string().default('claude'),
-  CLAUDE_CODE_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(900_000).default(240_000),
-  ANTHROPIC_API_KEY: z.string().optional(),
-  OPENAI_API_KEY: z.string().optional(),
+  AI_PROVIDER: z.string().min(1).optional(),
+  /** An explicit model, in the preferred provider's vocabulary. Each provider has its own default. */
+  AI_MODEL: z.string().min(1).optional(),
 
   COMPOSIO_API_KEY: z.string().optional(),
 
@@ -89,20 +88,9 @@ export const isLocalMode = (config: AppConfig): boolean => config.OPEN_LOOPS_MOD
  */
 export const isLongLived = (config: AppConfig): boolean => (config.VERCEL ?? '').length === 0;
 
-export type AiProvider = 'claude-code' | 'anthropic' | 'openai';
-
 /** Local means "use what is already on this machine"; hosted means "use a key". */
-export const aiProvider = (config: AppConfig): AiProvider =>
+export const aiProvider = (config: AppConfig): string =>
   config.AI_PROVIDER ?? (isLocalMode(config) ? 'claude-code' : 'anthropic');
-
-const DEFAULT_MODELS: Record<AiProvider, string> = {
-  'claude-code': 'sonnet',
-  anthropic: 'claude-sonnet-5',
-  openai: 'gpt-5.2',
-};
-
-export const aiModel = (config: AppConfig): string =>
-  config.AI_MODEL ?? DEFAULT_MODELS[aiProvider(config)];
 
 /**
  * The handles the first account starts life with, used to tell "I said" from "they said". Read

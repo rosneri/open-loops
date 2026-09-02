@@ -1,0 +1,31 @@
+{
+  "name": "@open-loops/plugin-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A starting point: one tick step, one settings fragment, one panel. Copy it with `bun run plugin:new`.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.tsx",
+      "default": "./src/ui/index.tsx"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/plugin-api": "workspace:*",
+    "@open-loops/plugin-ui": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@open-loops/kernel": "workspace:*",
+    "@open-loops/plugin-host": "workspace:*",
+    "@types/react": "^19.2.7"
+  }
+}

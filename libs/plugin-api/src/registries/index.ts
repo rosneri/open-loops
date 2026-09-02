@@ -7,3 +7,4 @@ export * from './tick.js';
 export * from './events.js';
 export * from './storage.js';
 export * from './tools.js';
+export * from './reasoning.js';

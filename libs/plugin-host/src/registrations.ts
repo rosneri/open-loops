@@ -8,6 +8,7 @@ import {
   type Plugin,
   type PluginSetupContext,
   type ProbeDefinition,
+  type ReasoningProviderDefinition,
   type ScheduleDefinition,
   type SettingsFragment,
   type SourceDefinition,
@@ -37,6 +38,7 @@ export class Registrations {
   public readonly http: Registered<HttpRegistration>[] = [];
   public readonly settings: Registered<SettingsFragment>[] = [];
   public readonly tickSteps: Registered<TickStepDefinition>[] = [];
+  public readonly reasoningProviders: Registered<ReasoningProviderDefinition>[] = [];
   public readonly handlers = new Map<LoopEventType, Registered<LoopEventHandler>[]>();
 }
 
@@ -101,6 +103,12 @@ export const setupContextFor = (input: {
       register: (step) => {
         require(Capability.Tick);
         registrations.tickSteps.push(tag(plugin.id, step));
+      },
+    },
+    reasoningProviders: {
+      register: (definition) => {
+        require(Capability.ProvideReasoning);
+        registrations.reasoningProviders.push(tag(plugin.id, definition));
       },
     },
     events: {

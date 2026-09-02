@@ -74,6 +74,15 @@
       "path": "./plugins/podcast"
     },
     {
+      "path": "./plugins/reasoning-claude-code"
+    },
+    {
+      "path": "./plugins/reasoning-ai-sdk"
+    },
+    {
+      "path": "./plugins/template"
+    },
+    {
       "path": "./apps/api"
     },
     {

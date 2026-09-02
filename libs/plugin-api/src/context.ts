@@ -9,6 +9,7 @@ import type {
   HttpRegistry,
   PluginRecordStore,
   ProbeRegistry,
+  ReasoningRegistry,
   ScheduleRegistry,
   SettingsRegistry,
   SourceRegistry,
@@ -87,4 +88,6 @@ export interface PluginSetupContext {
   readonly settings: SettingsRegistry;
   readonly tick: TickRegistry;
   readonly events: EventRegistry;
+  /** Ways of answering `scope.reasoning`. Requires `provide:reasoning`. */
+  readonly reasoningProviders: ReasoningRegistry;
 }

@@ -195,6 +195,8 @@ convention — a hosted connector physically cannot correct a record.
 Locally the reasoning runs on the **Claude Code you are already signed into** — no API key, no
 extra bill. Set `ANTHROPIC_API_KEY` as well and it becomes a fallback: when the CLI hits a usage
 limit or is missing (as on a server), the keyed provider takes over and the tick keeps running.
+The providers themselves are plugins — `plugins/reasoning-claude-code` and
+`plugins/reasoning-ai-sdk` — and `AI_PROVIDER` names which registered one thinks first.
 
 **Deciding what it means** is where the AI lives, in exactly two steps:
 
@@ -253,6 +255,8 @@ plugins/
   chat/ mail/ calendar/ documents/ code-review/ issue-tracker/ local-sources/
                         the apps this build knows and the probes that check them
   podcast/              the day, read aloud — a schedule, a panel, routes, its own records
+  reasoning-*/          who does the thinking: the Claude Code CLI, or a keyed API
+  template/             a starting point; `bun run plugin:new <id>` copies it
 apps/
   api/                  NestJS host — controllers only translate HTTP
   web/                  React client
@@ -290,6 +294,7 @@ with 7. `moon run :lint` handles it; you should never notice.
 ## Checks
 
 ```bash
+bun run plugin:new <id> "description"   # scaffold a plugin and list it everywhere
 moon run :typecheck   # every project, strictest TypeScript settings
 moon run :test        # Vitest
 moon run :lint        # architecture and size rules

@@ -46,7 +46,9 @@
     "@open-loops/plugin-host": "workspace:*",
     "@open-loops/plugin-local-sources": "workspace:*",
     "@open-loops/plugin-nest": "workspace:*",
-    "@open-loops/plugin-podcast": "workspace:*"
+    "@open-loops/plugin-podcast": "workspace:*",
+    "@open-loops/plugin-reasoning-claude-code": "workspace:*",
+    "@open-loops/plugin-reasoning-ai-sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

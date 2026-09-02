@@ -7,6 +7,8 @@ import issueTracker from '@open-loops/plugin-issue-tracker';
 import localSources from '@open-loops/plugin-local-sources';
 import mail from '@open-loops/plugin-mail';
 import podcast from '@open-loops/plugin-podcast';
+import reasoningAiSdk from '@open-loops/plugin-reasoning-ai-sdk';
+import reasoningClaudeCode from '@open-loops/plugin-reasoning-claude-code';
 
 /**
  * What this deployment is made of. Plugins are imported rather than discovered: the set is known
@@ -26,6 +28,8 @@ const ALL: readonly Plugin[] = [
   issueTracker,
   localSources,
   podcast,
+  reasoningClaudeCode,
+  reasoningAiSdk,
 ];
 
 export const enabledPlugins = (setting: string | undefined): readonly Plugin[] => {

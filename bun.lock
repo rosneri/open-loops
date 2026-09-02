@@ -49,6 +49,8 @@
         "@open-loops/plugin-mail": "workspace:*",
         "@open-loops/plugin-nest": "workspace:*",
         "@open-loops/plugin-podcast": "workspace:*",
+        "@open-loops/plugin-reasoning-ai-sdk": "workspace:*",
+        "@open-loops/plugin-reasoning-claude-code": "workspace:*",
         "@open-loops/reasoning": "workspace:*",
         "@open-loops/signals": "workspace:*",
         "bcryptjs": "^3.0.3",
@@ -348,6 +350,47 @@
         "react": "^19.2.8",
       },
     },
+    "plugins/reasoning-ai-sdk": {
+      "name": "@open-loops/plugin-reasoning-ai-sdk",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/reasoning": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/node": "^24.10.1",
+      },
+    },
+    "plugins/reasoning-claude-code": {
+      "name": "@open-loops/plugin-reasoning-claude-code",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/reasoning": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/node": "^24.10.1",
+      },
+    },
+    "plugins/template": {
+      "name": "@open-loops/plugin-template",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/plugin-api": "workspace:*",
+        "@open-loops/plugin-ui": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@open-loops/kernel": "workspace:*",
+        "@open-loops/plugin-host": "workspace:*",
+        "@types/react": "^19.2.7",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
+      },
+    },
     "tools/lint": {
       "name": "@open-loops/lint",
       "version": "0.1.0",
@@ -518,6 +561,12 @@
     "@open-loops/plugin-nest": ["@open-loops/plugin-nest@workspace:libs/plugin-nest"],
 
     "@open-loops/plugin-podcast": ["@open-loops/plugin-podcast@workspace:plugins/podcast"],
+
+    "@open-loops/plugin-reasoning-ai-sdk": ["@open-loops/plugin-reasoning-ai-sdk@workspace:plugins/reasoning-ai-sdk"],
+
+    "@open-loops/plugin-reasoning-claude-code": ["@open-loops/plugin-reasoning-claude-code@workspace:plugins/reasoning-claude-code"],
+
+    "@open-loops/plugin-template": ["@open-loops/plugin-template@workspace:plugins/template"],
 
     "@open-loops/plugin-ui": ["@open-loops/plugin-ui@workspace:libs/plugin-ui"],
 

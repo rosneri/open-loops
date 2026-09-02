@@ -29,10 +29,10 @@ export const Capability = {
   Settings: 'settings',
   /** Subscribe to loop events. Subscribers observe; they cannot veto or mutate. */
   Events: 'events',
-  /** Contribute to the client: a nav tab, a settings panel, a row decorator. */
-  Ui: 'ui',
   /** Ask the configured model for structured output. */
   Reasoning: 'reasoning',
+  /** Be the model: contribute a way of answering `reasoning` for the whole deployment. */
+  ProvideReasoning: 'provide:reasoning',
 } as const;
 
 export type Capability = (typeof Capability)[keyof typeof Capability];

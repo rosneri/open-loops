@@ -1,0 +1,17 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-template'
+  description: 'A starting point: one tick step, one settings fragment, one panel.'
+
+dependsOn:
+  - kernel
+  - plugin-api
+  - plugin-host
+  - plugin-ui
+
+tags:
+  - 'plugin'

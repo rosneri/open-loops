@@ -1,12 +1,15 @@
 import { Controller, Get, Inject, Req } from '@nestjs/common';
+import type { StructuredGenerator } from '@open-loops/orchestration';
 import type { AppConfig } from '../../config/env.js';
-import { aiModel, aiProvider } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { Public, type RequestWithUser } from '@open-loops/plugin-nest';
 
 @Controller('api/health')
 export class HealthController {
-  public constructor(@Inject(Tokens.Config) private readonly config: AppConfig) {}
+  public constructor(
+    @Inject(Tokens.Config) private readonly config: AppConfig,
+    @Inject(Tokens.StructuredGenerator) private readonly reasoning: StructuredGenerator,
+  ) {}
 
   /**
    * Public so an uptime check needs no credentials, but the configuration details behind it —
@@ -21,7 +24,8 @@ export class HealthController {
       mode: this.config.OPEN_LOOPS_MODE,
       timeZone: this.config.OPEN_LOOPS_TIMEZONE,
       composio: this.config.COMPOSIO_API_KEY === undefined ? 'absent' : 'configured',
-      model: `${aiProvider(this.config)}/${aiModel(this.config)}`,
+      // The chain the plugins assembled, first to last — what would actually answer.
+      model: this.reasoning.label,
     };
   }
 }

@@ -1,0 +1,15 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-reasoning-claude-code'
+  description: 'Thinks with the Claude Code already signed in on this machine. No key, no bill.'
+
+dependsOn:
+  - plugin-api
+  - reasoning
+
+tags:
+  - 'plugin'
