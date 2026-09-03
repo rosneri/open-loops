@@ -26,7 +26,10 @@ const issueClosed: ProbeDefinition = {
   runner: runnerFor({
     intent: (probe) => `get the issue ${probeText(probe, 'issueRef') ?? ''} and its state`,
     // Every tracker spells the finished state differently and several spell it more than one way.
-    satisfied: (payload) => /"(state|status)":\s*"(closed|done|completed)"/i.test(textOf(payload)),
+    // Sentry's word is "resolved"; note that its "ignored"/"archived" is muted, not finished, so
+    // it is deliberately absent.
+    satisfied: (payload) =>
+      /"(state|status)":\s*"(closed|done|completed|resolved)"/i.test(textOf(payload)),
   }),
 };
 
@@ -59,6 +62,15 @@ const sources: readonly SourceDefinition[] = [
       'search Jira for unresolved issues assigned to me',
     ] },
   { provider: 'ASANA', label: 'Asana', toolkit: 'asana' },
+  /**
+   * Sentry belongs here rather than in a monitoring plugin of its own: its unit of work is an
+   * issue with a state that someone is expected to resolve, which is the shape both probes above
+   * already ask about. What is unusual about it is only that a machine opened the issue.
+   */
+  { provider: 'SENTRY', label: 'Sentry', toolkit: 'sentry',
+    intents: [
+      'list unresolved Sentry issues assigned to me',
+    ] },
 ];
 
 export default definePlugin({

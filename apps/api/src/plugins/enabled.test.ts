@@ -60,6 +60,7 @@ describe('the plugins this build ships', () => {
       'LINEAR',
       'JIRA',
       'ASANA',
+      'SENTRY',
       'WISPR_FLOW',
       'RISEUP',
       'MANUAL',
@@ -79,6 +80,16 @@ describe('the plugins this build ships', () => {
     expect(catalogue.toolkitFor('GOOGLE_CALENDAR')).toBe('googlecalendar');
     expect(catalogue.providerForToolkit('microsoft_teams')).toBe('MICROSOFT_TEAMS');
     expect(catalogue.intentsFor('GITHUB')).toHaveLength(2);
+    // Both are brokered by Composio under these exact slugs; a typo here is a Connect button
+    // that opens a consent screen for nothing.
+    expect(catalogue.toolkitFor('SENTRY')).toBe('sentry');
+    expect(catalogue.toolkitFor('NOTION')).toBe('notion');
+  });
+
+  it('gives Sentry something to ask for, so a connected account is actually swept', async () => {
+    const catalogue = await sources();
+    expect(catalogue.connectable()).toContain('SENTRY');
+    expect(catalogue.intentsFor('SENTRY')).not.toHaveLength(0);
   });
 
   it('refuses to boot if two plugins claim the same app', async () => {

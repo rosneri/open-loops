@@ -24,6 +24,7 @@ export const SourceProvider = {
   GitLab: 'GITLAB',
   Linear: 'LINEAR',
   Jira: 'JIRA',
+  Sentry: 'SENTRY',
   Notion: 'NOTION',
   Asana: 'ASANA',
   WhatsApp: 'WHATSAPP',

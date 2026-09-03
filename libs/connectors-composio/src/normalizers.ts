@@ -313,8 +313,10 @@ const genericSignal = (item: Payload, ctx: NormaliseContext): Signal =>
     title: str(item['title']) ?? str(item['name']) ?? str(item['summary']) ?? 'Item',
     body: str(item['body']) ?? str(item['description']) ?? str(item['text']) ?? JSON.stringify(item),
     author: actor({ name: str(item['author']) ?? 'unknown', ctx }),
+    // `lastSeen` is Sentry's; without it every Sentry issue would carry the sync's clock rather
+    // than its own and the day would order them arbitrarily.
     occurredAt: instantFrom(
-      item['updatedAt'] ?? item['updated_at'] ?? item['created_at'],
+      item['updatedAt'] ?? item['updated_at'] ?? item['lastSeen'] ?? item['created_at'],
       ctx.fallbackAt,
     ),
   });
