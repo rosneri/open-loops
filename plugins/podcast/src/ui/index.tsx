@@ -58,7 +58,8 @@ function PodcastPanel({
     <div className="space-y-6">
       <div>
         <span className="block text-[11px] tracking-[0.14em] text-chalk-600 uppercase">Length</span>
-        <div className="mt-2 flex gap-1.5">
+        {/* Three fixed options, so a grid on a phone rather than a row that runs off the edge. */}
+        <div className="mt-2 grid grid-cols-3 gap-1.5 sm:flex">
           {LENGTHS.map((option) => (
             <button
               key={option.value}
@@ -66,14 +67,14 @@ function PodcastPanel({
               onClick={() => {
                 onEdit({ ...value, length: option.value });
               }}
-              className={`rounded border px-3 py-1.5 text-[11px] transition ${
+              className={`rounded border px-2 py-2 text-[11px] transition sm:px-3 sm:py-1.5 ${
                 value.length === option.value
                   ? 'border-chalk-600 text-chalk-100'
                   : 'border-ink-700 text-chalk-600 hover:border-ink-600 hover:text-chalk-300'
               }`}
             >
-              {option.label}
-              <span className="ml-1.5 text-chalk-600">{option.hint}</span>
+              <span className="block sm:inline">{option.label}</span>
+              <span className="block text-chalk-600 sm:ml-1.5 sm:inline">{option.hint}</span>
             </button>
           ))}
         </div>
@@ -96,7 +97,7 @@ function PodcastPanel({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={record}
@@ -141,7 +142,7 @@ function VoiceField(props: {
         onChange={(event) => {
           props.onChange(event.target.value);
         }}
-        className="mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600"
+        className="mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-base sm:text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600"
       />
     </label>
   );

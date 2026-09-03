@@ -20,7 +20,7 @@ export function ScheduleList({ schedules, onEdit }: ScheduleListProps): React.Re
         <div key={schedule.kind} className="space-y-2">
           <div className="flex items-baseline justify-between gap-4">
             <span className="text-sm text-chalk-100">{schedule.label}</span>
-            <label className="flex items-center gap-2 text-[11px] text-chalk-500">
+            <label className="flex min-h-9 shrink-0 cursor-pointer items-center gap-2 text-[11px] text-chalk-500 sm:min-h-0">
               <input
                 type="checkbox"
                 checked={schedule.enabled}
@@ -28,7 +28,7 @@ export function ScheduleList({ schedules, onEdit }: ScheduleListProps): React.Re
                 onChange={(event) => {
                   onEdit({ kind: schedule.kind, enabled: event.target.checked });
                 }}
-                className="accent-chalk-100"
+                className="h-4 w-4 accent-chalk-100"
               />
               Enabled
             </label>

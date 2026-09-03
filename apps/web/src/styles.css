@@ -1,5 +1,15 @@
 @import 'tailwindcss';
 
+/*
+ * Tailwind scans this app's own source by default, which is every file except the ones the point
+ * of the architecture is to have: a plugin ships its settings panel and its pages from its own
+ * package, and without this its classes are only styled where they happen to coincide with a
+ * class this app already uses. A plugin reaching for `grid-cols-3` when nothing here does got a
+ * one-column grid and no error.
+ */
+@source '../../../plugins/*/src/**/*.{ts,tsx}';
+@source '../../../libs/plugin-ui/src/**/*.{ts,tsx}';
+
 @theme {
   --color-ink-950: #09090b;
   --color-ink-900: #101012;
@@ -20,12 +30,27 @@
 
 :root {
   color-scheme: dark;
+
+  /*
+   * How tall one hour of the day is in the timeline. A phone gets a denser scale so a twelve-hour
+   * window is a glance rather than three screens of scrolling; the column is wide enough for the
+   * roomier scale from `sm` up.
+   */
+  --timeline-hour: 44px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --timeline-hour: 68px;
+  }
 }
 
 body {
   background-color: var(--color-ink-950);
   color: var(--color-chalk-100);
   -webkit-font-smoothing: antialiased;
+  /* Safari inflates text in landscape unless it is told the layout already handles the width. */
+  -webkit-text-size-adjust: 100%;
   font-feature-settings: 'cv02', 'cv03', 'ss01';
 }
 
@@ -42,4 +67,19 @@ body::before {
 
 .hairline {
   border: 1px solid color-mix(in oklab, var(--color-ink-700) 75%, transparent);
+}
+
+/*
+ * A row that scrolls sideways under a thumb. The bar itself is hidden because the content is
+ * clipped mid-item at the edge, which is the affordance; a scrollbar on top of it is noise.
+ */
+.rail {
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
 }

@@ -44,8 +44,8 @@ export function ToolBench({
   };
 
   return (
-    <section className="hairline rounded-lg bg-ink-900/40 p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+    <section className="hairline rounded-lg bg-ink-900/40 p-4 sm:p-6">
+      <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
         <div>
           <h2 className="text-lg font-medium tracking-tight">Try a real call</h2>
           <p className="mt-1 max-w-xl text-sm text-chalk-500">
@@ -58,7 +58,8 @@ export function ToolBench({
         </span>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      {/* Wide enough to be worth a sideways rail on a phone; wrapping stacks them five deep. */}
+      <div className="rail mt-5 -mx-4 flex gap-2 px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
@@ -66,27 +67,27 @@ export function ToolBench({
             onClick={() => {
               setQuery(suggestion);
             }}
-            className="rounded-full border border-ink-700 px-3 py-1 text-[11px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100"
+            className="min-h-9 shrink-0 rounded-full border border-ink-700 px-3 py-1 text-[11px] whitespace-nowrap text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100 sm:min-h-0"
           >
             {suggestion.split(' ').slice(0, 4).join(' ')}…
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
           }}
-          className="hairline flex-1 rounded bg-ink-950/60 px-3 py-2 text-sm text-chalk-100 outline-none focus:border-chalk-600"
+          className="hairline w-full rounded bg-ink-950/60 sm:flex-1 px-3 py-2 text-base sm:text-sm text-chalk-100 outline-none focus:border-chalk-600"
           placeholder="what do you want to fetch?"
         />
         <button
           type="button"
           disabled={action.busy || query.trim().length < 3}
           onClick={find}
-          className="rounded border border-chalk-600 px-4 py-2 text-xs text-chalk-100 transition hover:bg-ink-800 disabled:opacity-40"
+          className="min-h-10 rounded border border-chalk-600 px-4 py-2 text-xs text-chalk-100 transition hover:bg-ink-800 disabled:opacity-40 sm:min-h-0 sm:shrink-0"
         >
           {action.busy ? 'Working…' : 'Find tools'}
         </button>

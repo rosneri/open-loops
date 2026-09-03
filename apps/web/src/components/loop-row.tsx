@@ -22,9 +22,13 @@ export function LoopRow({
   onCommand,
 }: LoopRowProps): React.ReactElement {
   return (
-    <article className="hairline rounded-lg bg-ink-900/60 p-5 transition hover:border-ink-600">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
+    <article className="hairline rounded-lg bg-ink-900/60 p-4 transition hover:border-ink-600 sm:p-5">
+      {/*
+       * Time, estimate and due sit beside the loop on a wide row and above it on a phone, where a
+       * second column would leave the title about twenty characters to work with.
+       */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="order-2 min-w-0 sm:order-none">
           <div className="mb-2 flex flex-wrap items-center gap-2.5">
             <StatusPill status={item.status} />
             <span className="font-mono text-[10px] tracking-[0.14em] text-chalk-600 uppercase">
@@ -37,7 +41,9 @@ export function LoopRow({
             )}
           </div>
 
-          <h3 className="truncate text-[15px] font-medium text-chalk-100">{item.title}</h3>
+          <h3 className="text-[15px] font-medium break-words text-chalk-100 sm:truncate">
+            {item.title}
+          </h3>
           <p className="mt-1 line-clamp-2 text-sm text-chalk-500">{item.summary}</p>
 
           <ul className="mt-3 space-y-1">
@@ -57,7 +63,7 @@ export function LoopRow({
           </ul>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-2 text-right">
+        <div className="order-1 flex shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 sm:order-none sm:flex-col sm:items-end sm:gap-2 sm:text-right">
           {item.startAt !== undefined && (
             <span className="font-mono text-sm text-chalk-300">
               {clockTime(item.startAt, timeZone)}
@@ -79,7 +85,7 @@ export function LoopRow({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-ink-800 pt-3">
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-800 pt-3">
         {(
           [
             ['done', 'Mark done'],
@@ -94,7 +100,8 @@ export function LoopRow({
             onClick={() => {
               onCommand(item.id, command);
             }}
-            className="rounded border border-ink-700 px-2.5 py-1 text-[11px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100 disabled:opacity-40"
+            // Roomier than the label needs on a phone, because a thumb is not a cursor.
+            className="min-h-9 rounded border border-ink-700 px-3 py-1 text-[11px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100 disabled:opacity-40 sm:min-h-0 sm:px-2.5"
           >
             {label}
           </button>
@@ -104,7 +111,7 @@ export function LoopRow({
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="ml-auto text-[11px] text-chalk-600 underline-offset-4 hover:text-chalk-300 hover:underline"
+            className="ml-auto inline-flex min-h-9 items-center text-[11px] text-chalk-600 underline-offset-4 hover:text-chalk-300 hover:underline sm:min-h-0"
           >
             open source ↗
           </a>

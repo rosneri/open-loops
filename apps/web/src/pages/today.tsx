@@ -63,19 +63,21 @@ export function TodayPage(): React.ReactElement {
       {view.items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-          <section>
-            <SectionTitle>The day</SectionTitle>
-            <Timeline
-              items={planned}
-              windowStartAt={view.windowStartAt}
-              windowEndAt={view.windowEndAt}
-              now={view.now}
-              timeZone={view.timeZone}
-            />
-          </section>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:gap-10">
+          {/*
+           * Both children carry `min-w-0`, because a grid item's default `min-width: auto`
+           * refuses to shrink past its longest unbreakable word: one long title in one loop row
+           * widens the shared track and the whole page scrolls sideways.
+           */}
+          <TimelineSection
+            items={planned}
+            windowStartAt={view.windowStartAt}
+            windowEndAt={view.windowEndAt}
+            now={view.now}
+            timeZone={view.timeZone}
+          />
 
-          <section className="space-y-3">
+          <section className="order-2 min-w-0 space-y-3 lg:order-none">
             <SectionTitle>Loops</SectionTitle>
             {rows(planned)}
             {deferred.length > 0 && (
@@ -93,6 +95,39 @@ export function TodayPage(): React.ReactElement {
   );
 }
 
+/**
+ * The calendar is the anchor of the desktop layout and neither end of a phone screen suits it:
+ * above the loops it is most of a viewport of scrolling before the first thing you can act on,
+ * and below sixteen of them it is unreachable. So on a phone it is a closed disclosure sitting
+ * where it belongs in the reading order, and from `lg` it is the column it has always been.
+ */
+function TimelineSection(props: {
+  readonly items: readonly LoopDto[];
+  readonly windowStartAt: number;
+  readonly windowEndAt: number;
+  readonly now: number;
+  readonly timeZone: string;
+}): React.ReactElement {
+  const scheduled = props.items.filter((item) => item.startAt !== undefined).length;
+  const timeline = <Timeline {...props} />;
+
+  return (
+    <section className="order-1 min-w-0 lg:order-none">
+      <details className="border-b border-ink-800 pb-3 lg:hidden">
+        {/* Not `flex`: that drops the disclosure triangle, which is the only thing saying it opens. */}
+        <summary className="cursor-pointer py-1 font-mono text-[11px] tracking-[0.2em] text-chalk-600 uppercase marker:text-chalk-600">
+          The day <span className="tracking-normal normal-case">({scheduled} scheduled)</span>
+        </summary>
+        <div className="mt-5">{timeline}</div>
+      </details>
+
+      <div className="hidden lg:block">
+        <SectionTitle>The day</SectionTitle>
+        {timeline}
+      </div>
+    </section>
+  );
+}
 function SectionTitle({ children }: { readonly children: string }): React.ReactElement {
   return (
     <h2 className="mb-4 font-mono text-[11px] tracking-[0.2em] text-chalk-600 uppercase">
@@ -103,7 +138,7 @@ function SectionTitle({ children }: { readonly children: string }): React.ReactE
 
 function EmptyState(): React.ReactElement {
   return (
-    <div className="hairline rounded-lg bg-ink-900/40 px-8 py-16 text-center">
+    <div className="hairline rounded-lg bg-ink-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
       <p className="text-sm text-chalk-300">No open loops yet.</p>
       <p className="mx-auto mt-2 max-w-md text-sm text-chalk-600">
         Connect a source on the Integrations screen, then run a check. In local mode, point your

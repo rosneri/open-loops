@@ -62,7 +62,7 @@ export function IntegrationsPage(): React.ReactElement {
   return (
     <div className="space-y-10">
       <header className="max-w-2xl">
-        <h1 className="text-3xl font-medium tracking-tight">Integrations</h1>
+        <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Integrations</h1>
         <p className="mt-3 text-sm leading-relaxed text-chalk-500">
           Composio brokers OAuth for every provider, so you never register a redirect URI in
           Slack, GitHub, Google or Linear yourself — one click per app, and the token lives on

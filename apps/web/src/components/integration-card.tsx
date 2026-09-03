@@ -51,7 +51,7 @@ export function IntegrationCard({
             onClick={() => {
               onDisconnect(integration.provider);
             }}
-            className="w-full rounded border border-ink-700 py-1.5 text-[11px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100"
+            className="min-h-10 w-full rounded border border-ink-700 py-1.5 text-[11px] text-chalk-500 sm:min-h-0 transition hover:border-ink-600 hover:text-chalk-100"
           >
             Disconnect
           </button>
@@ -62,7 +62,7 @@ export function IntegrationCard({
             onClick={() => {
               onConnect(integration.provider);
             }}
-            className="w-full rounded border border-chalk-600 py-1.5 text-[11px] text-chalk-100 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600"
+            className="min-h-10 w-full rounded border border-chalk-600 py-1.5 text-[11px] text-chalk-100 sm:min-h-0 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600"
           >
             {pending ? 'Opening consent…' : integration.connectable ? 'Connect' : 'No adapter yet'}
           </button>

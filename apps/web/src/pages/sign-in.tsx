@@ -51,8 +51,8 @@ export function SignInPage({ onSignedIn }: SignInPageProps): React.ReactElement 
     (registering && inviteCode.trim().length === 0);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <form onSubmit={submit} className="hairline w-full max-w-sm rounded-lg bg-ink-900/60 p-8">
+    <div className="flex min-h-[100dvh] items-center justify-center px-4 py-8 sm:px-6">
+      <form onSubmit={submit} className="hairline w-full max-w-sm rounded-lg bg-ink-900/60 p-6 sm:p-8">
         <h1 className="font-mono text-sm tracking-[0.2em] text-chalk-100">OPEN&nbsp;LOOPS</h1>
         <p className="mt-3 text-sm text-chalk-500">
           {registering ? 'Create an account to start a day.' : 'Sign in to see your day.'}
@@ -73,7 +73,7 @@ export function SignInPage({ onSignedIn }: SignInPageProps): React.ReactElement 
         <button
           type="submit"
           disabled={busy || incomplete}
-          className="mt-6 w-full rounded border border-chalk-600 py-2 text-[12px] text-chalk-100 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600"
+          className="mt-6 min-h-11 w-full rounded border border-chalk-600 py-2 text-[12px] text-chalk-100 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600"
         >
           {submitLabel({ registering, busy })}
         </button>
@@ -86,7 +86,7 @@ export function SignInPage({ onSignedIn }: SignInPageProps): React.ReactElement 
               setError(undefined);
               setPassword('');
             }}
-            className="mt-4 w-full text-[11px] text-chalk-600 transition hover:text-chalk-100"
+            className="mt-4 min-h-10 w-full text-[11px] text-chalk-600 transition hover:text-chalk-100"
           >
             {registering ? 'I already have an account' : 'I have an invite code'}
           </button>
@@ -168,7 +168,7 @@ function CredentialFields({
 }
 
 const INPUT =
-  'mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600';
+  'mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 text-base sm:text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600';
 
 function Field({
   label,

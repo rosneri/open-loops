@@ -83,7 +83,7 @@ export function App(): React.ReactElement {
   };
 
   if (session === undefined) {
-    return <p className="px-8 py-10 text-sm text-chalk-500">Checking your session…</p>;
+    return <p className="px-5 py-8 text-sm text-chalk-500 sm:px-8 sm:py-10">Checking your session…</p>;
   }
 
   if (session === null) {
@@ -97,10 +97,10 @@ export function App(): React.ReactElement {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-[100dvh]">
       <AppHeader path={path} username={session.username} go={go} signOut={signOut} />
 
-      <main className="mx-auto max-w-6xl px-8 py-10">
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 lg:px-8 lg:py-10">
         {path === '/integrations' && <IntegrationsPage />}
         {path === '/settings' && <SettingsPage />}
         {path === '/' && <TodayPage />}
@@ -120,8 +120,14 @@ function AppHeader(props: {
 }): React.ReactElement {
   const { path, username, go, signOut } = props;
   return (
-      <header className="border-b border-ink-800 px-8 py-5">
-        <div className="mx-auto flex max-w-6xl items-baseline gap-10">
+    <header className="sticky top-0 z-20 border-b border-ink-800 bg-ink-950/85 backdrop-blur">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/*
+         * One row on a phone for identity, one for navigation. Above `sm` the two collapse into
+         * the single baseline-aligned row the app has always had: the nav is small enough to sit
+         * beside the wordmark there, and nowhere near small enough on a 375px screen.
+         */}
+        <div className="flex items-baseline gap-4 pt-4 sm:gap-10 sm:pt-0">
           <button
             type="button"
             onClick={() => {
@@ -131,34 +137,60 @@ function AppHeader(props: {
           >
             OPEN&nbsp;LOOPS
           </button>
-          <nav className="flex gap-6 text-sm">
+
+          <nav className="hidden gap-6 text-sm sm:flex sm:py-5">
             {TABS.map((tab) => (
-              <button
-                key={tab.path}
-                type="button"
-                onClick={() => {
-                  go(tab.path);
-                }}
-                className={`transition ${
-                  path === tab.path ? 'text-chalk-100' : 'text-chalk-500 hover:text-chalk-300'
-                }`}
-              >
-                {tab.label}
-              </button>
+              <TabButton key={tab.path} tab={tab} current={path} go={go} />
             ))}
           </nav>
 
           <div className="ml-auto flex items-baseline gap-4">
-            <span className="font-mono text-[11px] text-chalk-600">{username}</span>
+            <span className="hidden font-mono text-[11px] text-chalk-600 sm:inline">{username}</span>
             <button
               type="button"
               onClick={signOut}
-              className="text-sm text-chalk-500 transition hover:text-chalk-300"
+              className="-mr-1 px-1 py-1 text-sm text-chalk-500 transition hover:text-chalk-300"
             >
               Sign out
             </button>
           </div>
         </div>
-      </header>
+
+        {/* Scrolls sideways rather than wrapping to a second line as plugins add tabs. */}
+        <nav className="rail -mx-4 flex gap-5 px-4 pt-3 pb-1 text-sm sm:hidden">
+          {TABS.map((tab) => (
+            <TabButton key={tab.path} tab={tab} current={path} go={go} />
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function TabButton(props: {
+  readonly tab: { readonly path: string; readonly label: string };
+  readonly current: string;
+  readonly go: (next: string) => void;
+}): React.ReactElement {
+  const { tab, current, go } = props;
+  const active = current === tab.path;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        go(tab.path);
+      }}
+      /*
+       * The underline is what tells the two navs apart honestly: on the phone rail the active tab
+       * can be scrolled half out of view, so colour alone is not enough of a marker.
+       */
+      className={`shrink-0 border-b-2 pb-2 whitespace-nowrap transition sm:border-0 sm:pb-0 ${
+        active
+          ? 'border-chalk-100 text-chalk-100'
+          : 'border-transparent text-chalk-500 hover:text-chalk-300'
+      }`}
+    >
+      {tab.label}
+    </button>
   );
 }

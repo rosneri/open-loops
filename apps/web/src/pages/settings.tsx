@@ -111,7 +111,7 @@ export function SettingsPage(): React.ReactElement {
   return (
     <div className="max-w-2xl space-y-10">
       <header>
-        <h1 className="text-3xl font-medium tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Settings</h1>
         <p className="mt-3 text-sm leading-relaxed text-chalk-500">
           Schedules are read in {settings.timeZone}, and they live in the database rather than in
           the deployment — changing one here takes effect on save, not on the next deploy.
@@ -140,12 +140,26 @@ export function SettingsPage(): React.ReactElement {
         onEdit={editPlugin}
       />
 
-      <div className="flex items-center gap-3">
+      {/*
+       * This page is several screens long on a phone, and every edit on it is unsaved until this
+       * button is pressed, so with edits pending the button follows the scroll rather than being
+       * left behind at the bottom. With nothing to save it goes back to being an inline button:
+       * a permanent bar across the foot of the screen would be spending a tenth of the viewport
+       * on a control that cannot do anything. A desktop sees the whole form at once and never
+       * needs either.
+       */}
+      <div
+        className={`flex items-center gap-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none ${
+          dirty
+            ? 'sticky bottom-0 -mx-4 border-t border-ink-800 bg-ink-950/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur'
+            : ''
+        }`}
+      >
         <button
           type="button"
           onClick={save}
           disabled={!dirty || action.busy}
-          className="rounded border border-chalk-600 px-4 py-1.5 text-[12px] text-chalk-100 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600"
+          className="min-h-10 flex-1 rounded border border-chalk-600 px-4 py-1.5 text-[12px] text-chalk-100 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:border-ink-700 disabled:text-chalk-600 sm:min-h-0 sm:flex-none"
         >
           {action.busy ? 'Saving…' : 'Save'}
         </button>

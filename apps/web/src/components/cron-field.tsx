@@ -34,7 +34,7 @@ export function CronField({
           onChange={(event) => {
             onChange(event.target.value);
           }}
-          className="mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600 disabled:text-chalk-600"
+          className="mt-2 w-full rounded border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-base sm:text-sm tracking-normal text-chalk-100 normal-case outline-none focus:border-chalk-600 disabled:text-chalk-600"
         />
       </label>
 
@@ -52,7 +52,7 @@ export function CronField({
             onClick={() => {
               onChange(preset.cron);
             }}
-            className={`rounded border px-2 py-1 text-[10px] transition ${
+            className={`min-h-9 rounded border px-2.5 py-1 text-[10px] transition sm:min-h-0 sm:px-2 ${
               preset.cron === value
                 ? 'border-chalk-600 text-chalk-100'
                 : 'border-ink-700 text-chalk-600 hover:border-ink-600 hover:text-chalk-300'
