@@ -12,6 +12,8 @@ dependsOn:
   - loops
   - plugin-api
   - plugin-host
+  - plugin-nest
+  - plugin-ui
 
 tags:
   - 'plugin'

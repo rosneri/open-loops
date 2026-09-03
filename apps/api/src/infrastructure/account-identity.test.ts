@@ -19,10 +19,10 @@ class FakeUsers {
   private readonly rows = new Map<string, UserRecord & { composioUserId?: string }>();
   private readonly order: string[] = [];
 
-  public add(user: { id: string; username: string; handles?: readonly string[] }): void {
+  public add(user: { id: string; email: string; handles?: readonly string[] }): void {
     this.rows.set(user.id, {
       id: user.id,
-      username: user.username,
+      email: user.email,
       passwordHash: 'x',
       tokenVersion: 0,
       handles: user.handles ?? [],
@@ -79,7 +79,7 @@ const identities = (users: FakeUsers, overrides?: Partial<AppConfig>): AccountId
 describe('composio identity per account', () => {
   it('gives the first account the identity its connections were already made under', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
 
     const identity = await identities(users).identity('user-1');
 
@@ -90,8 +90,8 @@ describe('composio identity per account', () => {
 
   it('never lets a second account inherit the first one’s connected apps', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
-    users.add({ id: 'user-2', username: 'sam' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
+    users.add({ id: 'user-2', email: 'sam@example.com' });
     const service = identities(users);
 
     const first = await service.identity('user-1');
@@ -101,13 +101,13 @@ describe('composio identity per account', () => {
     expect(second.composioUserId).not.toBe(first.composioUserId);
     // The environment seeds one account, not everybody: sam is not neri.
     expect(second.handles).toEqual([]);
-    expect(second.meHandles).toEqual(['sam']);
+    expect(second.meHandles).toEqual(['sam@example.com']);
   });
 
   it('falls back to its own id when another account already holds the legacy one', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
-    users.add({ id: 'user-2', username: 'sam' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
+    users.add({ id: 'user-2', email: 'sam@example.com' });
     // Someone else got there first, which the unique index reports as a collision.
     await users.claimComposioIdentity({ userId: 'user-2', preferred: 'neri', handles: [] });
 
@@ -116,7 +116,7 @@ describe('composio identity per account', () => {
 
   it('claims once and answers from memory after that', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
     const service = identities(users);
 
     const [a, b] = await Promise.all([service.identity('user-1'), service.identity('user-1')]);
@@ -128,32 +128,37 @@ describe('composio identity per account', () => {
 
   it('re-reads after the account edits its handles', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
     const service = identities(users);
     await service.identity('user-1');
 
     await users.setHandles('user-1', ['neri@work.com']);
     service.forget('user-1');
 
-    expect((await service.identity('user-1')).meHandles).toEqual(['neri', 'neri@work.com']);
+    expect((await service.identity('user-1')).meHandles).toEqual([
+      'neri@example.com',
+      'neri',
+      'neri@work.com',
+    ]);
   });
 
   it('counts the sign-in name and a hand-picked composio id as handles, without repeating', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri', handles: ['neri'] });
+    users.add({ id: 'user-1', email: 'neri@example.com', handles: ['neri@example.com'] });
 
     const identity = await identities(users, { OPEN_LOOPS_HANDLES: '' }).identity('user-1');
 
-    expect(identity.meHandles).toEqual(['neri']);
+    // 'neri' is the hand-picked Composio id, counted once even though it is also a handle.
+    expect(identity.meHandles).toEqual(['neri@example.com', 'neri']);
   });
 
   it('does not remember a failed lookup as the answer', async () => {
     const users = new FakeUsers();
-    users.add({ id: 'user-1', username: 'neri' });
+    users.add({ id: 'user-1', email: 'neri@example.com' });
     const service = identities(users);
 
     await expect(service.identity('ghost')).rejects.toThrow();
-    users.add({ id: 'ghost', username: 'ghost' });
+    users.add({ id: 'ghost', email: 'ghost@example.com' });
     expect((await service.identity('ghost')).composioUserId).toBe('ghost');
   });
 });

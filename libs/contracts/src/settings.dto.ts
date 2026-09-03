@@ -42,7 +42,7 @@ export interface SettingsDto {
   /**
    * The names this account answers to across providers — what makes a message "to me" rather
    * than about someone else. Per account, so one person's addresses never speak for another's.
-   * The username is always one of them and is not editable.
+   * The sign-in address is always one of them and is not editable.
    */
   readonly handles: readonly string[];
   readonly updatedAt: number;

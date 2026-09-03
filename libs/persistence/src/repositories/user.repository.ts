@@ -2,12 +2,12 @@ import type { PrismaClient } from '../prisma-client.js';
 
 /**
  * Authentication has no domain library of its own: there is no invariant here beyond "this
- * username maps to this hash". The record is deliberately flat, and the hash never leaves the
- * auth module, which is the only code that knows how to verify one.
+ * email address maps to this hash". The record is deliberately flat, and the hash never leaves
+ * the auth module, which is the only code that knows how to verify one.
  */
 export interface UserRecord {
   readonly id: string;
-  readonly username: string;
+  readonly email: string;
   readonly passwordHash: string;
   readonly tokenVersion: number;
   /** Undefined until the account claims one; see `claimComposioIdentity`. */
@@ -18,9 +18,9 @@ export interface UserRecord {
 export class PrismaUserRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
-  /** Usernames are compared case-insensitively; storing them lowercased keeps that honest. */
-  public async findByUsername(username: string): Promise<UserRecord | undefined> {
-    const row = await this.prisma.user.findUnique({ where: { username: normalise(username) } });
+  /** Addresses are compared case-insensitively; storing them lowercased keeps that honest. */
+  public async findByEmail(email: string): Promise<UserRecord | undefined> {
+    const row = await this.prisma.user.findUnique({ where: { email: normalise(email) } });
     return row === null ? undefined : toRecord(row);
   }
 
@@ -107,21 +107,21 @@ export class PrismaUserRepository {
   }
 
   /**
-   * Registration's counterpart to `upsert`: a taken username is `undefined` rather than a
+   * Registration's counterpart to `upsert`: a taken address is `undefined` rather than a
    * rotated password. The setup script may overwrite an account because whoever runs it already
    * owns the machine; a signup request must never be able to take one over, which is why the
    * two are separate methods instead of one with a flag.
    *
-   * The unique index decides, not a prior read — two requests racing on the same name would
+   * The unique index decides, not a prior read — two requests racing on the same address would
    * both find it free.
    */
   public async create(input: {
-    username: string;
+    email: string;
     passwordHash: string;
   }): Promise<UserRecord | undefined> {
     try {
       const row = await this.prisma.user.create({
-        data: { username: normalise(input.username), passwordHash: input.passwordHash },
+        data: { email: normalise(input.email), passwordHash: input.passwordHash },
       });
       return toRecord(row);
     } catch (error) {
@@ -131,14 +131,31 @@ export class PrismaUserRepository {
   }
 
   /** Upsert rather than create, so re-running the setup script rotates a password in place. */
-  public async upsert(input: { username: string; passwordHash: string }): Promise<UserRecord> {
-    const username = normalise(input.username);
+  public async upsert(input: { email: string; passwordHash: string }): Promise<UserRecord> {
+    const email = normalise(input.email);
     const row = await this.prisma.user.upsert({
-      where: { username },
-      create: { username, passwordHash: input.passwordHash },
+      where: { email },
+      create: { email, passwordHash: input.passwordHash },
       update: { passwordHash: input.passwordHash, tokenVersion: { increment: 1 } },
     });
     return toRecord(row);
+  }
+
+  /**
+   * Sets a new password on an existing account, or `undefined` where there is no such account.
+   * `tokenVersion` goes up in the same statement: a password somebody has just reset must not
+   * leave a session open on whatever device knew the old one, and the two happening apart would
+   * leave a window where it does.
+   */
+  public async setPassword(input: {
+    userId: string;
+    passwordHash: string;
+  }): Promise<UserRecord | undefined> {
+    const updated = await this.prisma.user.updateMany({
+      where: { id: input.userId },
+      data: { passwordHash: input.passwordHash, tokenVersion: { increment: 1 } },
+    });
+    return updated.count === 0 ? undefined : await this.findById(input.userId);
   }
 }
 
@@ -150,11 +167,11 @@ export const cleanHandles = (handles: readonly string[]): string[] => [
 const isUniqueViolation = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002';
 
-const normalise = (username: string): string => username.trim().toLowerCase();
+const normalise = (email: string): string => email.trim().toLowerCase();
 
 interface UserRow {
   id: string;
-  username: string;
+  email: string;
   passwordHash: string;
   tokenVersion: number;
   composioUserId: string | null;
@@ -163,7 +180,7 @@ interface UserRow {
 
 const toRecord = (row: UserRow): UserRecord => ({
   id: row.id,
-  username: row.username,
+  email: row.email,
   passwordHash: row.passwordHash,
   tokenVersion: row.tokenVersion,
   ...(row.composioUserId === null ? {} : { composioUserId: row.composioUserId }),

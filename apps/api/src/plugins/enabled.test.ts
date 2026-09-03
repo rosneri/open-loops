@@ -163,7 +163,11 @@ describe('the plugins this build ships', () => {
   it('puts the podcast on the clock through the same registry as anything else', async () => {
     const kinds = ScheduleCatalog.from(await host()).kinds(() => ({}) as OwnerScope);
     expect(kinds.map((kind) => kind.kind)).toEqual(['podcast']);
-    expect((await host()).settings().map((entry) => entry.pluginId)).toEqual(['podcast']);
+    // Settings are a wider list than schedules: GitHub's organisation filter is one too.
+    expect((await host()).settings().map((entry) => entry.pluginId)).toEqual([
+      'code-review',
+      'podcast',
+    ]);
   });
 
   it('ships no podcast when the podcast plugin is switched off', async () => {

@@ -11,7 +11,7 @@ import { type AuthenticatedUser } from '@open-loops/plugin-nest';
 /** What we put in the token. `ver` is the row's `tokenVersion` at the time it was issued. */
 export interface SessionPayload {
   readonly sub: string;
-  readonly username: string;
+  readonly email: string;
   readonly ver: number;
 }
 
@@ -38,7 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const user = await this.users.findById(payload.sub);
     // A password change bumps `tokenVersion`, which is what makes it end every existing session.
     if (user?.tokenVersion !== payload.ver) throw new UnauthorizedException('Session expired.');
-    return { id: user.id, username: user.username };
+    return { id: user.id, email: user.email };
   }
 }
 

@@ -8,6 +8,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.tsx",
+      "default": "./src/ui/index.tsx"
     }
   },
   "types": "./src/index.ts",
@@ -15,6 +19,16 @@
     "@open-loops/kernel": "workspace:*",
     "@open-loops/loops": "workspace:*",
     "@open-loops/plugin-api": "workspace:*",
-    "@open-loops/plugin-host": "workspace:*"
+    "@open-loops/plugin-host": "workspace:*",
+    "@nestjs/common": "^11.2.3",
+    "@open-loops/plugin-nest": "workspace:*",
+    "@open-loops/plugin-ui": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7"
   }
 }

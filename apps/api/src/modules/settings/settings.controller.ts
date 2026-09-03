@@ -41,8 +41,8 @@ export class SettingsController {
       this.settings.view(ownerId),
       this.identities.identity(ownerId),
     ]);
-    // The stored list, not the effective one: the screen edits what it is shown, and a username
-    // is not something anyone should be able to remove from their own identity.
+    // The stored list, not the effective one: the screen edits what it is shown, and the
+    // sign-in address is not something anyone should remove from their own identity.
     return { ...settings, handles: identity.handles };
   }
 

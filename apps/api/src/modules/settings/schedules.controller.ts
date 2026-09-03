@@ -9,7 +9,8 @@ import { Public } from '@open-loops/plugin-nest';
 const USER_HEADER = 'x-open-loops-user';
 
 export interface AccountSchedulesDto {
-  readonly username: string;
+  /** The account's sign-in address, which is also what it is named back to in the header. */
+  readonly email: string;
   readonly timeZone: string;
   readonly schedules: readonly ScheduleDto[];
 }
@@ -42,9 +43,9 @@ export class SchedulesController {
   @HttpCode(202)
   public async run(
     @Param('kind') kind: string,
-    @Headers(USER_HEADER) username: string | undefined,
+    @Headers(USER_HEADER) email: string | undefined,
   ): Promise<{ ran: string }> {
-    await this.schedules.run(await this.owners.resolve(username), kind);
+    await this.schedules.run(await this.owners.resolve(email), kind);
     return { ran: kind };
   }
 }

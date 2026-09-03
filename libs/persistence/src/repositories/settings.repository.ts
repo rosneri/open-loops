@@ -51,18 +51,18 @@ export class PrismaSettingsRepository {
   /**
    * Every account, for the process that holds the clocks. Rows are created on demand, so an
    * account that has never opened Settings is included rather than being silently skipped. The
-   * username comes along because the scheduler names the account back to the API in a header,
-   * and it should not need a second query to learn it.
+   * email comes along because the scheduler names the account back to the API in a header, and
+   * it should not need a second query to learn it.
    */
-  public async listAll(): Promise<readonly (UserSettingsRecord & { username: string })[]> {
+  public async listAll(): Promise<readonly (UserSettingsRecord & { email: string })[]> {
     const users = await this.prisma.user.findMany({
-      select: { id: true, username: true },
+      select: { id: true, email: true },
       orderBy: { createdAt: 'asc' },
     });
 
-    const settings: (UserSettingsRecord & { username: string })[] = [];
+    const settings: (UserSettingsRecord & { email: string })[] = [];
     for (const user of users) {
-      settings.push({ ...(await this.get(user.id)), username: user.username });
+      settings.push({ ...(await this.get(user.id)), email: user.email });
     }
     return settings;
   }

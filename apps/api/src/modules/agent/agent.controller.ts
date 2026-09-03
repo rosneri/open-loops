@@ -82,11 +82,11 @@ export class AgentController {
 
   @Post('ingest')
   public async ingestSignals(
-    @Headers(USER_HEADER) username: string | undefined,
+    @Headers(USER_HEADER) email: string | undefined,
     @Body() body: unknown,
   ): Promise<IngestResultDto> {
     const { signals } = ingestSchema.parse(body);
-    const workspace = this.workspaces.for(await this.owners.resolve(username));
+    const workspace = this.workspaces.for(await this.owners.resolve(email));
     // A provider no installed plugin claims is not rejected — the agent saw something real and
     // dropping it would lose the signal. It is filed as MANUAL, which is what it is.
     const known = new Set(this.sources.providers());
@@ -98,19 +98,19 @@ export class AgentController {
 
   @Get('probes')
   public async probes(
-    @Headers(USER_HEADER) username: string | undefined,
+    @Headers(USER_HEADER) email: string | undefined,
   ): Promise<{ probes: readonly PendingProbeDto[] }> {
-    const workspace = this.workspaces.for(await this.owners.resolve(username));
+    const workspace = this.workspaces.for(await this.owners.resolve(email));
     return { probes: await workspace.probes.pending() };
   }
 
   @Post('evidence')
   public async evidence(
-    @Headers(USER_HEADER) username: string | undefined,
+    @Headers(USER_HEADER) email: string | undefined,
     @Body() body: unknown,
   ): Promise<{ applied: number }> {
     const { answers } = evidenceSchema.parse(body);
-    const workspace = this.workspaces.for(await this.owners.resolve(username));
+    const workspace = this.workspaces.for(await this.owners.resolve(email));
     return {
       applied: await workspace.probes.answer(
         answers.map((answer) => ({

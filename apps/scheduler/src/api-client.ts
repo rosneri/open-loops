@@ -8,7 +8,8 @@ export interface ScheduledJob {
 }
 
 export interface Schedule {
-  readonly username: string;
+  /** The account's sign-in address; the API knows it by that in the user header. */
+  readonly email: string;
   readonly timeZone: string;
   readonly schedules: readonly ScheduledJob[];
 }
@@ -37,11 +38,11 @@ export class ApiClient {
    * path per kind baked into it, which meant a new kind of scheduled work needed the clock
    * redeployed. It names the kind now and the deployment decides what that means.
    */
-  public async run(input: { username: string; kind: string }): Promise<void> {
+  public async run(input: { email: string; kind: string }): Promise<void> {
     await this.send({
       method: 'POST',
       path: `/api/schedules/${input.kind}/run`,
-      username: input.username,
+      email: input.email,
       // A sweep can legitimately take minutes and a podcast longer; the wider of the two is the
       // safe deadline now that this process cannot tell which is which.
       timeoutMs: Math.max(this.config.SWEEP_TIMEOUT_MS, this.config.PODCAST_TIMEOUT_MS),
@@ -51,7 +52,7 @@ export class ApiClient {
   private async send<TResult>(request: {
     method: string;
     path: string;
-    username?: string;
+    email?: string;
     body?: unknown;
     timeoutMs: number;
   }): Promise<TResult> {
@@ -61,7 +62,7 @@ export class ApiClient {
       headers: {
         authorization: `Bearer ${this.config.OPEN_LOOPS_AGENT_TOKEN}`,
         'content-type': 'application/json',
-        ...(request.username === undefined ? {} : { 'x-open-loops-user': request.username }),
+        ...(request.email === undefined ? {} : { 'x-open-loops-user': request.email }),
       },
       ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
       // Without a deadline a hung request would silently hold the "already running" flag for

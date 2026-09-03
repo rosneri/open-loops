@@ -58,21 +58,21 @@ export class PrismaScheduleRepository {
   }
 
   /**
-   * Every account with its schedules, for the process that holds the clocks. The username comes
+   * Every account with its schedules, for the process that holds the clocks. The email comes
    * along because the scheduler names the account back to the API in a header, and it should not
    * need a second query to learn it.
    */
   public async listAll(
     defaults: readonly ScheduleDefaults[],
-  ): Promise<readonly { username: string; schedules: readonly ScheduleRecord[] }[]> {
+  ): Promise<readonly { email: string; schedules: readonly ScheduleRecord[] }[]> {
     const users = await this.prisma.user.findMany({
-      select: { id: true, username: true },
+      select: { id: true, email: true },
       orderBy: { createdAt: 'asc' },
     });
 
-    const all: { username: string; schedules: readonly ScheduleRecord[] }[] = [];
+    const all: { email: string; schedules: readonly ScheduleRecord[] }[] = [];
     for (const user of users) {
-      all.push({ username: user.username, schedules: await this.forOwner(user.id, defaults) });
+      all.push({ email: user.email, schedules: await this.forOwner(user.id, defaults) });
     }
     return all;
   }

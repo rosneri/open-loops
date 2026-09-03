@@ -153,7 +153,11 @@ export class WorkspaceFactory {
 
     // Sources, the OAuth broker and the tool explorer, all bound to this owner: two accounts
     // that both connected Slack are two Composio identities, not one shared connection.
-    const stack = this.stacks.for(ownerId);
+    //
+    // The stack is handed a way to reach a plugin's scope, and the scopes are built from the
+    // stack's tool broker. The knot is tied with a closure rather than untied: a source asks for
+    // this person's narrowing when a sync runs, which is long after both halves exist.
+    const stack = this.stacks.for(ownerId, (pluginId) => scopeFor(pluginId));
 
     const scopeFor = this.scopes({ ownerId, loops, today, signals, tools: stack.tools });
 

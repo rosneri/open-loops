@@ -26,7 +26,7 @@ cp .env.example .env      # DATABASE_URL, and COMPOSIO_API_KEY if you want hoste
 bun run db:up             # Postgres in Docker on :5439
 bun run db:generate
 bun run db:migrate        # or db:push against a throwaway database
-bun run create-user neri  # prints a generated password; the first account is made here
+bun run create-user you@example.com   # prints a generated password; the first account
 moon run api:dev web:dev  # API on :4455, client on http://localhost:4444
 ```
 
@@ -145,17 +145,20 @@ config. Removing the plugin removes them.
 
 ## Signing in
 
-Every route is behind a login except a handful: `POST /api/auth/login`, the two registration
-routes below, a bare `GET /api/health` liveness check, and the OAuth callback Composio redirects
-the browser to. That is enforced by a global guard, so a new controller is protected the day it
+Every route is behind a login except a handful: `POST /api/auth/login`, the registration and
+reset routes below, a bare `GET /api/health` liveness check, and the OAuth callback Composio
+redirects the browser to. That is enforced by a global guard, so a new controller is protected the day it
 is written and has to say `@Public()` to opt out.
 
 The first account on a machine is made from the command line:
 
 ```bash
-bun run create-user <username>              # generates and prints a password
-bun run create-user <username> <password>   # or set one; also rotates an existing account
+bun run create-user <email>              # generates and prints a password
+bun run create-user <email> <password>   # or set one; also rotates an existing account
 ```
+
+An account is an email address, not a handle: it is what every account here has always held, it
+is what a password manager fills, and it is the only identifier that says who to reach.
 
 Everyone after that can sign themselves up, but only with an invite code. Set
 `AUTH_SIGNUP_INVITE_CODE` — at least 6 characters, case-sensitive — and the sign-in screen grows
@@ -173,8 +176,15 @@ and it says only whether the door exists.
 
 The code is compared in constant time against a SHA-256 digest of each side, so a wrong guess
 leaks neither its length nor how far it got, and it is checked before any password is hashed.
-Registration creates and never overwrites: a taken username is a `409`, so a signup can't take
+Registration creates and never overwrites: a taken address is a `409`, so a signup can't take
 an account over the way a re-run of `create-user` deliberately can.
+
+`POST /api/auth/reset-password` is what "I forgot my password" on the sign-in screen calls, and
+it is proved by that same invite code — this deployment has no mail sender, so there is no link
+to put in an inbox. That is a real trade: anyone holding the code can set a new password on any
+account here, so the code is as sensitive as the accounts it protects and is worth rotating when
+it spreads. A reset bumps `tokenVersion`, which ends every session the account had open, and
+hands back a fresh one so the person is signed in rather than sent back to the login.
 
 Rotating a password ends every session that account already had. `AUTH_JWT_SECRET` signs the
 session cookie and is required — at least 32 characters, and changing it logs everyone out.
@@ -240,7 +250,18 @@ Composio renames it tomorrow, the search still resolves and nothing here changes
 The **Try a real call** panel on that screen runs the same path the hourly sync uses and prints
 the Composio log id, so "it seemed to work" is always checkable.
 
+The **GitHub** panel on the Settings screen lists the organisations your connected account
+belongs to — read from GitHub, not typed — and ticking some narrows the fetch to their
+repositories. Nothing ticked means every organisation, which is what an account that belongs to
+one wants and what the app did before the setting existed.
+
 ## The day
+
+The day itself can be narrowed too, in the moment rather than in settings: the Today screen has a
+search box over titles, people and criteria, and a chip per app the day's loops came from. It is
+the list you already have, filtered in the browser — no round trip, and nothing saved.
+
+## Planning
 
 The planner is a pure function of (what is open, what your calendar blocks, what time it is). It
 packs work into your window, schedules around meetings, and puts a two-minute "tell them it's

@@ -42,7 +42,7 @@ export class SettingsService {
   }
 
   /**
-   * Every account's schedules, for the process that holds the clocks. Usernames rather than ids,
+   * Every account's schedules, for the process that holds the clocks. Addresses rather than ids,
    * because the scheduler turns round and names the account back to the API in a header.
    */
   public async allSchedules(): Promise<readonly AccountSchedules[]> {
@@ -50,7 +50,7 @@ export class SettingsService {
     const all: AccountSchedules[] = [];
     for (const user of users) {
       all.push({
-        username: user.username,
+        email: user.email,
         timeZone: this.timeZone,
         schedules: await this.schedules(user.userId),
       });
@@ -142,7 +142,7 @@ export interface SettingsStores {
 }
 
 export interface AccountSchedules {
-  readonly username: string;
+  readonly email: string;
   readonly timeZone: string;
   readonly schedules: readonly ScheduleDto[];
 }

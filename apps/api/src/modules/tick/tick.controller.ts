@@ -23,10 +23,10 @@ export class TickController {
   @Post()
   public async run(
     @Req() request: RequestWithUser,
-    @Headers(USER_HEADER) username: string | undefined,
+    @Headers(USER_HEADER) email: string | undefined,
     @Body() _body: unknown,
   ): Promise<TickReportDto> {
-    const ownerId = request.user?.id ?? (await this.owners.resolve(username));
+    const ownerId = request.user?.id ?? (await this.owners.resolve(email));
     return await this.workspaces.for(ownerId).tick.execute();
   }
 }

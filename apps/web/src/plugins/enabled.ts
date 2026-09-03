@@ -1,4 +1,5 @@
 import type { WebPlugin } from '@open-loops/plugin-ui';
+import codeReview from '@open-loops/plugin-code-review/ui';
 import podcast from '@open-loops/plugin-podcast/ui';
 
 /**
@@ -7,4 +8,4 @@ import podcast from '@open-loops/plugin-podcast/ui';
  * know about — or the other way round — is a mismatch a person notices, not one the screen
  * papers over. A plugin with no client contribution simply is not here.
  */
-export const webPlugins: readonly WebPlugin[] = [podcast];
+export const webPlugins: readonly WebPlugin[] = [codeReview, podcast];

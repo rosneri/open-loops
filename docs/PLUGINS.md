@@ -42,6 +42,13 @@ else — there is no account at boot, so there is nothing to do anything *to*.
 | `context.settings` | `settings` | a slice of the Settings screen |
 | `context.events` | `events` | a subscriber to loop events |
 
+A source may also narrow itself per person. `focus(scope)` is asked once per sync and returns a
+clause appended to that source's intents — the code-review plugin reads the GitHub organisations
+somebody ticked in Settings and returns "limited to repositories owned by the acme organization
+on GitHub". It needs `settings` as well as `write:signals`, it must not throw to mean "no
+narrowing" (return `undefined`), and a failure is logged and ignored rather than failing the
+sync: the honest fallback is the unnarrowed intent.
+
 Registering something the manifest did not declare throws at boot. That is deliberate: a missing
 capability should be a startup failure, not a surprise on the day the feature is first used.
 

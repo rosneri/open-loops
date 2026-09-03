@@ -1,3 +1,5 @@
+import type { OwnerScope } from '../context.js';
+
 /**
  * A place work arrives from. Adding one used to mean editing a union in the kernel, a table of
  * toolkit slugs in a session file and a table of fetch intents in a connector — three files in
@@ -27,6 +29,17 @@ export interface SourceDefinition {
    * during a GitHub sync; saying "on GitHub" is what pins it.
    */
   readonly intents?: readonly string[] | undefined;
+  /**
+   * A narrowing this particular person has asked for, in words, appended to each intent when
+   * their sources are fetched — "in the acme or beta organisations". It is a function of the
+   * owner because the intents are a fact about the app and the narrowing is a fact about the
+   * account: one is written once by whoever knows GitHub, the other is a setting somebody saved
+   * on a Tuesday. `undefined` is the normal answer and means "everything you can see".
+   *
+   * Called once per sync, not cached: a setting saved on the Settings screen must take effect on
+   * the next tick rather than on the next deploy.
+   */
+  focus?(scope: OwnerScope): Promise<string | undefined>;
 }
 
 export interface SourceRegistry {

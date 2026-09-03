@@ -219,7 +219,10 @@ model ProbeTask {
 /// its own salt and parameters encoded in the string; nothing here is reversible.
 model User {
   id           String   @id @default(uuid())
-  username     String   @unique
+  /// The address this person signs in with. It was called `username` until every account on
+  /// every install turned out to hold an email address anyway, and a reset that cannot reach
+  /// anybody is not a reset — the column says what the value has always been.
+  email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

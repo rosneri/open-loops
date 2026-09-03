@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { JwtService } from '@nestjs/jwt';
 import { hashPassword, verifyPassword } from './password.js';
-import { inviteAccepted, registrationSchema } from './registration.js';
+import { inviteAccepted, passwordResetSchema, registrationSchema } from './registration.js';
 import type { SessionPayload } from './jwt.strategy.js';
 
 const SECRET = 'a-secret-long-enough-to-be-realistic-32+';
@@ -17,7 +17,7 @@ describe('password hashing', () => {
     expect(await hashPassword('same')).not.toBe(await hashPassword('same'));
   });
 
-  /** The unknown-username path verifies against a dummy hash; it must not throw or pass. */
+  /** The unknown-address path verifies against a dummy hash; it must not throw or pass. */
   it('returns false for a malformed hash instead of throwing', async () => {
     expect(await verifyPassword('anything', 'not-a-hash')).toBe(false);
     expect(await verifyPassword('anything', '')).toBe(false);
@@ -29,7 +29,7 @@ describe('password hashing', () => {
  * way this app configures it, which is the part that could be got wrong here.
  */
 describe('session tokens', () => {
-  const payload: SessionPayload = { sub: 'user-1', username: 'neri', ver: 0 };
+  const payload: SessionPayload = { sub: 'user-1', email: 'neri@example.com', ver: 0 };
   const jwt = new JwtService({ secret: SECRET, signOptions: { expiresIn: '168h' } });
 
   it('round-trips the claims it was given', () => {
@@ -99,11 +99,16 @@ describe('invite codes', () => {
 });
 
 describe('registration input', () => {
-  const valid = { username: 'neri', password: 'correct horse battery', inviteCode: CODE };
+  const valid = {
+    email: 'neri@example.com',
+    password: 'correct horse battery',
+    inviteCode: CODE,
+  };
 
-  it('accepts a plausible signup and trims the username', () => {
-    const parsed = registrationSchema.parse({ ...valid, username: '  neri  ' });
-    expect(parsed.username).toBe('neri');
+  /** Two people typing the same address with different spacing and case are one account. */
+  it('accepts a plausible signup and normalises the address', () => {
+    const parsed = registrationSchema.parse({ ...valid, email: '  Neri@Example.COM ' });
+    expect(parsed.email).toBe('neri@example.com');
   });
 
   it('rejects a password bcrypt would silently truncate', () => {
@@ -117,23 +122,51 @@ describe('registration input', () => {
     expect(registrationSchema.safeParse({ ...valid, password: 'hunter2' }).success).toBe(false);
   });
 
-  it('rejects usernames that are not names', () => {
-    for (const username of ['', 'a', 'has space', 'semi;colon', 'a'.repeat(41)]) {
-      expect(registrationSchema.safeParse({ ...valid, username }).success).toBe(false);
+  it('rejects what is not an email address', () => {
+    for (const email of ['', 'neri', 'has space@example.com', 'neri@', '@example.com']) {
+      expect(registrationSchema.safeParse({ ...valid, email }).success).toBe(false);
     }
   });
 
-  /** The accounts this app already has are email addresses, so one has to be a valid username. */
-  it('accepts an email address as a username', () => {
+  it('accepts the tagged addresses people actually sign up with', () => {
     expect(
-      registrationSchema.safeParse({ ...valid, username: 'neri.coder+ol@gmail.com' }).success,
+      registrationSchema.safeParse({ ...valid, email: 'neri.coder+ol@gmail.com' }).success,
     ).toBe(true);
   });
 
   it('requires an invite code to be present at all', () => {
     expect(registrationSchema.safeParse({ ...valid, inviteCode: '' }).success).toBe(false);
     expect(
-      registrationSchema.safeParse({ username: 'neri', password: valid.password }).success,
+      registrationSchema.safeParse({ email: valid.email, password: valid.password }).success,
     ).toBe(false);
+  });
+});
+
+/**
+ * A reset writes a password, so it has to be as hard to get wrong as a signup: the same address
+ * rules, the same length floor and ceiling, and the invite code that stands in for a mailer.
+ */
+describe('password reset input', () => {
+  const valid = {
+    email: 'neri@example.com',
+    password: 'a brand new password',
+    inviteCode: CODE,
+  };
+
+  it('accepts a plausible reset and normalises the address', () => {
+    expect(passwordResetSchema.parse({ ...valid, email: ' NERI@example.com ' }).email).toBe(
+      'neri@example.com',
+    );
+  });
+
+  it('refuses a reset that would set a password login could not hold', () => {
+    expect(passwordResetSchema.safeParse({ ...valid, password: 'hunter2' }).success).toBe(false);
+    expect(passwordResetSchema.safeParse({ ...valid, password: 'x'.repeat(73) }).success).toBe(
+      false,
+    );
+  });
+
+  it('refuses a reset with nothing to prove the caller belongs here', () => {
+    expect(passwordResetSchema.safeParse({ ...valid, inviteCode: '' }).success).toBe(false);
   });
 });

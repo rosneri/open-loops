@@ -10,6 +10,7 @@ project:
 dependsOn:
   - contracts
   - plugin-ui
+  - plugin-code-review
   - plugin-podcast
 
 tags:

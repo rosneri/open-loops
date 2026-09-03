@@ -98,7 +98,7 @@ export function App(): React.ReactElement {
 
   return (
     <div className="min-h-[100dvh]">
-      <AppHeader path={path} username={session.username} go={go} signOut={signOut} />
+      <AppHeader path={path} email={session.email} go={go} signOut={signOut} />
 
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 lg:px-8 lg:py-10">
         {path === '/integrations' && <IntegrationsPage />}
@@ -114,11 +114,11 @@ export function App(): React.ReactElement {
 
 function AppHeader(props: {
   readonly path: string;
-  readonly username: string;
+  readonly email: string;
   readonly go: (next: string) => void;
   readonly signOut: () => void;
 }): React.ReactElement {
-  const { path, username, go, signOut } = props;
+  const { path, email, go, signOut } = props;
   return (
     <header className="sticky top-0 z-20 border-b border-ink-800 bg-ink-950/85 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -145,7 +145,7 @@ function AppHeader(props: {
           </nav>
 
           <div className="ml-auto flex items-baseline gap-4">
-            <span className="hidden font-mono text-[11px] text-chalk-600 sm:inline">{username}</span>
+            <span className="hidden font-mono text-[11px] text-chalk-600 sm:inline">{email}</span>
             <button
               type="button"
               onClick={signOut}

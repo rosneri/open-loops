@@ -16,10 +16,10 @@ export class OwnerResolver {
     @Inject(Tokens.UserRepository) private readonly users: PrismaUserRepository,
   ) {}
 
-  public async resolve(username: string | undefined): Promise<string> {
-    if (username !== undefined && username.length > 0) {
-      const user = await this.users.findByUsername(username);
-      if (user === undefined) throw new BadRequestException(`No account named "${username}".`);
+  public async resolve(email: string | undefined): Promise<string> {
+    if (email !== undefined && email.length > 0) {
+      const user = await this.users.findByEmail(email);
+      if (user === undefined) throw new BadRequestException(`No account for "${email}".`);
       return user.id;
     }
 

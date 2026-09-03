@@ -85,6 +85,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@open-loops/contracts": "workspace:*",
+        "@open-loops/plugin-code-review": "workspace:*",
         "@open-loops/plugin-podcast": "workspace:*",
         "@open-loops/plugin-ui": "workspace:*",
         "react": "^19.2.8",
@@ -284,10 +285,20 @@
       "name": "@open-loops/plugin-code-review",
       "version": "0.1.0",
       "dependencies": {
+        "@nestjs/common": "^11.2.3",
         "@open-loops/kernel": "workspace:*",
         "@open-loops/loops": "workspace:*",
         "@open-loops/plugin-api": "workspace:*",
         "@open-loops/plugin-host": "workspace:*",
+        "@open-loops/plugin-nest": "workspace:*",
+        "@open-loops/plugin-ui": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.7",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
       },
     },
     "plugins/documents": {

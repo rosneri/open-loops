@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { createPrismaClient, PrismaUserRepository } from '@open-loops/persistence';
 import { loadConfig } from './config/env.js';
 import { hashPassword } from './modules/auth/password.js';
@@ -7,18 +8,25 @@ import { hashPassword } from './modules/auth/password.js';
  * a signup route open to anyone who can reach the deployment would undo the login it sits
  * behind, so `POST /api/auth/register` exists only where AUTH_SIGNUP_INVITE_CODE is set.
  *
- * This script may also overwrite — re-running it for an existing username sets a new password
- * and ends every session that username already had — which registration deliberately cannot.
+ * This script may also overwrite — re-running it for an existing address sets a new password
+ * and ends every session that account already had — which registration deliberately cannot.
  *
- *   bun run apps/api/src/create-user.ts <username> [password]
+ *   bun run apps/api/src/create-user.ts <email> [password]
  *
  * With the password omitted, one is generated and printed — which is the better habit, since a
  * password passed as an argument is visible in the process list and the shell history.
  */
 const main = async (): Promise<void> => {
-  const [username, provided] = process.argv.slice(2);
-  if (username === undefined || username.trim().length === 0) {
-    process.stderr.write('Usage: bun run apps/api/src/create-user.ts <username> [password]\n');
+  const [email, provided] = process.argv.slice(2);
+  if (email === undefined || email.trim().length === 0) {
+    process.stderr.write('Usage: bun run apps/api/src/create-user.ts <email> [password]\n');
+    process.exitCode = 1;
+    return;
+  }
+  // The same rule the signup route applies, so an account made here can always sign in there —
+  // and so a typo becomes a refusal rather than an address nobody can reach.
+  if (!z.email().safeParse(email.trim().toLowerCase()).success) {
+    process.stderr.write(`"${email}" is not an email address.\n`);
     process.exitCode = 1;
     return;
   }
@@ -35,8 +43,8 @@ const main = async (): Promise<void> => {
   const users = new PrismaUserRepository(prisma);
 
   try {
-    const user = await users.upsert({ username, passwordHash: await hashPassword(password) });
-    process.stdout.write(`User ${user.username} ready.\n`);
+    const user = await users.upsert({ email, passwordHash: await hashPassword(password) });
+    process.stdout.write(`User ${user.email} ready.\n`);
     if (provided === undefined) process.stdout.write(`Password: ${password}\n`);
   } finally {
     await prisma.$disconnect();

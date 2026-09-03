@@ -24,7 +24,21 @@ export interface ComposioSourceConnectorDeps {
    * they live on the account row and can change between one tick and the next.
    */
   readonly meHandles: () => Promise<readonly string[]>;
+  /**
+   * What this person narrowed a provider to, in words — "in the acme organisation" — read per
+   * sync for the same reason the handles are: it is a setting they can change between one tick
+   * and the next. `undefined` means everything the connection can see.
+   */
+  readonly focus: (provider: string) => Promise<string | undefined>;
 }
+
+/**
+ * The person's narrowing, appended rather than woven in: the intent is a sentence written by
+ * whoever knows the app, and a clause on the end is the one edit that cannot change what it was
+ * asking for.
+ */
+const narrow = (intent: string, focus: string | undefined): string =>
+  focus === undefined || focus.trim().length === 0 ? intent : `${intent}, ${focus.trim()}`;
 
 /**
  * The hosted data adapter. It resolves intents to tools, runs them, normalises whatever comes
@@ -45,9 +59,13 @@ export class ComposioSourceConnector implements SourceConnector {
       return { signals: [], cursor: input.since };
     }
 
+    // Asked once for the whole fetch rather than once per intent: it is the same answer for
+    // every intent, and reading it is a database round trip.
+    const focus = await this.deps.focus(input.provider);
+
     const signals: Signal[] = [];
     for (const intent of intents) {
-      signals.push(...(await this.runIntent({ intent, toolkit, input })));
+      signals.push(...(await this.runIntent({ intent: narrow(intent, focus), toolkit, input })));
     }
 
     const cursor = signals.reduce<number>(

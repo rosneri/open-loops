@@ -14,7 +14,8 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "@open-loops/plugin-ui": "workspace:*",
-    "@open-loops/plugin-podcast": "workspace:*"
+    "@open-loops/plugin-podcast": "workspace:*",
+    "@open-loops/plugin-code-review": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

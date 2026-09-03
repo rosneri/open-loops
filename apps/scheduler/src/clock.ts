@@ -7,7 +7,7 @@ interface Entry {
   readonly job: CronJob;
 }
 
-const key = (username: string, kind: string): string => `${username}:${kind}`;
+const key = (email: string, kind: string): string => `${email}:${kind}`;
 
 /**
  * One cron job per account per kind of work, rebuilt whenever the schedules change. This is the
@@ -34,14 +34,14 @@ export class Clock {
     for (const schedule of schedules) {
       for (const job of schedule.schedules) {
         if (!job.enabled) continue;
-        const id = key(schedule.username, job.kind);
+        const id = key(schedule.email, job.kind);
         wanted.add(id);
         this.ensure({
           id,
           cron: job.cron,
           timeZone: schedule.timeZone,
           run: async () => {
-            await this.api.run({ username: schedule.username, kind: job.kind });
+            await this.api.run({ email: schedule.email, kind: job.kind });
           },
         });
       }

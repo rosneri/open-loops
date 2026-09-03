@@ -1,6 +1,9 @@
 import { Capability, definePlugin, type OwnerScope, type ProbeDefinition,
   type SourceDefinition,
 } from '@open-loops/plugin-api';
+import { CodeReviewController } from './http/code-review.controller.js';
+import { focusPhrase } from './organizations.js';
+import { settingsFragment, type CodeReviewSettings } from './settings.js';
 import { ToolProbeRunner, asArray, includesAll, textOf } from '@open-loops/plugin-host';
 import { probeText } from '@open-loops/loops';
 
@@ -88,16 +91,36 @@ const sources: readonly SourceDefinition[] = [
     intents: [
       'list my GitHub notifications and issues assigned to me',
       'search GitHub for open pull requests I authored or that await my review',
-    ] },
+    ],
+    /*
+     * An account that belongs to one organisation for work and three for other people's side
+     * projects gets a day made mostly of other people's side projects. Which ones count is a
+     * setting, so it is read here per person and per sync rather than baked into the intents.
+     */
+    focus: async (scope) => focusPhrase((await scope.settings<CodeReviewSettings>()).organizations),
+  },
   { provider: 'GITLAB', label: 'GitLab', toolkit: 'gitlab' },
 ];
+
+export type { CodeReviewSettings } from './settings.js';
+export { ORGANIZATIONS_ROUTE, type Organization, type OrganizationsDto } from './organizations.js';
 
 export default definePlugin({
   id: 'code-review',
   version: '1.0.0',
   description: 'Pull requests and reviews.',
-  capabilities: [Capability.RunProbes, Capability.Tools, Capability.WriteSignals],
+  capabilities: [
+    Capability.RunProbes,
+    Capability.Tools,
+    Capability.WriteSignals,
+    // The organisation filter: a setting to hold it, a route to fill the picker from GitHub.
+    Capability.Settings,
+    Capability.Http,
+  ],
   setup: (context) => {
+    context.settings.register(settingsFragment);
+    context.http.register({ basePath: 'api/code-review', controllers: [CodeReviewController] });
+
     for (const source of sources) context.sources.register(source);
     for (const definition of [pullRequestExists, pullRequestMerged, reviewSubmitted]) {
       context.probes.register(definition);

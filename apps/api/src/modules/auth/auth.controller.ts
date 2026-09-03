@@ -18,7 +18,7 @@ import { Tokens } from '../../tokens.js';
 import { AuthService } from './auth.service.js';
 import { clearSessionCookie, setSessionCookie } from './cookie.js';
 import { CredentialThrottleGuard } from './credential-throttle.guard.js';
-import { registrationSchema } from './registration.js';
+import { passwordResetSchema, registrationSchema } from './registration.js';
 import { Public, type RequestWithUser, type AuthenticatedUser } from '@open-loops/plugin-nest';
 
 @Controller('api/auth')
@@ -50,9 +50,10 @@ export class AuthController {
   }
 
   /**
-   * Whether this deployment has a registration route, so the sign-in screen can offer it or
-   * stay a login. Public and anonymous by necessity — the form has to know before anyone signs
-   * in — and it says only that the door exists, never what the code is.
+   * Whether this deployment has a registration route, so the sign-in screen can offer it — and
+   * with it the reset, which is gated on the same invite code — or stay a login and nothing
+   * else. Public and anonymous by necessity: the form has to know before anyone signs in. It
+   * says only that the door exists, never what the code is.
    */
   @Public()
   @Get('registration')
@@ -80,6 +81,34 @@ export class AuthController {
       throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join('; '));
     }
     const user = await this.auth.register(parsed.data);
+    setSessionCookie(response, { token: await this.auth.issue(user), config: this.config });
+    return user;
+  }
+
+  /**
+   * Forgotten password, invite code in place of a link in an inbox: this deployment has no mail
+   * sender, and a reset nobody can complete is not a reset. The invite code is the secret that
+   * already decides who may have an account here, so it is what proves the request.
+   *
+   * Throttled like registration rather than like login. A person resets a password about as
+   * often as they create an account, and the code is the only thing standing in the way, so the
+   * limit is what keeps a fleet of guesses from being cheap.
+   */
+  @Public()
+  @UseGuards(CredentialThrottleGuard)
+  @Throttle({ credentials: { ttl: 15 * 60_000, limit: 5 } })
+  @Post('reset-password')
+  public async resetPassword(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthenticatedUser> {
+    const parsed = passwordResetSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join('; '));
+    }
+    const user = await this.auth.resetPassword(parsed.data);
+    // The reset ended every session this account had, including the one the browser may still
+    // be holding, so it is handed a new cookie here rather than being bounced to the login.
     setSessionCookie(response, { token: await this.auth.issue(user), config: this.config });
     return user;
   }

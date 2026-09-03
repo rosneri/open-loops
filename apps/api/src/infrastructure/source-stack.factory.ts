@@ -9,7 +9,7 @@ import {
   ComposioToolExplorer,
   type ComposioSessionRegistry,
 } from '@open-loops/connectors-composio';
-import type { ToolBroker } from '@open-loops/plugin-api';
+import type { OwnerScope, ToolBroker } from '@open-loops/plugin-api';
 import type { SourceCatalog } from '@open-loops/plugin-host';
 import { LocalAgentSourceConnector, LocalConnectionBroker } from '@open-loops/connectors-local';
 import type { AppConfig } from '../config/env.js';
@@ -58,7 +58,12 @@ export class SourceStackFactory {
     };
   }
 
-  public for(ownerId: string): SourceStack {
+  /**
+   * `scopeFor` is a plugin's window onto this owner, and it is passed rather than built here
+   * because the scope carries the tool broker this factory is in the middle of assembling.
+   * Nothing calls it until a sync runs, by which point the workspace is whole.
+   */
+  public for(ownerId: string, scopeFor: (pluginId: string) => OwnerScope): SourceStack {
     if (isLocalMode(this.config) || this.sessions === undefined) return this.local;
 
     // Cheap wrappers around one cached session — the session, not this object, is what holds
@@ -75,6 +80,7 @@ export class SourceStackFactory {
           sources: this.sources,
           logger: this.logger,
           meHandles: async () => await this.identities.meHandles(ownerId),
+          focus: async (provider) => await this.sources.focusFor(provider, scopeFor),
         }),
       ],
     };

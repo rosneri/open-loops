@@ -1,4 +1,4 @@
-import type { SourceDefinition } from '@open-loops/plugin-api';
+import type { OwnerScope, SourceDefinition } from '@open-loops/plugin-api';
 import type { PluginHost } from './plugin-host.js';
 
 /**
@@ -10,7 +10,14 @@ export class SourceCatalog {
   private readonly byProvider: ReadonlyMap<string, SourceDefinition>;
   private readonly byToolkit: ReadonlyMap<string, SourceDefinition>;
 
-  public constructor(private readonly definitions: readonly SourceDefinition[]) {
+  public constructor(
+    private readonly definitions: readonly SourceDefinition[],
+    /**
+     * Which plugin registered each provider. Only `focus` needs it — a narrowing is read out of
+     * that plugin's own settings, so the scope it runs on has to be that plugin's.
+     */
+    private readonly owners: ReadonlyMap<string, string> = new Map(),
+  ) {
     this.byProvider = new Map(definitions.map((entry) => [entry.provider, entry]));
     this.byToolkit = new Map(
       definitions
@@ -32,7 +39,10 @@ export class SourceCatalog {
       }
       seen.set(definition.provider, pluginId);
     }
-    return new SourceCatalog(host.sources().map((entry) => entry.definition));
+    return new SourceCatalog(
+      host.sources().map((entry) => entry.definition),
+      new Map(host.sources().map((entry) => [entry.definition.provider, entry.pluginId])),
+    );
   }
 
   public all(): readonly SourceDefinition[] {
@@ -61,5 +71,31 @@ export class SourceCatalog {
 
   public intentsFor(provider: string): readonly string[] {
     return this.byProvider.get(provider)?.intents ?? [];
+  }
+
+  /**
+   * This owner's narrowing for one provider, or `undefined` where the source declares none, the
+   * person has not asked for one, or asking failed. A narrowing that cannot be read must not
+   * fail the sync: the honest fallback is the unnarrowed intent, which is what the app did
+   * before anybody could narrow it.
+   */
+  public async focusFor(
+    provider: string,
+    scopeFor: (pluginId: string) => OwnerScope,
+  ): Promise<string | undefined> {
+    const definition = this.byProvider.get(provider);
+    const pluginId = this.owners.get(provider);
+    if (definition?.focus === undefined || pluginId === undefined) return undefined;
+
+    const scope = scopeFor(pluginId);
+    try {
+      return await definition.focus(scope);
+    } catch (error) {
+      scope.logger.warn('source focus could not be read', {
+        provider,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    }
   }
 }

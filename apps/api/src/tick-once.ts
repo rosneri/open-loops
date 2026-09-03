@@ -5,8 +5,8 @@ import { WorkspaceFactory } from './infrastructure/workspace.factory.js';
 import { OwnerResolver } from './modules/auth/owner-resolver.service.js';
 
 /**
- * `bun run tick [username]` — one heartbeat by hand, for when you do not want to wait for the
- * schedule. The username may be omitted while there is only one account.
+ * `bun run tick [email]` — one heartbeat by hand, for when you do not want to wait for the
+ * schedule. The address may be omitted while there is only one account.
  */
 const main = async (): Promise<void> => {
   const app = await NestFactory.createApplicationContext(await createAppModule(), {

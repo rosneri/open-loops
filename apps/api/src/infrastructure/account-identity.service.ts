@@ -12,7 +12,7 @@ export interface AccountIdentity {
   readonly handles: readonly string[];
   /**
    * What actually decides whether a signal is "to me": the stored handles plus the ones this
-   * account cannot help having — its username, and a Composio identity somebody chose by hand.
+   * account cannot help having — its email address, and a Composio identity chosen by hand.
    */
   readonly meHandles: readonly string[];
 }
@@ -101,20 +101,20 @@ export class AccountIdentities {
 }
 
 /**
- * The username is a handle too, and so is a Composio identity somebody chose by hand — those are
- * how a person is addressed on the providers they connected, so neither is something to remember
- * to type into Settings. A generated identity is just this row's id and names nobody, so it is
- * left out rather than matched against message text.
+ * The sign-in address is a handle too, and so is a Composio identity somebody chose by hand —
+ * those are how a person is addressed on the providers they connected, so neither is something
+ * to remember to type into Settings. A generated identity is just this row's id and names
+ * nobody, so it is left out rather than matched against message text.
  */
 const identityOf = (user: {
   id: string;
-  username: string;
+  email: string;
   composioUserId?: string;
   handles: readonly string[];
 }): AccountIdentity => {
   const composioUserId = user.composioUserId ?? user.id;
   const named = composioUserId === user.id ? [] : [composioUserId];
-  const meHandles = [user.username, ...named, ...user.handles]
+  const meHandles = [user.email, ...named, ...user.handles]
     .map((handle) => handle.trim())
     .filter((handle) => handle.length > 0);
   return { composioUserId, handles: user.handles, meHandles: [...new Set(meHandles)] };

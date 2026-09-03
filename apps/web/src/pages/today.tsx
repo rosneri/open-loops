@@ -4,12 +4,19 @@ import { api } from '../api.js';
 import { useAsyncAction } from '../hooks/use-async-action.js';
 import { DayHeader } from '../components/day-header.js';
 import { ErrorPanel } from '../components/error-panel.js';
+import { LoopFilterBar } from '../components/loop-filter-bar.js';
 import { LoopRow } from '../components/loop-row.js';
 import { Timeline } from '../components/timeline.js';
+import { NO_FILTER, applyFilter, isFiltering, type LoopFilter } from '../loop-filter.js';
 
 export function TodayPage(): React.ReactElement {
   const [view, setView] = useState<TodayDto | undefined>();
   const [loadError, setLoadError] = useState<string | undefined>();
+  /**
+   * Kept here rather than in the URL or on the server: it is a way of reading the list you
+   * already have, and it should not survive a reload the way a saved view would.
+   */
+  const [filter, setFilter] = useState<LoopFilter>(NO_FILTER);
 
   const load = useCallback(async () => {
     try {
@@ -34,8 +41,14 @@ export function TodayPage(): React.ReactElement {
     );
   }
 
-  const deferred = view.items.filter((item) => item.disposition === 'DEFERRED');
-  const planned = view.items.filter((item) => item.disposition !== 'DEFERRED');
+  /*
+   * Filtered before the day is split, so the timeline and the list agree about what is being
+   * looked at: a calendar showing blocks for loops that are not in the list below it is worse
+   * than one that empties out with them.
+   */
+  const shown = applyFilter(view.items, filter);
+  const deferred = shown.filter((item) => item.disposition === 'DEFERRED');
+  const planned = shown.filter((item) => item.disposition !== 'DEFERRED');
 
   const rows = (items: readonly LoopDto[]): React.ReactElement[] =>
     items.map((item) => (
@@ -60,8 +73,23 @@ export function TodayPage(): React.ReactElement {
 
       {action.error !== undefined && <ErrorPanel message={action.error} />}
 
+      {view.items.length > 0 && (
+        <LoopFilterBar
+          items={view.items}
+          value={filter}
+          onChange={setFilter}
+          shown={shown.length}
+        />
+      )}
+
       {view.items.length === 0 ? (
         <EmptyState />
+      ) : shown.length === 0 ? (
+        <NothingMatches
+          onClear={() => {
+            setFilter(NO_FILTER);
+          }}
+        />
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:gap-10">
           {/*
@@ -78,7 +106,7 @@ export function TodayPage(): React.ReactElement {
           />
 
           <section className="order-2 min-w-0 space-y-3 lg:order-none">
-            <SectionTitle>Loops</SectionTitle>
+            <SectionTitle>{isFiltering(filter) ? 'Matching loops' : 'Loops'}</SectionTitle>
             {rows(planned)}
             {deferred.length > 0 && (
               <>
@@ -133,6 +161,22 @@ function SectionTitle({ children }: { readonly children: string }): React.ReactE
     <h2 className="mb-4 font-mono text-[11px] tracking-[0.2em] text-chalk-600 uppercase">
       {children}
     </h2>
+  );
+}
+
+/** The day has loops; this filter has none. Distinct from an empty day, and it says so. */
+function NothingMatches({ onClear }: { readonly onClear: () => void }): React.ReactElement {
+  return (
+    <div className="hairline rounded-lg bg-ink-900/40 px-5 py-12 text-center sm:px-8 sm:py-16">
+      <p className="text-sm text-chalk-300">Nothing in today matches that.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 min-h-10 rounded border border-ink-700 px-3 text-[11px] text-chalk-500 transition hover:border-ink-600 hover:text-chalk-100"
+      >
+        Clear the filter
+      </button>
+    </div>
   );
 }
 

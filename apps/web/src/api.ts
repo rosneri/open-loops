@@ -122,26 +122,41 @@ const returnTo = (): string =>
 
 export interface SessionUser {
   readonly id: string;
-  readonly username: string;
+  /** The address this person signs in with; the app shows it in the header and nowhere else. */
+  readonly email: string;
 }
 
 /** The only place the client knows any URLs. Every screen goes through these functions. */
 export const api = {
   me: async (): Promise<SessionUser> => await request<SessionUser>('/api/auth/me'),
 
-  login: async (username: string, password: string): Promise<SessionUser> =>
-    await post<SessionUser>('/api/auth/login', { username, password }),
+  login: async (email: string, password: string): Promise<SessionUser> =>
+    await post<SessionUser>('/api/auth/login', { email, password }),
 
-  /** Whether this deployment offers a signup form, or is a login and nothing else. */
+  /**
+   * Whether this deployment offers a signup form and the reset that shares its invite code, or
+   * is a login and nothing else.
+   */
   registrationEnabled: async (): Promise<boolean> =>
     (await request<{ enabled: boolean }>('/api/auth/registration')).enabled,
 
   /** Succeeds signed in, exactly as `login` does — the cookie comes back on the same response. */
   register: async (input: {
-    username: string;
+    email: string;
     password: string;
     inviteCode: string;
   }): Promise<SessionUser> => await post<SessionUser>('/api/auth/register', input),
+
+  /**
+   * Sets a new password for someone who has forgotten theirs, proved by the deployment's invite
+   * code — there is no mail sender here to put a link in an inbox. Succeeds signed in, on a
+   * session issued after every older one was ended.
+   */
+  resetPassword: async (input: {
+    email: string;
+    password: string;
+    inviteCode: string;
+  }): Promise<SessionUser> => await post<SessionUser>('/api/auth/reset-password', input),
 
   logout: async (): Promise<{ ok: true }> => await post<{ ok: true }>('/api/auth/logout'),
 
