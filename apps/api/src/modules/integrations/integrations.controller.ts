@@ -4,11 +4,12 @@ import type { BeginConnectionDto, IntegrationDto } from '@open-loops/contracts';
 import type { SourceProvider } from '@open-loops/kernel';
 import type { SourceCatalog } from '@open-loops/plugin-host';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import type { AppConfig } from '../../config/env.js';
+import { siteUrl, type AppConfig } from '../../config/env.js';
 import { Tokens } from '../../tokens.js';
 import { WorkspaceFactory } from '../../infrastructure/workspace.factory.js';
 import { HandshakeTokens } from './handshake-tokens.js';
 import { Owner, Public } from '@open-loops/plugin-nest';
+import { resolveReturnUrl } from './return-url.js';
 
 interface CallbackQuery {
   readonly returnTo?: string;
@@ -123,12 +124,21 @@ export class IntegrationsController {
     return upper;
   }
 
+  /**
+   * Composio redirects a browser here after consent, so this has to be the address the
+   * deployment answers on rather than the one it binds to. It was `localhost` unconditionally,
+   * which works on a laptop and sends every hosted user to their own machine.
+   */
   private apiOrigin(): string {
-    return `http://localhost:${this.config.PORT}`;
+    return siteUrl(this.config);
   }
 
+  /**
+   * Where the person ends up once the handshake is done. Built from the site URL for the same
+   * reason as the callback: `WEB_ORIGIN` is a CORS allowlist whose value is legitimately a
+   * wildcard, and a wildcard joined to a path is not a page anyone can land on.
+   */
   private webReturn(returnTo: string | undefined, provider: string): string {
-    const base = returnTo ?? `${this.config.WEB_ORIGIN.split(',')[0] ?? ''}/integrations`;
-    return `${base}?provider=${provider}`;
+    return resolveReturnUrl({ returnTo, provider, site: siteUrl(this.config) });
   }
 }

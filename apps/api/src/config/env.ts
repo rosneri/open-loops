@@ -25,7 +25,32 @@ const schema = z.object({
   OPEN_LOOPS_USER_ID: z.string().default('local-user'),
   OPEN_LOOPS_HANDLES: z.string().default(''),
   OPEN_LOOPS_AGENT_TOKEN: z.string().optional(),
+  /**
+   * Which browser origins may call this API. A CORS allowlist and nothing else — it answers
+   * "who is allowed to talk to me", which is a different question from "where do I live", and
+   * the two were conflated until the OAuth callback started pointing at localhost in production.
+   * That second question is `OPEN_LOOPS_SITE_URL`.
+   */
   WEB_ORIGIN: z.string().default('*'),
+  /**
+   * This deployment's own public origin, e.g. `https://open-loops-delta.vercel.app`. It is the
+   * address a third party is told to send the browser back to, so it cannot be inferred from a
+   * request the way a same-origin link can: the OAuth callback URL handed to Composio and the
+   * page the user lands on afterwards are both built from it, and both are followed by a browser
+   * that is not on this machine. Unset means a local run, where localhost is the honest answer.
+   *
+   * A trailing slash is stripped so the value composes with the paths appended to it, rather
+   * than producing `https://host//api/...` for whoever remembered to type one.
+   */
+  OPEN_LOOPS_SITE_URL: z.preprocess(
+    // Blank counts as unset, because `.env.example` ships the key with an empty value and a
+    // hosted deployment that has not filled it in yet should fall back, not fail to boot.
+    (value) => (typeof value === 'string' && value.trim().length === 0 ? undefined : value),
+    z
+      .url('OPEN_LOOPS_SITE_URL must be an absolute URL, e.g. https://open-loops.example.com.')
+      .transform((value) => value.replace(/\/+$/, ''))
+      .optional(),
+  ),
 
   /**
    * Signs the session cookie. Required rather than optional-with-a-fallback: a generated
@@ -110,6 +135,13 @@ export const loadConfig = (source: NodeJS.ProcessEnv = process.env): AppConfig =
 };
 
 export const isLocalMode = (config: AppConfig): boolean => config.OPEN_LOOPS_MODE === 'LOCAL';
+
+/**
+ * Where this deployment answers the door. Everything a third party or a browser has to come back
+ * to is built from this, so it is one function rather than a default repeated at each call site.
+ */
+export const siteUrl = (config: AppConfig): string =>
+  config.OPEN_LOOPS_SITE_URL ?? `http://localhost:${String(config.PORT)}`;
 
 /** Whether this deployment has a registration route. Off unless an invite code was configured. */
 export const signupEnabled = (config: AppConfig): boolean =>
