@@ -11,8 +11,6 @@ import { Capability, definePlugin, type SourceDefinition } from '@open-loops/plu
 const sources: readonly SourceDefinition[] = [
   { provider: 'WISPR_FLOW', label: 'Wispr Flow' },
   { provider: 'RISEUP', label: 'RiseUp' },
-  /** Anything typed in by hand, and the fallback owner of a signal from nowhere in particular. */
-  { provider: 'MANUAL', label: 'Manual' },
 ];
 
 export default definePlugin({

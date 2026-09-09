@@ -1,6 +1,14 @@
 import type { IntegrationDto } from '@open-loops/contracts';
 import { titleCase } from '../format.js';
 
+/** Coarse on purpose: a delivery is interesting as "this morning" or "a week ago", not to the minute. */
+const ago = (at: number): string => {
+  const hours = Math.max(0, Math.round((Date.now() - at) / 3_600_000));
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${String(hours)}h ago`;
+  return `${String(Math.round(hours / 24))}d ago`;
+};
+
 const STATUS_TONE: Record<string, string> = {
   ACTIVE: 'text-signal-done',
   PENDING: 'text-signal-progress',
@@ -23,6 +31,7 @@ export function IntegrationCard({
   onDisconnect,
 }: IntegrationCardProps): React.ReactElement {
   const active = integration.status === 'ACTIVE';
+  const pushed = integration.delivery === 'PUSH';
   return (
     <div className="hairline flex flex-col justify-between rounded-lg bg-ink-900/60 p-5">
       <div>
@@ -39,13 +48,30 @@ export function IntegrationCard({
         <p className="mt-1 font-mono text-[11px] text-chalk-600">
           {integration.accountLabel ?? integration.mode.toLowerCase().replace('_', ' ')}
         </p>
+        {integration.lastSyncedAt !== undefined && (
+          <p className="mt-1 font-mono text-[11px] text-chalk-600">
+            {pushed ? 'delivered' : 'synced'} {ago(integration.lastSyncedAt)}
+          </p>
+        )}
         {integration.lastError !== undefined && (
           <p className="mt-2 text-[11px] text-signal-unconfirmed">{integration.lastError}</p>
         )}
       </div>
 
       <div className="mt-5">
-        {active ? (
+        {/*
+         * A push source has no button of any kind. There is nothing to authorise — the local
+         * agent posts its recaps to /api/agent/ingest — so the honest thing to show is how it
+         * arrives. It used to read "No adapter yet", which said the opposite of the truth: that
+         * somebody had not got round to writing one.
+         */}
+        {pushed ? (
+          <p className="text-[11px] leading-relaxed text-chalk-600">
+            {active
+              ? 'Arrives by push from the local agent.'
+              : 'Arrives by push. Nothing has been delivered yet.'}
+          </p>
+        ) : active ? (
           <button
             type="button"
             onClick={() => {

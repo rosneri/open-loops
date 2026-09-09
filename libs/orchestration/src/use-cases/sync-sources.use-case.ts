@@ -16,6 +16,8 @@ export interface SyncSourcesResult {
   readonly fetched: number;
   readonly perProvider: Readonly<Record<string, number>>;
   readonly failures: readonly { source: SourceProvider; error: string }[];
+  /** Active sources nothing here pulls, because they arrive by push. Not failures. */
+  readonly pushed: readonly SourceProvider[];
 }
 
 const LOOKBACK_MS = 72 * 60 * 60 * 1000;
@@ -34,10 +36,22 @@ export class SyncSourcesUseCase {
     const active = await this.deps.integrations.listActive();
     const perProvider: Record<string, number> = {};
     const failures: { source: SourceProvider; error: string }[] = [];
+    const pushed: SourceProvider[] = [];
     let fetched = 0;
 
     for (const integration of active) {
       const provider = integration.provider;
+      /*
+       * A source with no connector is not a broken source. Wispr Flow and RiseUp have no hosted
+       * API to pull, so they arrive at /api/agent/ingest instead — and the push is what stamps
+       * their last delivery. Sweeping them used to throw, which marked the integration FAILED
+       * and put "No connector is bound for WISPR_FLOW" on its card once an hour.
+       */
+      if (this.connectorFor(provider) === undefined) {
+        pushed.push(provider);
+        continue;
+      }
+
       try {
         const count = await this.syncOne({ provider, now });
         perProvider[provider] = count;
@@ -52,11 +66,16 @@ export class SyncSourcesUseCase {
       await this.deps.integrations.save(integration);
     }
 
-    return { fetched, perProvider, failures };
+    if (pushed.length > 0) this.deps.logger.debug('sources that arrive by push', { pushed });
+
+    return { fetched, perProvider, failures, pushed };
   }
 
   private async syncOne(input: { provider: SourceProvider; now: number }): Promise<number> {
     const connector = this.connectorFor(input.provider);
+    // The caller has already skipped the providers nothing pulls, so an absent one here is a
+    // deployment that lost a connector between the two calls: a genuine failure, not a push.
+    if (connector === undefined) throw new Error(`No connector is bound for ${input.provider}.`);
     const since =
       (await this.deps.cursors.get(input.provider)) ?? asInstant(input.now - LOOKBACK_MS);
     const result = await connector.fetchSignals({
@@ -69,11 +88,8 @@ export class SyncSourcesUseCase {
     return appended;
   }
 
-  private connectorFor(provider: SourceProvider): SourceConnector {
-    const connector = this.deps.connectors.find((candidate) =>
-      candidate.supports.includes(provider),
-    );
-    if (connector === undefined) throw new Error(`No connector is bound for ${provider}.`);
-    return connector;
+  /** `undefined` where nothing in this deployment can pull that provider. */
+  private connectorFor(provider: SourceProvider): SourceConnector | undefined {
+    return this.deps.connectors.find((candidate) => candidate.supports.includes(provider));
   }
 }

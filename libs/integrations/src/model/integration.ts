@@ -72,6 +72,27 @@ export class Integration {
     };
   }
 
+  /**
+   * A source with no hosted API to broker — Wispr Flow's meeting recaps, RiseUp's cashflow —
+   * proves it is alive by delivering something. There is no consent screen to complete and no
+   * token to hold, so the push itself is the connection: it activates the integration, stamps
+   * the delivery and clears whatever error was standing.
+   *
+   * The mode is the local agent's regardless of what the deployment runs as. A hosted Open Loops
+   * still receives these from somebody's machine, and calling that HOSTED would be claiming a
+   * broker holds a token for it.
+   */
+  public receiveDelivery(input: { at: Instant; mode: ConnectionMode }): void {
+    const { lastError: _cleared, ...rest } = this.props;
+    this.props = {
+      ...rest,
+      mode: input.mode,
+      status: Status.Active,
+      lastSyncedAt: input.at,
+      connectedAt: this.props.connectedAt ?? input.at,
+    };
+  }
+
   public recordSync(at: Instant): void {
     if (!this.isUsable()) {
       throw new DomainError('INTEGRATION_NOT_ACTIVE', `${this.props.provider} is not connected.`);

@@ -37,6 +37,9 @@ Notes that matter:
 - `externalId` must be stable. The store dedupes on `(provider, externalId)`, which is what makes
   re-running a sweep harmless.
 - `author.isMe` is how the extractor tells "I promised" from "they asked". Get it right.
+- `provider` must be one an installed source plugin claims. There is no catch-all any more: an
+  unrecognised name comes back in `rejected` saying so, rather than being filed somewhere you did
+  not choose. `GET /api/integrations` is the list.
 - Nothing here interprets anything. Do **not** pre-filter to what you think is a task — send the
   feed and let extraction decide.
 
@@ -112,6 +115,11 @@ Meeting recaps are the densest source of commitments there is, so they get their
   ]
 }
 ```
+
+A push is also what marks the source live: Wispr Flow has no consent screen to complete, so
+delivering a recap is what turns its Integrations card from "nothing delivered yet" into
+active, with the time of the last delivery on it. Nothing else can — the hourly sweep has
+nothing to pull for a push source and deliberately leaves it alone.
 
 Send the **whole recap**, action items included, as one signal. The extractor is told that a
 `MEETING_NOTE` is a record of something that already happened, and that only items the user took

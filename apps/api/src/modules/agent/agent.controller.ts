@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Headers, Inject, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Inject,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { z } from 'zod';
 import type { IngestResultDto, PendingProbeDto } from '@open-loops/contracts';
 import { asInstant } from '@open-loops/kernel';
@@ -37,7 +46,14 @@ const signalSchema = z.object({
   body: z.string().default(''),
   author: actorSchema,
   participants: z.array(actorSchema).default([]),
-  occurredAtIso: z.string(),
+  /*
+   * Parsed here rather than trusted. An unparseable date used to survive validation, become a
+   * NaN instant and reach Prisma as an Invalid Date, which the agent saw as an opaque 500 —
+   * a timestamp it could not have known was wrong.
+   */
+  occurredAtIso: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), 'occurredAtIso must be a date, e.g. 2026-08-26T09:30:00.000Z'),
   threadRef: z.string().optional(),
   url: z.string().optional(),
   channel: z.string().optional(),
@@ -85,14 +101,17 @@ export class AgentController {
     @Headers(USER_HEADER) email: string | undefined,
     @Body() body: unknown,
   ): Promise<IngestResultDto> {
-    const { signals } = ingestSchema.parse(body);
+    const { signals } = parsed(ingestSchema, body);
     const workspace = this.workspaces.for(await this.owners.resolve(email));
-    // A provider no installed plugin claims is not rejected — the agent saw something real and
-    // dropping it would lose the signal. It is filed as MANUAL, which is what it is.
-    const known = new Set(this.sources.providers());
+    /*
+     * A provider no installed plugin claims comes back in `rejected`, naming itself. It used to
+     * be filed under a catch-all `MANUAL` provider, which meant a typo in the agent's push
+     * looked like a successful ingest and turned up later as a loop from nowhere in particular.
+     */
     return await workspace.ingest.execute({
       mode: this.mode,
-      signals: signals.map((signal) => toSignal(signal, known)),
+      known: new Set(this.sources.providers()),
+      signals: signals.map(toSignal),
     });
   }
 
@@ -109,7 +128,7 @@ export class AgentController {
     @Headers(USER_HEADER) email: string | undefined,
     @Body() body: unknown,
   ): Promise<{ applied: number }> {
-    const { answers } = evidenceSchema.parse(body);
+    const { answers } = parsed(evidenceSchema, body);
     const workspace = this.workspaces.for(await this.owners.resolve(email));
     return {
       applied: await workspace.probes.answer(
@@ -124,6 +143,24 @@ export class AgentController {
   }
 }
 
+/**
+ * A body this door cannot read is the caller's mistake, so it is a 400 that names the field.
+ * `parse` throws a raw `ZodError`, which Nest reports as "Internal server error" — the agent
+ * pushing a recap with a timestamp it got wrong deserves to be told which one, not to be told
+ * the server broke.
+ */
+const parsed = <TSchema extends z.ZodType>(schema: TSchema, body: unknown): z.infer<TSchema> => {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    throw new BadRequestException(
+      result.error.issues
+        .map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`)
+        .join('; '),
+    );
+  }
+  return result.data;
+};
+
 type SignalInput = z.infer<typeof signalSchema>;
 
 /** `exactOptionalPropertyTypes` means an absent field and an explicit `undefined` differ. */
@@ -134,10 +171,9 @@ const toActor = (actor: z.infer<typeof actorSchema>): SignalActor => ({
   ...(actor.email === undefined ? {} : { email: actor.email }),
 });
 
-const toSignal = (signal: SignalInput, known: ReadonlySet<string>): Signal => {
-  const provider = signal.provider.toUpperCase();
+const toSignal = (signal: SignalInput): Signal => {
   return {
-    provider: known.has(provider) ? provider : 'MANUAL',
+    provider: signal.provider.toUpperCase(),
     externalId: signal.externalId,
     kind: signal.kind,
     title: signal.title,

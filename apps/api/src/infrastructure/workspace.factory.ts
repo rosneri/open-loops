@@ -63,6 +63,8 @@ export class SharedServices {
     public readonly knownProviders: readonly SourceProvider[],
     @Inject(Tokens.ConnectableProviders)
     public readonly connectableProviders: readonly SourceProvider[],
+    @Inject(Tokens.PushProviders)
+    public readonly pushProviders: readonly SourceProvider[],
     @Inject(Tokens.LoopExtractor) public readonly extractor: LoopExtractor,
     @Inject(Tokens.LoopReconciler) public readonly reconciler: LoopReconciler,
     @Inject(Tokens.StructuredGenerator) public readonly reasoning: StructuredGenerator,
@@ -179,6 +181,7 @@ export class WorkspaceFactory {
       mode: this.shared.mode,
       knownProviders: this.shared.knownProviders,
       connectableProviders: this.shared.connectableProviders,
+      pushProviders: this.shared.pushProviders,
       ids,
       clock,
       logger,
@@ -219,7 +222,14 @@ export class WorkspaceFactory {
       integrations,
       today,
       rebalance,
-      ingest: new IngestSignalsUseCase({ signals, clock, logger }),
+      ingest: new IngestSignalsUseCase({
+        signals,
+        // A push is what tells the Integrations screen a push-delivered source is alive.
+        integrations: integrationRepo,
+        ids,
+        clock,
+        logger,
+      }),
       commands: new LoopCommandsUseCase({ loops, plans, events, clock }),
       tick: new RunTickUseCase({
         ownerId,

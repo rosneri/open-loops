@@ -63,16 +63,15 @@ describe('the plugins this build ships', () => {
       'SENTRY',
       'WISPR_FLOW',
       'RISEUP',
-      'MANUAL',
     ]);
   });
 
   it('offers a Connect button only where there is an account to authorise', async () => {
     const connectable = (await sources()).connectable();
     expect(connectable).toContain('SLACK');
-    // Wispr Flow has no hosted API to broker; it arrives by push or not at all.
+    // Wispr Flow and RiseUp have no hosted API to broker; they arrive by push or not at all.
     expect(connectable).not.toContain('WISPR_FLOW');
-    expect(connectable).not.toContain('MANUAL');
+    expect(connectable).not.toContain('RISEUP');
   });
 
   it('keeps the toolkit slugs upstream actually uses', async () => {

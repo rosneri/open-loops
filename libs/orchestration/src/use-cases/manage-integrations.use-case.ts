@@ -1,11 +1,16 @@
 import type { Clock, IdGenerator, Logger, SourceProvider } from '@open-loops/kernel';
 import type {
   ConnectionBroker,
-  ConnectionMode,
   Integration,
+  IntegrationProps,
   IntegrationRepository,
 } from '@open-loops/integrations';
-import { ConnectionStatus, Integration as Aggregate, asIntegrationId } from '@open-loops/integrations';
+import {
+  ConnectionMode,
+  ConnectionStatus,
+  Integration as Aggregate,
+  asIntegrationId,
+} from '@open-loops/integrations';
 import type { BeginConnectionDto, IntegrationDto } from '@open-loops/contracts';
 
 export interface ManageIntegrationsDeps {
@@ -19,10 +24,26 @@ export interface ManageIntegrationsDeps {
    */
   readonly knownProviders: readonly SourceProvider[];
   readonly connectableProviders: readonly SourceProvider[];
+  /**
+   * The ones that arrive by push instead of by OAuth — the sources that named no toolkit. It is
+   * a property of the source rather than of the deployment, which is why it is not simply
+   * "everything that is not connectable": locally every provider is connectable, and Wispr Flow
+   * still has no hosted API to connect to.
+   */
+  readonly pushProviders: readonly SourceProvider[];
   readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly logger: Logger;
 }
+
+/** `exactOptionalPropertyTypes` again: an absent field and an explicit `undefined` differ. */
+const whatIsKnown = (
+  props: IntegrationProps | undefined,
+): Pick<IntegrationDto, 'accountLabel' | 'lastSyncedAt' | 'lastError'> => ({
+  ...(props?.accountLabel === undefined ? {} : { accountLabel: props.accountLabel }),
+  ...(props?.lastSyncedAt === undefined ? {} : { lastSyncedAt: props.lastSyncedAt }),
+  ...(props?.lastError === undefined ? {} : { lastError: props.lastError }),
+});
 
 /**
  * Everything the integrations screen needs. Providers the user has never touched are returned
@@ -35,18 +56,26 @@ export class ManageIntegrationsUseCase {
   public async list(): Promise<readonly IntegrationDto[]> {
     const stored = await this.deps.integrations.listAll();
     const byProvider = new Map(stored.map((item) => [item.provider, item]));
-    return this.deps.knownProviders.map((provider) => {
-      const props = byProvider.get(provider)?.snapshot();
-      return {
-        provider,
-        status: props?.status ?? ConnectionStatus.Disconnected,
-        mode: props?.mode ?? this.deps.mode,
-        connectable: this.deps.connectableProviders.includes(provider),
-        ...(props?.accountLabel === undefined ? {} : { accountLabel: props.accountLabel }),
-        ...(props?.lastSyncedAt === undefined ? {} : { lastSyncedAt: props.lastSyncedAt }),
-        ...(props?.lastError === undefined ? {} : { lastError: props.lastError }),
-      };
-    });
+    return this.deps.knownProviders.map((provider) =>
+      this.describe(provider, byProvider.get(provider)?.snapshot()),
+    );
+  }
+
+  /** One card. A provider nobody has touched is a disconnected placeholder, not an absence. */
+  private describe(provider: SourceProvider, props: IntegrationProps | undefined): IntegrationDto {
+    const pushed = this.deps.pushProviders.includes(provider);
+    return {
+      provider,
+      status: props?.status ?? ConnectionStatus.Disconnected,
+      // An untouched source is described by how it would arrive, not by how this deployment
+      // reaches the ones it brokers: nothing will ever deliver Wispr Flow but somebody's agent.
+      mode: props?.mode ?? (pushed ? ConnectionMode.LocalAgent : this.deps.mode),
+      delivery: pushed ? 'PUSH' : 'OAUTH',
+      // A push source is never connectable, in any mode: there is no consent to give, and a
+      // button that declared it connected would be a button that lies the moment it is wrong.
+      connectable: !pushed && this.deps.connectableProviders.includes(provider),
+      ...whatIsKnown(props),
+    };
   }
 
   /**

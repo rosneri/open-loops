@@ -35,5 +35,4 @@ export const SourceProvider = {
   Discord: 'DISCORD',
   MicrosoftTeams: 'MICROSOFT_TEAMS',
   Outlook: 'OUTLOOK',
-  Manual: 'MANUAL',
 } as const;

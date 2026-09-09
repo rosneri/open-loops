@@ -250,6 +250,12 @@ Composio renames it tomorrow, the search still resolves and nothing here changes
 The **Try a real call** panel on that screen runs the same path the hourly sync uses and prints
 the Composio log id, so "it seemed to work" is always checkable.
 
+Not every source is brokered. Wispr Flow's meeting recaps and RiseUp's cashflow have no hosted
+API at all: they arrive at `POST /api/agent/ingest` from the local agent, and that delivery is
+what marks their card active and stamps the time. Their cards carry no Connect button because
+there is nothing to authorise — which is a different thing from an app this deployment cannot
+reach, and now says so.
+
 The **GitHub** panel on the Settings screen lists the organisations your connected account
 belongs to — read from GitHub, not typed — and ticking some narrows the fetch to their
 repositories. Nothing ticked means every organisation, which is what an account that belongs to

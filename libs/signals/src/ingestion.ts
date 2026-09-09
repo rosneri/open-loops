@@ -16,6 +16,13 @@ export interface IngestionReport {
 export const screenSignals = (input: {
   signals: readonly Signal[];
   now: Instant;
+  /**
+   * The providers this deployment knows about, or `undefined` to accept any. A pushed signal
+   * naming an app no installed plugin claims used to be filed under a catch-all `MANUAL`
+   * provider, which put it on a screen nobody had asked for and under a name nobody had chosen.
+   * Naming the unknown provider back to the caller is more use than inventing a home for it.
+   */
+  known?: ReadonlySet<string> | undefined;
 }): IngestionReport => {
   const accepted: Signal[] = [];
   const rejected: { key: string; reason: string }[] = [];
@@ -23,7 +30,7 @@ export const screenSignals = (input: {
 
   for (const signal of input.signals) {
     const key = `${signal.provider}:${signal.externalId}`;
-    const reason = reject({ signal, now: input.now, seen, key });
+    const reason = reject({ signal, now: input.now, seen, key, known: input.known });
     if (reason === undefined) {
       seen.add(key);
       accepted.push(signal);
@@ -40,9 +47,13 @@ const reject = (input: {
   now: Instant;
   seen: ReadonlySet<string>;
   key: string;
+  known: ReadonlySet<string> | undefined;
 }): string | undefined => {
   const { signal } = input;
   if (signal.externalId.trim().length === 0) return 'missing externalId';
+  if (input.known !== undefined && !input.known.has(signal.provider)) {
+    return `no source plugin claims the provider ${signal.provider}`;
+  }
   if (input.seen.has(input.key)) return 'duplicate within the same batch';
   if (signal.occurredAt > input.now + MAX_FUTURE_SKEW_MS) return 'occurs in the future';
   if (signal.title.trim().length === 0 && signal.body.trim().length === 0) return 'empty';

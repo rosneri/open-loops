@@ -28,6 +28,7 @@ export const Tokens = {
    */
   ComposioSessions: 'OL_COMPOSIO_SESSIONS',
   ConnectableProviders: 'OL_CONNECTABLE_PROVIDERS',
+  PushProviders: 'OL_PUSH_PROVIDERS',
   ConnectionMode: 'OL_CONNECTION_MODE',
 
   /** What the installed plugins collectively decided this deployment is. */

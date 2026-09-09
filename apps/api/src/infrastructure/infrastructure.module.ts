@@ -131,6 +131,19 @@ const dataStrategy: Provider[] = [
     useFactory: (config: AppConfig, sources: SourceCatalog): readonly SourceProvider[] =>
       isLocalMode(config) ? sources.providers() : sources.connectable(),
   },
+  {
+    /**
+     * The sources that named no toolkit, and so have nothing to authorise anywhere: they arrive
+     * by push. Read from the catalogue rather than from the mode, because whether Wispr Flow has
+     * a hosted API is not a fact about this deployment.
+     */
+    provide: Tokens.PushProviders,
+    inject: [Tokens.SourceCatalog],
+    useFactory: (sources: SourceCatalog): readonly SourceProvider[] => {
+      const brokered = new Set(sources.connectable());
+      return sources.providers().filter((provider) => !brokered.has(provider));
+    },
+  },
 ];
 
 /**
