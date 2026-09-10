@@ -250,11 +250,20 @@ Composio renames it tomorrow, the search still resolves and nothing here changes
 The **Try a real call** panel on that screen runs the same path the hourly sync uses and prints
 the Composio log id, so "it seemed to work" is always checkable.
 
-Not every source is brokered. Wispr Flow's meeting recaps and RiseUp's cashflow have no hosted
-API at all: they arrive at `POST /api/agent/ingest` from the local agent, and that delivery is
-what marks their card active and stamps the time. Their cards carry no Connect button because
-there is nothing to authorise — which is a different thing from an app this deployment cannot
-reach, and now says so.
+Most toolkits are Composio's own. **Wispr Flow is this project's**: it publishes a hosted MCP
+server, so it is registered once per Composio project as a custom toolkit (`CUSTOM_WISPR_FLOW`)
+and brokered from there like any other app. A fresh deployment has to register it before its card
+can connect — see `docs/AGENT.md` — because Composio does not ship it for you.
+
+Wispr's list tools return a title and an attendee preview; the action items live one call deeper.
+So its source declares a `hydrate` step and the connector expands each listed meeting before
+normalising it. Every other source still makes the single call it always did.
+
+Not every source is brokered. RiseUp's cashflow has no hosted API at all: it arrives at
+`POST /api/agent/ingest` from the local agent, and that delivery is what marks its card active
+and stamps the time. Its card carries no Connect button because there is nothing to authorise —
+which is a different thing from an app this deployment cannot reach, and now says so. The same
+push route still accepts Wispr recaps, for anyone whose notes never reach the hosted server.
 
 The **GitHub** panel on the Settings screen lists the organisations your connected account
 belongs to — read from GitHub, not typed — and ticking some narrows the fetch to their

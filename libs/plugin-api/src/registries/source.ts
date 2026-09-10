@@ -16,8 +16,8 @@ export interface SourceDefinition {
   readonly label: string;
   /**
    * The broker's own name for this app. `undefined` means there is no hosted connection to make:
-   * Wispr Flow and RiseUp are real sources that arrive by push from the local agent, and offering
-   * a "Connect" button for them would be a lie.
+   * RiseUp is a real source that arrives by push from the local agent, and offering a "Connect"
+   * button for it would be a lie.
    */
   readonly toolkit?: string | undefined;
   /**
@@ -40,6 +40,38 @@ export interface SourceDefinition {
    * the next tick rather than on the next deploy.
    */
   focus?(scope: OwnerScope): Promise<string | undefined>;
+  /**
+   * A second call per listed row, for a source whose list tool returns headlines and keeps the
+   * part worth reading behind a detail call. Wispr Flow is why it exists: `search_meetings`
+   * returns a title and an attendee preview, while the action items — the only part a loop can
+   * be made of — live in `get_meeting`'s summary.
+   *
+   * Absent means one call, which is what every other source wants and what they all did before
+   * this existed.
+   */
+  readonly hydrate?: HydrateDefinition | undefined;
+}
+
+/**
+ * How to expand one row of a list into the thing it summarises. Phrased as an intent for the
+ * same reason the fetch intents are: the detail tool can be renamed upstream without this
+ * changing.
+ */
+export interface HydrateDefinition {
+  /** What to ask the broker for, in words, to expand one row. Must name its provider out loud. */
+  readonly intent: string;
+  /**
+   * Where the row keeps its id, tried in order — the first one present wins. A list is a list
+   * because upstream spells it `meeting_id` on one tool and `id` on the next.
+   */
+  readonly idKeys: readonly string[];
+  /** What the detail tool calls that id among its arguments. */
+  readonly argument: string;
+  /**
+   * How many rows to expand per sync. One tick is not the place to page a year of history, and
+   * each expansion is a billed round trip.
+   */
+  readonly limit?: number;
 }
 
 export interface SourceRegistry {

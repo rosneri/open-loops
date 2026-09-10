@@ -16,7 +16,7 @@ export interface IngestSignalsDeps {
   readonly signals: SignalStore;
   /**
    * A push is the only evidence a push-delivered source is alive: there is no consent screen to
-   * complete for Wispr Flow and nothing pulls it on a schedule, so without this the Integrations
+   * complete for RiseUp and nothing pulls it on a schedule, so without this the Integrations
    * screen calls a source that delivered a meeting recap this morning "disconnected" forever.
    */
   readonly integrations: IntegrationRepository;

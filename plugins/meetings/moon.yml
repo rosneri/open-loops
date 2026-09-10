@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+layer: 'library'
+language: 'typescript'
+stack: 'backend'
+project:
+  name: 'plugin-meetings'
+  description: 'Meeting recaps and the notes taken alongside them.'
+
+dependsOn:
+  - plugin-api
+
+tags:
+  - 'plugin'

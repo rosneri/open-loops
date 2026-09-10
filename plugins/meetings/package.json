@@ -1,0 +1,17 @@
+{
+  "name": "@open-loops/plugin-meetings",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Meeting recaps and the notes taken alongside them.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@open-loops/plugin-api": "workspace:*"
+  }
+}

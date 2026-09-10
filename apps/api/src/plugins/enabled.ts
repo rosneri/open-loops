@@ -6,6 +6,7 @@ import documents from '@open-loops/plugin-documents';
 import issueTracker from '@open-loops/plugin-issue-tracker';
 import localSources from '@open-loops/plugin-local-sources';
 import mail from '@open-loops/plugin-mail';
+import meetings from '@open-loops/plugin-meetings';
 import podcast from '@open-loops/plugin-podcast';
 import reasoningAiSdk from '@open-loops/plugin-reasoning-ai-sdk';
 import reasoningClaudeCode from '@open-loops/plugin-reasoning-claude-code';
@@ -26,6 +27,7 @@ const ALL: readonly Plugin[] = [
   documents,
   codeReview,
   issueTracker,
+  meetings,
   localSources,
   podcast,
   reasoningClaudeCode,

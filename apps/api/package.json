@@ -34,6 +34,7 @@
     "@open-loops/plugin-host": "workspace:*",
     "@open-loops/plugin-issue-tracker": "workspace:*",
     "@open-loops/plugin-local-sources": "workspace:*",
+    "@open-loops/plugin-meetings": "workspace:*",
     "@open-loops/plugin-mail": "workspace:*",
     "@open-loops/plugin-nest": "workspace:*",
     "@open-loops/plugin-podcast": "workspace:*",

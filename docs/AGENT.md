@@ -89,9 +89,34 @@ Each answer is consumed exactly once, by the next tick.
 
 ## Meeting notes (Wispr Flow, Granola, anything else)
 
-Wispr Flow's Notetaker has no hosted API we can sync — the Flow API is voice-only and gated
-behind approval — but Notetaker exposes meeting history over **MCP**. So it arrives the same way
-everything else does locally: the agent reads it and pushes it here.
+Wispr Flow's Notetaker is **brokered now, not pushed**. Its meeting history is served from a
+public MCP server at `https://api.wisprflow.ai/connect/mcp`, behind OAuth with dynamic client
+registration, which Composio can front as a custom toolkit. The Flow dictation API is still
+voice-only and gated behind approval; none of this uses it.
+
+Composio does not ship that toolkit, so each project registers it once:
+
+```bash
+curl -X POST https://backend.composio.dev/api/v3.1/custom/toolkits/upsert \
+  -H "x-api-key: $COMPOSIO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"slug":"WISPR_FLOW","toolkit_config":{"name":"Wispr Flow",
+       "app_url":"https://api.wisprflow.ai/connect/mcp",
+       "auth_schemes":[{"mode":"DCR_OAUTH",
+         "discovery_url":"https://mcp-auth.wisprflow.com/.well-known/oauth-authorization-server"}]}}'
+```
+
+Then create an auth config for it with `is_enabled_for_tool_router: true`, or every session
+execution fails `NoActiveConnection` even with a live account. Composio refuses to sync the
+toolkit's tool list until one account has connected, so connect once before expecting tools.
+`app_url` and `auth_schemes` are immutable and the slug cannot be renamed: fixing either means
+deleting the toolkit and registering it again.
+
+Users connect their own Wispr account from the Integrations screen like any other app; the token
+is per user and never touches this repository.
+
+The push route below still works and is the fallback — `/api/agent/ingest` accepts any provider,
+and a recap delivered that way still activates the card. Use it when the hosted server has not
+captured the meeting.
 
 Meeting recaps are the densest source of commitments there is, so they get their own kind:
 

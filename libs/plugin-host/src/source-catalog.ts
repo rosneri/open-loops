@@ -1,4 +1,4 @@
-import type { OwnerScope, SourceDefinition } from '@open-loops/plugin-api';
+import type { HydrateDefinition, OwnerScope, SourceDefinition } from '@open-loops/plugin-api';
 import type { PluginHost } from './plugin-host.js';
 
 /**
@@ -71,6 +71,11 @@ export class SourceCatalog {
 
   public intentsFor(provider: string): readonly string[] {
     return this.byProvider.get(provider)?.intents ?? [];
+  }
+
+  /** How to expand a listed row into its body, where the source says one call is not enough. */
+  public hydrateFor(provider: string): HydrateDefinition | undefined {
+    return this.byProvider.get(provider)?.hydrate;
   }
 
   /**

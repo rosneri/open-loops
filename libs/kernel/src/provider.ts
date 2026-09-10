@@ -28,9 +28,9 @@ export const SourceProvider = {
   Notion: 'NOTION',
   Asana: 'ASANA',
   WhatsApp: 'WHATSAPP',
-  /** Meeting notes and action items. No hosted API — it arrives over MCP via the local agent. */
+  /** Meeting notes and action items, brokered from Wispr's hosted MCP server as a custom toolkit. */
   WisprFlow: 'WISPR_FLOW',
-  /** Personal cashflow. Read-only, PAT-authenticated MCP — same local-agent route as Wispr. */
+  /** Personal cashflow. Read-only, PAT-authenticated MCP — the local-agent push route. */
   RiseUp: 'RISEUP',
   Discord: 'DISCORD',
   MicrosoftTeams: 'MICROSOFT_TEAMS',

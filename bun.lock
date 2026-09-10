@@ -48,6 +48,7 @@
         "@open-loops/plugin-issue-tracker": "workspace:*",
         "@open-loops/plugin-local-sources": "workspace:*",
         "@open-loops/plugin-mail": "workspace:*",
+        "@open-loops/plugin-meetings": "workspace:*",
         "@open-loops/plugin-nest": "workspace:*",
         "@open-loops/plugin-podcast": "workspace:*",
         "@open-loops/plugin-reasoning-ai-sdk": "workspace:*",
@@ -338,6 +339,13 @@
         "@open-loops/plugin-host": "workspace:*",
       },
     },
+    "plugins/meetings": {
+      "name": "@open-loops/plugin-meetings",
+      "version": "0.1.0",
+      "dependencies": {
+        "@open-loops/plugin-api": "workspace:*",
+      },
+    },
     "plugins/podcast": {
       "name": "@open-loops/plugin-podcast",
       "version": "0.1.0",
@@ -571,6 +579,8 @@
     "@open-loops/plugin-local-sources": ["@open-loops/plugin-local-sources@workspace:plugins/local-sources"],
 
     "@open-loops/plugin-mail": ["@open-loops/plugin-mail@workspace:plugins/mail"],
+
+    "@open-loops/plugin-meetings": ["@open-loops/plugin-meetings@workspace:plugins/meetings"],
 
     "@open-loops/plugin-nest": ["@open-loops/plugin-nest@workspace:libs/plugin-nest"],
 

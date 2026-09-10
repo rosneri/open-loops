@@ -8,7 +8,7 @@ import type {
 } from '@open-loops/signals';
 import type { ComposioToolExplorer } from './composio-tool-explorer.js';
 import type { SourceCatalog } from '@open-loops/plugin-host';
-import { normalise } from './normalizers.js';
+import { collectionOf, normalise } from './normalizers.js';
 
 export interface ComposioSourceConnectorDeps {
   readonly explorer: ComposioToolExplorer;
@@ -93,7 +93,7 @@ export class ComposioSourceConnector implements SourceConnector {
         return [];
       }
       return normalise({
-        payload: execution.data,
+        payload: await this.hydrated({ payload: execution.data, ...context }),
         ctx: {
           provider: context.input.provider,
           meHandles: await this.deps.meHandles(),
@@ -107,5 +107,59 @@ export class ComposioSourceConnector implements SourceConnector {
       });
       return [];
     }
+  }
+
+  /**
+   * Expands each listed row into the thing it summarises, for the sources that declare they need
+   * it. A list tool that returns titles and a detail tool that returns the body is a common
+   * shape, and normalising the list alone yields signals the extractor correctly refuses to act
+   * on — a meeting recap with no action items in it is not a commitment, it is a calendar entry.
+   *
+   * Every failure here degrades to the unexpanded row rather than losing it: a half-read recap
+   * is worth more than a dropped one, and the detail call is the part most likely to rate-limit.
+   */
+  private async hydrated(context: {
+    payload: unknown;
+    intent: string;
+    toolkit: string;
+    input: FetchSignalsInput;
+  }): Promise<unknown> {
+    const plan = this.deps.sources.hydrateFor(context.input.provider);
+    if (plan === undefined) return context.payload;
+
+    const rows = collectionOf(context.payload);
+    if (rows.length === 0) return context.payload;
+
+    const [detail] = await this.deps.explorer.search({
+      query: plan.intent,
+      toolkits: [context.toolkit],
+    });
+    if (detail === undefined) {
+      this.deps.logger.warn('no composio tool matched the hydrate intent', {
+        intent: plan.intent,
+      });
+      return context.payload;
+    }
+
+    const limit = plan.limit ?? 10;
+    const expanded: Record<string, unknown>[] = [];
+    for (const row of rows.slice(0, limit)) {
+      const id = plan.idKeys
+        .map((key) => row[key])
+        .find((value): value is string => typeof value === 'string' && value.length > 0);
+      if (id === undefined) {
+        expanded.push(row);
+        continue;
+      }
+      const execution = await this.deps.explorer.execute({
+        slug: detail.slug,
+        args: { [plan.argument]: id },
+      });
+      // The row is spread first so the detail wins where they disagree, and the row's own id
+      // survives a detail response that does not repeat it.
+      expanded.push(execution.ok ? { ...row, ...execution.data } : row);
+    }
+    // Anything past the cap still becomes a signal, just an unexpanded one.
+    return [...expanded, ...rows.slice(limit)];
   }
 }

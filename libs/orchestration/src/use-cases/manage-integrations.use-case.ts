@@ -27,7 +27,7 @@ export interface ManageIntegrationsDeps {
   /**
    * The ones that arrive by push instead of by OAuth — the sources that named no toolkit. It is
    * a property of the source rather than of the deployment, which is why it is not simply
-   * "everything that is not connectable": locally every provider is connectable, and Wispr Flow
+   * "everything that is not connectable": locally every provider is connectable, and RiseUp
    * still has no hosted API to connect to.
    */
   readonly pushProviders: readonly SourceProvider[];
@@ -68,7 +68,7 @@ export class ManageIntegrationsUseCase {
       provider,
       status: props?.status ?? ConnectionStatus.Disconnected,
       // An untouched source is described by how it would arrive, not by how this deployment
-      // reaches the ones it brokers: nothing will ever deliver Wispr Flow but somebody's agent.
+      // reaches the ones it brokers: nothing will ever deliver RiseUp but somebody's agent.
       mode: props?.mode ?? (pushed ? ConnectionMode.LocalAgent : this.deps.mode),
       delivery: pushed ? 'PUSH' : 'OAUTH',
       // A push source is never connectable, in any mode: there is no consent to give, and a

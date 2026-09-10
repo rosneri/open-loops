@@ -26,6 +26,7 @@ projects:
   plugin-calendar: 'plugins/calendar'
   plugin-documents: 'plugins/documents'
   plugin-local-sources: 'plugins/local-sources'
+  plugin-meetings: 'plugins/meetings'
   plugin-podcast: 'plugins/podcast'
   plugin-reasoning-claude-code: 'plugins/reasoning-claude-code'
   plugin-reasoning-ai-sdk: 'plugins/reasoning-ai-sdk'

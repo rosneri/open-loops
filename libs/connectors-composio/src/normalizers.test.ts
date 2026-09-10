@@ -104,4 +104,79 @@ describe('normalise', () => {
   it('returns nothing rather than guessing when there is no collection', () => {
     expect(normalise({ payload: { ok: true }, ctx: ctx(SourceProvider.GitHub) })).toHaveLength(0);
   });
+
+  /**
+   * The hydrated shape: a `search_meetings` row merged with what `get_meeting` added. The action
+   * items live in the summary, which is the only reason the hydrate step exists.
+   */
+  it('reads a hydrated Wispr Flow meeting as a meeting note', () => {
+    const [signal] = normalise({
+      payload: {
+        count: 1,
+        has_more: false,
+        meetings: [
+          {
+            meeting_id: '9c4b3c35-a2f4-479a-ba72-95b9df97d587',
+            title: 'Eng standup',
+            started_at: '2026-08-26T09:30:00.000Z',
+            share_link: 'https://notes.wisprflow.ai/shared/abc',
+            attendees: [{ name: 'Neriya Rosner' }, { name: 'Dana', email: 'dana@acme.com' }],
+            summary: '## Flow Summary\n### Next steps\n- Neri to open the rate-limiting PR today',
+            content: '## Notes\nWe argued about the limiter.',
+          },
+        ],
+      },
+      ctx: ctx('WISPR_FLOW'),
+    });
+
+    expect(signal?.kind).toBe('MEETING_NOTE');
+    // Namespaced the way the local agent's pushes already are.
+    expect(signal?.externalId).toBe('wispr:meeting:9c4b3c35-a2f4-479a-ba72-95b9df97d587');
+    expect(signal?.title).toBe('Eng standup');
+    // Both halves, because the recap is sent whole and the extractor decides what is owed.
+    expect(signal?.body).toContain('Neri to open the rate-limiting PR today');
+    expect(signal?.body).toContain('We argued about the limiter.');
+    expect(signal?.occurredAt).toBe(Date.parse('2026-08-26T09:30:00.000Z'));
+    expect(signal?.url).toBe('https://notes.wisprflow.ai/shared/abc');
+    expect(signal?.isDirectedAtMe).toBe(true);
+    expect(signal?.participants.map((person) => person.displayName)).toContain('Dana');
+  });
+
+  /**
+   * An unhydrated row still becomes a signal rather than being dropped — the cap and every
+   * failure path in the connector produce exactly this shape.
+   */
+  it('keeps a Wispr Flow meeting that was never expanded', () => {
+    const [signal] = normalise({
+      payload: { meetings: [{ meeting_id: 'm1', title: 'Retro', started_at: '2026-08-26T09:30:00.000Z' }] },
+      ctx: ctx('WISPR_FLOW'),
+    });
+
+    expect(signal?.kind).toBe('MEETING_NOTE');
+    expect(signal?.externalId).toBe('wispr:meeting:m1');
+    expect(signal?.body).toBe('');
+  });
+
+  /** The scratchpad is the same toolkit and a different kind; its rows carry no meeting id. */
+  it('reads a Wispr Flow scratchpad note as a document, not a meeting', () => {
+    const [signal] = normalise({
+      payload: {
+        notes: [
+          {
+            id: '2acd2a3a-fca7-4e4f-b9fd-4a7ed5385cef',
+            title: 'Hiring loop',
+            content_excerpt: 'Owe Dana the scorecard by Thursday.',
+            modified_at: '2026-08-31T12:30:16.206823Z',
+          },
+        ],
+      },
+      ctx: ctx('WISPR_FLOW'),
+    });
+
+    expect(signal?.kind).toBe('DOCUMENT');
+    expect(signal?.externalId).toBe('wispr:note:2acd2a3a-fca7-4e4f-b9fd-4a7ed5385cef');
+    expect(signal?.body).toBe('Owe Dana the scorecard by Thursday.');
+    // A note you wrote to yourself is still addressed to you.
+    expect(signal?.isDirectedAtMe).toBe(true);
+  });
 });

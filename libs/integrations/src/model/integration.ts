@@ -73,8 +73,8 @@ export class Integration {
   }
 
   /**
-   * A source with no hosted API to broker — Wispr Flow's meeting recaps, RiseUp's cashflow —
-   * proves it is alive by delivering something. There is no consent screen to complete and no
+   * A source with no hosted API to broker — RiseUp's cashflow — proves it is alive by
+   * delivering something. There is no consent screen to complete and no
    * token to hold, so the push itself is the connection: it activates the integration, stamps
    * the delivery and clears whatever error was standing.
    *

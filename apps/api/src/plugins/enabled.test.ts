@@ -69,8 +69,9 @@ describe('the plugins this build ships', () => {
   it('offers a Connect button only where there is an account to authorise', async () => {
     const connectable = (await sources()).connectable();
     expect(connectable).toContain('SLACK');
-    // Wispr Flow and RiseUp have no hosted API to broker; they arrive by push or not at all.
-    expect(connectable).not.toContain('WISPR_FLOW');
+    // Wispr Flow publishes a hosted MCP server, brokered as a project-owned custom toolkit.
+    expect(connectable).toContain('WISPR_FLOW');
+    // RiseUp has no hosted API to broker; it arrives by push or not at all.
     expect(connectable).not.toContain('RISEUP');
   });
 

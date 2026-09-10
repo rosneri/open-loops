@@ -16,6 +16,7 @@ dependsOn:
   - plugin-code-review
   - plugin-documents
   - plugin-local-sources
+  - plugin-meetings
   - plugin-issue-tracker
   - plugin-mail
   - plugin-podcast

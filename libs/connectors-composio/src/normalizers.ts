@@ -34,6 +34,8 @@ const instantFrom = (value: unknown, fallback: Instant): Instant => {
  */
 const PREFERRED_KEYS = [
   'items',
+  'meetings',
+  'notes',
   'notifications',
   'messages',
   'issues',
@@ -71,7 +73,7 @@ const nestedCollection = (record: Payload, depth: number): readonly Payload[] | 
   return undefined;
 };
 
-const collectionOf = (payload: unknown, depth = 0): readonly Payload[] => {
+export const collectionOf = (payload: unknown, depth = 0): readonly Payload[] => {
   if (Array.isArray(payload)) return payload.map(asRecord);
   if (depth > 4 || typeof payload !== 'object' || payload === null) return [];
   const record = payload as Payload;
@@ -304,6 +306,88 @@ const calendarSignal = (item: Payload, ctx: NormaliseContext): Signal => {
   };
 };
 
+/**
+ * Wispr Flow arrives over a project-owned custom MCP toolkit, and its two collections are two
+ * different kinds: a recorded meeting is a MEETING_NOTE, a scratchpad jotting is a DOCUMENT.
+ * Nothing in the payload flags which is which, so they are told apart by shape — a meeting has
+ * attendees or a summary, a note has neither.
+ *
+ * The keys are read tolerantly on purpose. A custom MCP toolkit declares no output schema, so
+ * the spellings below are the ones the server's own tool descriptions name, with the obvious
+ * alternates behind them; a rename upstream costs a wrong timestamp rather than a lost signal.
+ */
+const wisprAttendees = (item: Payload, ctx: NormaliseContext): readonly SignalActor[] => {
+  const raw = item['attendees'] ?? item['participants'] ?? item['attendee_preview'];
+  if (!Array.isArray(raw)) return [];
+  return raw.map((entry) => {
+    if (typeof entry === 'string') return actor({ name: entry, ctx });
+    const person = asRecord(entry);
+    return actor({
+      name: str(person['name']) ?? str(person['display_name']) ?? str(person['displayName']),
+      email: str(person['email']),
+      ctx,
+    });
+  });
+};
+
+/**
+ * `summary` is the Flow Summary, whose next-steps section holds the action items; `content` is
+ * the markdown note body. Both arrive only after the hydrate call — a bare search row has
+ * neither, which is exactly why the hydrate step exists.
+ */
+const wisprBody = (item: Payload): string =>
+  [
+    str(item['summary']),
+    str(item['content']) ?? str(item['notes']) ?? str(item['content_excerpt']),
+  ]
+    .filter((part): part is string => part !== undefined)
+    .join('\n\n');
+
+const wisprOccurredAt = (item: Payload, fallback: Instant): Instant =>
+  instantFrom(
+    item['started_at'] ?? item['start_time'] ?? item['start'] ?? item['occurred_at'] ??
+      item['modified_at'] ?? item['updated_at'] ?? item['created_at'],
+    fallback,
+  );
+
+/** A meeting has attendees or a summary; a scratchpad note has neither. */
+const isWisprMeeting = (item: Payload, attendees: readonly SignalActor[]): boolean =>
+  wisprMeetingId(item) !== undefined || attendees.length > 0 || str(item['summary']) !== undefined;
+
+const wisprMeetingId = (item: Payload): string | undefined =>
+  str(item['meeting_id']) ?? str(item['meetingId']);
+
+const wisprSignal = (item: Payload, ctx: NormaliseContext): Signal => {
+  const attendees = wisprAttendees(item, ctx);
+  const isMeeting = isWisprMeeting(item, attendees);
+
+  const author = actor({ name: isMeeting ? 'Wispr Flow Notetaker' : 'Wispr Flow', ctx });
+  const id = wisprMeetingId(item) ?? idOf(item) ?? '';
+  const shareLink = str(item['share_link']);
+
+  const signal = base({
+    item,
+    ctx,
+    kind: isMeeting ? SignalKind.MeetingNote : SignalKind.Document,
+    // Namespaced the way the local agent's pushes already are, and separately per collection so
+    // a note and a meeting that share an id cannot collide.
+    externalId: id.length === 0 ? '' : `wispr:${isMeeting ? 'meeting' : 'note'}:${id}`,
+    title: str(item['title']) ?? (isMeeting ? 'Meeting' : 'Note'),
+    body: wisprBody(item),
+    author,
+    occurredAt: wisprOccurredAt(item, ctx.fallbackAt),
+  });
+
+  return {
+    ...signal,
+    ...(attendees.length === 0 ? {} : { participants: [author, ...attendees] }),
+    ...(shareLink === undefined ? {} : { url: shareLink }),
+    // Both kinds are the user's own record of their own commitments. A note you wrote to
+    // yourself is still addressed to you, and `!author.isMe` would read it the other way.
+    isDirectedAtMe: true,
+  };
+};
+
 const genericSignal = (item: Payload, ctx: NormaliseContext): Signal =>
   base({
     item,
@@ -328,6 +412,7 @@ const BY_PROVIDER: Partial<Record<SourceProvider, (item: Payload, ctx: Normalise
     LINEAR: linearSignal,
     GMAIL: gmailSignal,
     GOOGLE_CALENDAR: calendarSignal,
+    WISPR_FLOW: wisprSignal,
   };
 
 /**
