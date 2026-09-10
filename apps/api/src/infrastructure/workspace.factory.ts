@@ -18,6 +18,7 @@ import {
   ManageIntegrationsUseCase,
   RebalanceDayUseCase,
   ReconcileLoopsUseCase,
+  PruneDisconnectedUseCase,
   RunTickUseCase,
   SyncSourcesUseCase,
   TodayViewQuery,
@@ -242,6 +243,7 @@ export class WorkspaceFactory {
       tick: new RunTickUseCase({
         ownerId,
         integrations,
+        prune: this.pruning({ integrations: integrationRepo, loops, clock, logger }),
         sync,
         extract,
         reconcile,
@@ -251,5 +253,13 @@ export class WorkspaceFactory {
         logger,
       }),
     };
+  }
+
+  /**
+   * Dropping what a disconnected app left behind. A method rather than an inline literal only
+   * because the factory above is already at the length the lint rule allows.
+   */
+  private pruning(deps: ConstructorParameters<typeof PruneDisconnectedUseCase>[0]) {
+    return new PruneDisconnectedUseCase(deps);
   }
 }

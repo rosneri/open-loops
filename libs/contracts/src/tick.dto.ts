@@ -10,6 +10,11 @@ export interface TickReportDto {
   readonly finishedAt: number;
   readonly signalsFetched: number;
   readonly loopsCreated: number;
+  /**
+   * Loops dropped because the app they came from is disconnected. Only the live ones go; a
+   * finished loop stays as the record that it was finished.
+   */
+  readonly loopsPruned: number;
   readonly loopsChecked: number;
   readonly loopsClosed: number;
   readonly awaitingAcknowledgement: number;

@@ -5,10 +5,15 @@ import type { RebalanceDayResult, RebalanceDayUseCase } from './rebalance-day.us
 import type { ReconcileLoopsResult, ReconcileLoopsUseCase } from './reconcile-loops.use-case.js';
 import type { SyncSourcesResult, SyncSourcesUseCase } from './sync-sources.use-case.js';
 import type { ManageIntegrationsUseCase } from './manage-integrations.use-case.js';
+import type {
+  PruneDisconnectedResult,
+  PruneDisconnectedUseCase,
+} from './prune-disconnected.use-case.js';
 import type { TickStep, TickStepReport } from '../ports/tick-step.port.js';
 
 export interface RunTickDeps {
   readonly integrations: ManageIntegrationsUseCase;
+  readonly prune: PruneDisconnectedUseCase;
   readonly sync: SyncSourcesUseCase;
   readonly extract: ExtractLoopsUseCase;
   readonly reconcile: ReconcileLoopsUseCase;
@@ -40,6 +45,10 @@ export class RunTickUseCase {
     // Cheap, and it means connecting an app is the only step a user ever has to take.
     await this.step('adopt', failures, async () => await this.deps.integrations.adoptUpstream());
 
+    // Before anything reads the loops: a source that was disconnected since the last sweep
+    // should not have its open work extracted against, planned around or counted as today's.
+    const prune = await this.step('prune', failures, async () => await this.deps.prune.execute());
+
     const sync = await this.deps.sync.execute();
     failures.push(...sync.failures);
 
@@ -50,7 +59,7 @@ export class RunTickUseCase {
 
     const report = toReport({
       window: { startedAt, finishedAt: this.deps.clock.now() },
-      steps: { sync, extract, reconcile, plan },
+      steps: { prune, sync, extract, reconcile, plan },
       extra,
       failures,
     });
@@ -101,6 +110,7 @@ export class RunTickUseCase {
 }
 
 interface StepResults {
+  readonly prune: PruneDisconnectedResult | undefined;
   readonly sync: SyncSourcesResult;
   readonly extract: ExtractLoopsResult | undefined;
   readonly reconcile: ReconcileLoopsResult | undefined;
@@ -109,6 +119,7 @@ interface StepResults {
 
 /** A skipped step contributes zeros rather than absent fields, so the report is always total. */
 const SKIPPED = {
+  prune: { pruned: 0, providers: [] },
   extract: { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0 },
   reconcile: { checked: 0, probesRun: 0, closed: 0, awaitingAcknowledgement: 0 },
   plan: { blocks: [], deferred: 0 },
@@ -120,6 +131,7 @@ const toReport = (input: {
   extra: Readonly<Record<string, TickStepReport>>;
   failures: readonly TickFailureDto[];
 }): TickReportDto => {
+  const prune = input.steps.prune ?? SKIPPED.prune;
   const extract = input.steps.extract ?? SKIPPED.extract;
   const reconcile = input.steps.reconcile ?? SKIPPED.reconcile;
   const plan = input.steps.plan ?? SKIPPED.plan;
@@ -129,6 +141,7 @@ const toReport = (input: {
     finishedAt: input.window.finishedAt,
     signalsFetched: input.steps.sync.fetched,
     loopsCreated: extract.loopsCreated,
+    loopsPruned: prune.pruned,
     loopsChecked: reconcile.checked,
     loopsClosed: reconcile.closed,
     awaitingAcknowledgement: reconcile.awaitingAcknowledgement,

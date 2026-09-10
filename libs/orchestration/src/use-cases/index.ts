@@ -5,4 +5,5 @@ export * from './rebalance-day.use-case.js';
 export * from './run-tick.use-case.js';
 export * from './ingest-signals.use-case.js';
 export * from './manage-integrations.use-case.js';
+export * from './prune-disconnected.use-case.js';
 export * from './loop-commands.use-case.js';
