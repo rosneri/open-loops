@@ -1,8 +1,10 @@
-import type { LoopDto } from '@open-loops/contracts';
+import type { FixedBlockDto, LoopDto } from '@open-loops/contracts';
 import { clockTime } from '../format.js';
 
 interface TimelineProps {
   readonly items: readonly LoopDto[];
+  /** Calendar time. Drawn behind the plan, because it is what the plan had to fit around. */
+  readonly fixed: readonly FixedBlockDto[];
   readonly windowStartAt: number;
   readonly windowEndAt: number;
   readonly now: number;
@@ -32,6 +34,7 @@ const TONE: Record<string, string> = {
  */
 export function Timeline({
   items,
+  fixed,
   windowStartAt,
   windowEndAt,
   now,
@@ -73,6 +76,27 @@ export function Timeline({
             <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-signal-progress" />
           </div>
         )}
+
+        {/*
+          * Meetings, drawn first so a planned block sits on top of the time it shares. Hatched
+          * rather than coloured, and never given the status tones: it is not work in a state,
+          * it is time that was already gone before the planner started.
+          */}
+        {fixed.map((block) => {
+          const top = offset(block.startAt);
+          const span = offset(block.endAt) - top;
+          return (
+            <div
+              key={`${String(block.startAt)}-${block.label}`}
+              title={`${block.label} — unmovable`}
+              className="absolute right-1 left-1 overflow-hidden rounded border border-dashed border-ink-600 bg-ink-800/40 px-2 py-1 sm:right-2 sm:left-2 sm:px-3"
+              style={{ top: hours(top), height: `max(20px, ${hours(span)})` }}
+            >
+              <p className="truncate text-[12px] leading-tight text-chalk-500">{block.label}</p>
+              <p className="truncate font-mono text-[10px] text-chalk-600">unmovable</p>
+            </div>
+          );
+        })}
 
         {scheduled.map((item) => {
           const top = offset(item.startAt ?? windowStartAt);

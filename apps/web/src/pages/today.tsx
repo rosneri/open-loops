@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { LoopDto, TodayDto } from '@open-loops/contracts';
+import type { FixedBlockDto, LoopDto, TodayDto } from '@open-loops/contracts';
 import { api } from '../api.js';
 import { useAsyncAction } from '../hooks/use-async-action.js';
 import { DayHeader } from '../components/day-header.js';
@@ -99,6 +99,7 @@ export function TodayPage(): React.ReactElement {
            */}
           <TimelineSection
             items={planned}
+            fixed={view.fixed}
             windowStartAt={view.windowStartAt}
             windowEndAt={view.windowEndAt}
             now={view.now}
@@ -131,12 +132,14 @@ export function TodayPage(): React.ReactElement {
  */
 function TimelineSection(props: {
   readonly items: readonly LoopDto[];
+  readonly fixed: readonly FixedBlockDto[];
   readonly windowStartAt: number;
   readonly windowEndAt: number;
   readonly now: number;
   readonly timeZone: string;
 }): React.ReactElement {
   const scheduled = props.items.filter((item) => item.startAt !== undefined).length;
+  const meetings = props.fixed.length;
   const timeline = <Timeline {...props} />;
 
   return (
@@ -144,7 +147,10 @@ function TimelineSection(props: {
       <details className="border-b border-ink-800 pb-3 lg:hidden">
         {/* Not `flex`: that drops the disclosure triangle, which is the only thing saying it opens. */}
         <summary className="cursor-pointer py-1 font-mono text-[11px] tracking-[0.2em] text-chalk-600 uppercase marker:text-chalk-600">
-          The day <span className="tracking-normal normal-case">({scheduled} scheduled)</span>
+          The day{' '}
+          <span className="tracking-normal normal-case">
+            ({scheduled} scheduled{meetings > 0 ? `, ${String(meetings)} unmovable` : ''})
+          </span>
         </summary>
         <div className="mt-5">{timeline}</div>
       </details>

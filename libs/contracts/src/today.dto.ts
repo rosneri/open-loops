@@ -41,6 +41,17 @@ export interface LoopDto {
   readonly criteria: readonly CriterionDto[];
 }
 
+/**
+ * Time the planner had to work around rather than work with: meetings and anything else on the
+ * calendar. Shown because a day that hides them looks emptier than it is — the plan already
+ * schedules around this time, and a person reading the timeline could not see why.
+ */
+export interface FixedBlockDto {
+  readonly startAt: number;
+  readonly endAt: number;
+  readonly label: string;
+}
+
 export interface TodayDto {
   readonly day: string;
   readonly now: number;
@@ -48,5 +59,7 @@ export interface TodayDto {
   readonly windowStartAt: number;
   readonly windowEndAt: number;
   readonly items: readonly LoopDto[];
+  /** Calendar time, which nothing can move. Ordered by when it starts. */
+  readonly fixed: readonly FixedBlockDto[];
   readonly counts: Readonly<Record<LoopStatusDto, number>>;
 }

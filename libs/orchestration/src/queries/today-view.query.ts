@@ -1,13 +1,19 @@
 import type { Clock } from '@open-loops/kernel';
-import type { LoopDto, LoopStatusDto, TodayDto } from '@open-loops/contracts';
+import type { FixedBlockDto, LoopDto, LoopStatusDto, TodayDto } from '@open-loops/contracts';
 import type { OpenLoopRepository, OpenLoopView } from '@open-loops/loops';
 import { EvidenceVerdict, isActionable, latestConclusiveByCriterion } from '@open-loops/loops';
-import type { DailyPlanRepository, PlannedBlock } from '@open-loops/planning';
+import type { BusyTimeProvider, DailyPlanRepository, PlannedBlock } from '@open-loops/planning';
 import { asWorkRef } from '@open-loops/planning';
 
 export interface TodayViewDeps {
   readonly loops: OpenLoopRepository;
   readonly plans: DailyPlanRepository;
+  /**
+   * The same busy time the planner schedules around, read here so the day can show it. One
+   * source for both: a timeline that disagreed with the planner about when you are in a meeting
+   * would be worse than one that never mentioned meetings at all.
+   */
+  readonly busyTime: BusyTimeProvider;
   readonly clock: Clock;
   readonly timeZone: string;
 }
@@ -37,6 +43,14 @@ export class TodayViewQuery {
       .map((view) => toLoopDto({ view, block: blocks.get(String(asWorkRef(view.id))) }))
       .sort((left, right) => (left.startAt ?? Infinity) - (right.startAt ?? Infinity));
 
+    const fixed: readonly FixedBlockDto[] = (await this.busy(dayStartAt))
+      .map((interval) => ({
+        startAt: interval.startAt,
+        endAt: interval.endAt,
+        label: interval.label,
+      }))
+      .sort((left, right) => left.startAt - right.startAt);
+
     const window = plan?.snapshot().window;
     return {
       day,
@@ -45,8 +59,21 @@ export class TodayViewQuery {
       windowStartAt: dayStartAt + (window?.startMinute ?? DEFAULT_START_MINUTE) * MINUTE_MS,
       windowEndAt: dayStartAt + (window?.endMinute ?? DEFAULT_END_MINUTE) * MINUTE_MS,
       items,
+      fixed,
       counts: tally(views.map((view) => view.status)),
     };
+  }
+
+  /**
+   * Never allowed to empty the day. The calendar is the least essential thing on this screen and
+   * the most likely to be unreachable, so a failure here costs the meetings and nothing else.
+   */
+  private async busy(dayStartAt: ReturnType<Clock['startOfDay']>) {
+    try {
+      return await this.deps.busyTime.listBusy({ dayStartAt });
+    } catch {
+      return [];
+    }
   }
 }
 

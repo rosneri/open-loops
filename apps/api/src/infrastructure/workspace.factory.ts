@@ -149,6 +149,7 @@ export class WorkspaceFactory {
     const today = new TodayViewQuery({
       loops,
       plans,
+      busyTime,
       clock,
       timeZone: this.config.OPEN_LOOPS_TIMEZONE,
     });
