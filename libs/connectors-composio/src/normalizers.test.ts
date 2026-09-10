@@ -61,10 +61,12 @@ describe('normalise', () => {
     expect(signal?.kind).toBe('ISSUE');
   });
 
+  // Asana, because this is about finding the collection at all — a provider with a mapper of its
+  // own would be testing that mapper instead.
   it('falls back to the first array of objects when the key is unknown', () => {
     const signals = normalise({
       payload: { somethingNobodyNamed: [{ id: 'x1', title: 'hello' }] },
-      ctx: ctx(SourceProvider.Notion),
+      ctx: ctx(SourceProvider.Asana),
     });
     expect(signals).toHaveLength(1);
     expect(signals[0]?.title).toBe('hello');
@@ -178,5 +180,81 @@ describe('normalise', () => {
     expect(signal?.body).toBe('Owe Dana the scorecard by Thursday.');
     // A note you wrote to yourself is still addressed to you.
     expect(signal?.isDirectedAtMe).toBe(true);
+  });
+
+  /**
+   * The shape NOTION_SEARCH_NOTION_PAGE actually returns. Nothing a normaliser would look for is
+   * where it looks: no top-level title, and the real one under whatever that database calls its
+   * first column.
+   */
+  it('reads a Notion page title out of its title property, not the top level', () => {
+    const [signal] = normalise({
+      payload: {
+        object: 'list',
+        results: [
+          {
+            object: 'page',
+            id: '3d08e86d-6d86-80a0-ac90-e0b3a368cde2',
+            url: 'https://app.notion.com/p/Setup-the-devops-3d08e86d',
+            created_time: '2026-09-03T12:19:00.000Z',
+            last_edited_time: '2026-09-10T07:41:00.000Z',
+            parent: { type: 'database_id', database_id: 'b4af7ec3' },
+            properties: {
+              'Task name': { type: 'title', title: [{ plain_text: 'Setup the devops' }] },
+              Status: { type: 'status', status: { name: 'Hold / In review' } },
+              Priority: { type: 'select', select: { name: 'P1' } },
+              Started: { type: 'date', date: { start: '2026-09-09' } },
+              Assignee: {
+                type: 'people',
+                people: [{ name: 'Neriya Rosner', person: { email: 'neri.coder@gmail.com' } }],
+              },
+            },
+          },
+        ],
+      },
+      ctx: ctx('NOTION'),
+    });
+
+    // The regression: this used to be "Item", with the whole JSON payload as the body.
+    expect(signal?.title).toBe('Setup the devops');
+    expect(signal?.kind).toBe('ISSUE');
+    expect(signal?.body).toContain('Status: Hold / In review');
+    expect(signal?.body).toContain('Priority: P1');
+    // The body is what the columns say, not the API's own scaffolding.
+    expect(signal?.body).not.toContain('database_id');
+    expect(signal?.occurredAt).toBe(Date.parse('2026-09-10T07:41:00.000Z'));
+    expect(signal?.url).toBe('https://app.notion.com/p/Setup-the-devops-3d08e86d');
+    // Assigned to me is the reason it is worth a loop at all.
+    expect(signal?.isDirectedAtMe).toBe(true);
+  });
+
+  it('calls a page outside a database a document, and says so when nothing is assigned', () => {
+    const [signal] = normalise({
+      payload: {
+        results: [
+          {
+            object: 'page',
+            id: 'page-1',
+            last_edited_time: '2026-09-10T07:41:00.000Z',
+            parent: { type: 'workspace' },
+            properties: { Name: { type: 'title', title: [{ plain_text: 'Onboarding notes' }] } },
+          },
+        ],
+      },
+      ctx: ctx('NOTION'),
+    });
+
+    expect(signal?.title).toBe('Onboarding notes');
+    expect(signal?.kind).toBe('DOCUMENT');
+    expect(signal?.isDirectedAtMe).toBe(false);
+  });
+
+  it('names an untitled page rather than calling it an item', () => {
+    const [signal] = normalise({
+      payload: { results: [{ object: 'page', id: 'page-2', properties: {} }] },
+      ctx: ctx('NOTION'),
+    });
+
+    expect(signal?.title).toBe('Untitled Notion page');
   });
 });

@@ -388,6 +388,97 @@ const wisprSignal = (item: Payload, ctx: NormaliseContext): Signal => {
   };
 };
 
+/**
+ * Notion keeps nothing where a normaliser would look for it. A page has no `title` and no
+ * `name`; the title is whichever property happens to be of type `title`, named whatever that
+ * database calls its first column — "Task name" here, "Name" elsewhere. So the generic mapper
+ * produced rows titled "Item" carrying the raw JSON as their body, and the extractor, given a
+ * page of API noise and no name, invented one. That is where "Self-created Notion task" came
+ * from: not a task anybody wrote, a title the model made up to describe a payload.
+ */
+const notionText = (parts: unknown): string =>
+  Array.isArray(parts)
+    ? parts.map((part) => str(asRecord(part)['plain_text']) ?? '').join('')
+    : '';
+
+const notionNamed = (value: unknown): string => str(asRecord(value)['name']) ?? '';
+
+/** One property flattened to the words a person would read, or nothing worth printing. */
+const NOTION_VALUES: Record<string, (prop: Payload) => string> = {
+  title: (prop) => notionText(prop['title']),
+  rich_text: (prop) => notionText(prop['rich_text']),
+  status: (prop) => notionNamed(prop['status']),
+  select: (prop) => notionNamed(prop['select']),
+  multi_select: (prop) =>
+    (Array.isArray(prop['multi_select']) ? prop['multi_select'] : []).map(notionNamed).join(', '),
+  date: (prop) => str(asRecord(prop['date'])['start']) ?? '',
+  people: (prop) =>
+    (Array.isArray(prop['people']) ? prop['people'] : [])
+      .map((entry) => str(asRecord(entry)['name']) ?? '')
+      .filter((name) => name.length > 0)
+      .join(', '),
+  url: (prop) => str(prop['url']) ?? '',
+  email: (prop) => str(prop['email']) ?? '',
+  number: (prop) => (typeof prop['number'] === 'number' ? String(prop['number']) : ''),
+  checkbox: (prop) => (prop['checkbox'] === true ? 'yes' : ''),
+};
+
+const notionValue = (prop: Payload): string =>
+  NOTION_VALUES[str(prop['type']) ?? '']?.(prop) ?? '';
+
+const notionPeople = (prop: Payload, ctx: NormaliseContext): readonly SignalActor[] =>
+  (Array.isArray(prop['people']) ? prop['people'] : []).map((entry) => {
+    const person = asRecord(entry);
+    return actor({
+      name: str(person['name']),
+      email: str(asRecord(person['person'])['email']),
+      ctx,
+    });
+  });
+
+const notionSignal = (item: Payload, ctx: NormaliseContext): Signal => {
+  const properties = Object.entries(asRecord(item['properties'])).map(
+    ([name, value]) => [name, asRecord(value)] as const,
+  );
+  const title = properties.find(([, prop]) => str(prop['type']) === 'title');
+  const people = properties.flatMap(([, prop]) => notionPeople(prop, ctx));
+
+  // The rest of the row, as lines rather than JSON: "Status: In review", "Priority: P1". It is
+  // what the database columns already say, which is what somebody scanning the page would read.
+  const body = properties
+    .filter(([, prop]) => str(prop['type']) !== 'title')
+    .map(([name, prop]) => [name, notionValue(prop)] as const)
+    .filter(([, value]) => value.length > 0)
+    .map(([name, value]) => `${name}: ${value}`)
+    .join('\n');
+
+  const mine = people.filter((person) => person.isMe);
+  const author = mine[0] ?? people[0] ?? actor({ name: 'Notion', ctx });
+
+  return {
+    ...base({
+      item,
+      ctx,
+      // A page inside a database is a row somebody tracks — a task. A loose page is a document.
+      kind:
+        str(asRecord(item['parent'])['type']) === 'database_id'
+          ? SignalKind.Issue
+          : SignalKind.Document,
+      externalId: idOf(item) ?? '',
+      title: title === undefined ? 'Untitled Notion page' : notionValue(title[1]),
+      body,
+      author,
+      // Notion spells its timestamps in full words, so the generic keys matched none of them and
+      // every page carried the sync's own clock instead of when it was last touched.
+      occurredAt: instantFrom(item['last_edited_time'] ?? item['created_time'], ctx.fallbackAt),
+    }),
+    ...(people.length === 0 ? {} : { participants: people }),
+    // Assigned to me is the whole question here, and `!author.isMe` answers the opposite one:
+    // a task I am named on would read as mine to ignore rather than mine to do.
+    isDirectedAtMe: mine.length > 0,
+  };
+};
+
 const genericSignal = (item: Payload, ctx: NormaliseContext): Signal =>
   base({
     item,
@@ -412,6 +503,7 @@ const BY_PROVIDER: Partial<Record<SourceProvider, (item: Payload, ctx: Normalise
     LINEAR: linearSignal,
     GMAIL: gmailSignal,
     GOOGLE_CALENDAR: calendarSignal,
+    NOTION: notionSignal,
     WISPR_FLOW: wisprSignal,
   };
 
