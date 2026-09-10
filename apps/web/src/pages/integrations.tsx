@@ -50,6 +50,16 @@ export function IntegrationsPage(): React.ReactElement {
     [action],
   );
 
+  /**
+   * The outstanding question is answered on the Settings screen, in the panel the plugin that
+   * asked it already owns. Navigating through the same history the shell listens on keeps this
+   * a single-page move rather than a reload that would drop everything just loaded.
+   */
+  const finishSetup = useCallback((): void => {
+    window.history.pushState({}, '', '/settings');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
+
   const disconnect = useCallback(
     (provider: string): void => {
       void action.run(async () => await api.disconnect(provider));
@@ -81,6 +91,7 @@ export function IntegrationsPage(): React.ReactElement {
                 pending={pending === integration.provider}
                 onConnect={connect}
                 onDisconnect={disconnect}
+                onFinishSetup={finishSetup}
               />
             ))
           : Array.from({ length: SKELETON_CARDS }, (_, index) => (

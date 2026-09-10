@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusPhrase, readOrganizations } from './organizations.js';
+import { focusPhrase, githubSetupStep, readOrganizations } from './organizations.js';
 
 describe('reading organisations out of a tool result', () => {
   it('takes the logins GitHub returns for /user/orgs', () => {
@@ -58,5 +58,39 @@ describe('narrowing the fetch', () => {
     expect(focusPhrase(['acme', 'beta', 'gamma'])).toBe(
       'limited to repositories owned by the acme, beta or gamma organizations on GitHub',
     );
+  });
+});
+
+describe('the question GitHub asks before it will connect', () => {
+  const step = githubSetupStep();
+
+  const scopeWith = (input: {
+    organizations: readonly string[];
+    available?: readonly unknown[];
+  }): Parameters<typeof step.complete>[0] =>
+    ({
+      settings: () => Promise.resolve({ organizations: input.organizations }),
+      logger: { debug: () => undefined, info: () => undefined, warn: () => undefined, error: () => undefined },
+      tools: {
+        execute: () =>
+          Promise.resolve({ ok: true, data: { organizations: input.available ?? [] }, logId: 'log' }),
+      },
+    }) as unknown as Parameters<typeof step.complete>[0];
+
+  it('is answered once an organisation has been picked', async () => {
+    await expect(step.complete(scopeWith({ organizations: ['acme'] }))).resolves.toBe(true);
+  });
+
+  it('is unanswered while organisations exist and none are picked', async () => {
+    const scope = scopeWith({ organizations: [], available: [{ login: 'acme' }] });
+    await expect(step.complete(scope)).resolves.toBe(false);
+  });
+
+  /**
+   * A personal account belongs to nothing, and gating it behind a picker with no options would
+   * make GitHub unconnectable for the person who needs no filter at all.
+   */
+  it('is answered when there is nothing to choose from', async () => {
+    await expect(step.complete(scopeWith({ organizations: [] }))).resolves.toBe(true);
   });
 });

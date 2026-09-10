@@ -1,4 +1,5 @@
-import type { OwnerScope } from '@open-loops/plugin-api';
+import type { OwnerScope, SetupStep } from '@open-loops/plugin-api';
+import type { CodeReviewSettings } from './settings.js';
 
 /** One organisation the connected GitHub account belongs to, as the picker shows it. */
 export interface Organization {
@@ -103,3 +104,22 @@ export const focusPhrase = (organizations: readonly string[]): string | undefine
     named.length === 1 ? 'organization' : 'organizations'
   } on GitHub`;
 };
+
+/**
+ * The question GitHub asks before it will finish connecting. Asked during the connection rather
+ * than left to a settings screen: an account that belongs to four organisations and syncs all of
+ * them produces a day made mostly of other people's work, and the wrong answer here does not
+ * look like an error — it looks like the app.
+ */
+export const githubSetupStep = (): SetupStep => ({
+  label: 'Choose which GitHub organisations count',
+  complete: async (scope: OwnerScope): Promise<boolean> => {
+    const chosen = (await scope.settings<CodeReviewSettings>()).organizations;
+    if (chosen.length > 0) return true;
+    // Nothing chosen is only a question when there is something to choose. An account in no
+    // organisations — or one GitHub will not tell us about, which is what a token without
+    // `read:org` looks like — must not be gated behind a picker with no options.
+    const { organizations } = await listOrganizations(scope);
+    return organizations.length === 0;
+  },
+});

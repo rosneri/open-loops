@@ -50,6 +50,29 @@ export interface SourceDefinition {
    * this existed.
    */
   readonly hydrate?: HydrateDefinition | undefined;
+  /**
+   * A question this source cannot be connected without answering. GitHub is why it exists: an
+   * account that belongs to four organisations and syncs all of them fills somebody's day with
+   * three other teams' pull requests, and the moment to ask is while they are connecting it —
+   * not on a settings screen they may never open.
+   */
+  readonly setup?: SetupStep | undefined;
+}
+
+/**
+ * A post-consent step, owned by the plugin that knows what is being asked. Deliberately not a
+ * form definition: the plugin already renders its own settings panel, and this only decides
+ * whether the connection is allowed to finish.
+ */
+export interface SetupStep {
+  /** What the Integrations card says is still missing, in words the person will recognise. */
+  readonly label: string;
+  /**
+   * Whether this owner has answered. True also means "there was nothing to ask" — an account in
+   * no organisations must not be gated behind a picker with no options, and only the plugin
+   * knows the difference between "chose nothing" and "had nothing to choose".
+   */
+  complete(scope: OwnerScope): Promise<boolean>;
 }
 
 /**

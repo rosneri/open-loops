@@ -1,4 +1,9 @@
-import type { HydrateDefinition, OwnerScope, SourceDefinition } from '@open-loops/plugin-api';
+import type {
+  HydrateDefinition,
+  OwnerScope,
+  SetupStep,
+  SourceDefinition,
+} from '@open-loops/plugin-api';
 import type { PluginHost } from './plugin-host.js';
 
 /**
@@ -78,6 +83,35 @@ export class SourceCatalog {
 
   public intentsFor(provider: string): readonly string[] {
     return this.byProvider.get(provider)?.intents ?? [];
+  }
+
+  public setupFor(provider: string): SetupStep | undefined {
+    return this.byProvider.get(provider)?.setup;
+  }
+
+  /**
+   * Whether a source's post-consent question has been answered for this owner. A source that
+   * asks nothing is always done, and a step that cannot be evaluated counts as done: failing to
+   * reach GitHub must not leave somebody holding a connection they are unable to finish.
+   */
+  public async setupCompleteFor(
+    provider: string,
+    scopeFor: (pluginId: string) => OwnerScope,
+  ): Promise<boolean> {
+    const step = this.byProvider.get(provider)?.setup;
+    const pluginId = this.owners.get(provider);
+    if (step === undefined || pluginId === undefined) return true;
+
+    const scope = scopeFor(pluginId);
+    try {
+      return await step.complete(scope);
+    } catch (error) {
+      scope.logger.warn('source setup step could not be evaluated', {
+        provider,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return true;
+    }
   }
 
   /** How to expand a listed row into its body, where the source says one call is not enough. */

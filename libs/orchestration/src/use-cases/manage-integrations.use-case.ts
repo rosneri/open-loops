@@ -34,6 +34,15 @@ export interface ManageIntegrationsDeps {
   readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly logger: Logger;
+  /**
+   * Whether a source's post-consent question has been answered for this owner, and what to call
+   * it while it has not. A source that asks nothing answers `true` with no label, which is every
+   * source but GitHub today.
+   */
+  readonly setup: {
+    complete: (provider: SourceProvider) => Promise<boolean>;
+    labelFor: (provider: SourceProvider) => string | undefined;
+  };
 }
 
 /** `exactOptionalPropertyTypes` again: an absent field and an explicit `undefined` differ. */
@@ -55,6 +64,16 @@ export class ManageIntegrationsUseCase {
 
   public async list(): Promise<readonly IntegrationDto[]> {
     const stored = await this.deps.integrations.listAll();
+    // Answering the question is what finishes the connection, and the answer is saved on a
+    // settings screen that knows nothing about integrations. Re-reading it here is what closes
+    // that gap without coupling the two — and it only runs for a row actually waiting.
+    for (const integration of stored) {
+      if (integration.snapshot().status !== ConnectionStatus.AwaitingSetup) continue;
+      if (!(await this.deps.setup.complete(integration.provider))) continue;
+      integration.activate({ scopes: [], at: this.deps.clock.now() });
+      await this.deps.integrations.save(integration);
+    }
+
     const byProvider = new Map(stored.map((item) => [item.provider, item]));
     return this.deps.knownProviders.map((provider) =>
       this.describe(provider, byProvider.get(provider)?.snapshot()),
@@ -74,6 +93,10 @@ export class ManageIntegrationsUseCase {
       // A push source is never connectable, in any mode: there is no consent to give, and a
       // button that declared it connected would be a button that lies the moment it is wrong.
       connectable: !pushed && this.deps.connectableProviders.includes(provider),
+      ...(props?.status === ConnectionStatus.AwaitingSetup &&
+      this.deps.setup.labelFor(provider) !== undefined
+        ? { setupLabel: this.deps.setup.labelFor(provider) ?? '' }
+        : {}),
       ...whatIsKnown(props),
     };
   }
@@ -153,6 +176,15 @@ export class ManageIntegrationsUseCase {
     if (!state.active) {
       integration.fail({ error: 'Authorisation did not complete.' });
       await this.deps.integrations.save(integration);
+      return false;
+    }
+    // Authorised, but the source may still be missing the one answer that decides what it
+    // fetches. Activating now and asking later would mean a first sync that quietly pulled the
+    // wrong repositories — which reads as working.
+    if (!(await this.deps.setup.complete(input.provider))) {
+      integration.awaitSetup({ at: this.deps.clock.now() });
+      await this.deps.integrations.save(integration);
+      this.deps.logger.info('integration awaiting setup', { provider: input.provider });
       return false;
     }
     integration.activate({

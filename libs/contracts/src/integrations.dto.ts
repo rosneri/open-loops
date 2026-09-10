@@ -1,6 +1,7 @@
 export type ConnectionStatusDto =
   | 'DISCONNECTED'
   | 'PENDING'
+  | 'AWAITING_SETUP'
   | 'ACTIVE'
   | 'EXPIRED'
   | 'FAILED';
@@ -21,6 +22,12 @@ export interface IntegrationDto {
    * source with no button is working as designed, not waiting on an adapter somebody forgot.
    */
   readonly delivery: 'OAUTH' | 'PUSH';
+  /**
+   * What the source still needs answering before it can be Active, in the words the screen
+   * shows — "Choose which GitHub organisations count". Present only while `status` is
+   * `AWAITING_SETUP`, so the card can say what is missing instead of "pending" forever.
+   */
+  readonly setupLabel?: string;
 }
 
 export interface BeginConnectionDto {

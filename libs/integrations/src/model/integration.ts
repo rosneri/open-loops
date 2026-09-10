@@ -62,6 +62,21 @@ export class Integration {
     this.props = { ...this.props, status: Status.Pending, externalAccountRef };
   }
 
+  /**
+   * Authorised, but not usable yet: the source declared a question that has to be answered
+   * before a sync would fetch the right thing. Kept distinct from Pending — nothing is in
+   * flight, nobody is on a consent screen, and the only thing standing between here and Active
+   * is a choice on a screen this app owns.
+   */
+  public awaitSetup(input: { at: Instant }): void {
+    const { lastError: _cleared, ...rest } = this.props;
+    this.props = {
+      ...rest,
+      status: Status.AwaitingSetup,
+      connectedAt: this.props.connectedAt ?? input.at,
+    };
+  }
+
   public activate(input: { scopes: readonly string[]; accountLabel?: string; at: Instant }): void {
     this.props = {
       ...this.props,

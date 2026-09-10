@@ -5,7 +5,7 @@ import type { ProbeRunner } from '@open-loops/loops';
 import { LocalProbeRunner } from '@open-loops/connectors-local';
 import { type ComposioToolExplorer } from '@open-loops/connectors-composio';
 import type { OwnerScope, ToolBroker } from '@open-loops/plugin-api';
-import type { PluginHost, ProbeCatalog } from '@open-loops/plugin-host';
+import type { PluginHost, ProbeCatalog, SourceCatalog } from '@open-loops/plugin-host';
 import type {
   LoopExtractor,
   LoopReconciler,
@@ -70,6 +70,7 @@ export class SharedServices {
     @Inject(Tokens.StructuredGenerator) public readonly reasoning: StructuredGenerator,
     @Inject(Tokens.PluginHost) public readonly plugins: PluginHost,
     @Inject(Tokens.ProbeCatalog) public readonly catalog: ProbeCatalog,
+    @Inject(Tokens.SourceCatalog) public readonly sources: SourceCatalog,
   ) {}
 }
 
@@ -182,6 +183,13 @@ export class WorkspaceFactory {
       knownProviders: this.shared.knownProviders,
       connectableProviders: this.shared.connectableProviders,
       pushProviders: this.shared.pushProviders,
+      // The question a source asks before it will finish connecting, answered against this
+      // owner's own settings — which is why it is a closure over their scopes and not a value.
+      setup: {
+        complete: async (provider) =>
+          await this.shared.sources.setupCompleteFor(provider, scopeFor),
+        labelFor: (provider) => this.shared.sources.setupFor(provider)?.label,
+      },
       ids,
       clock,
       logger,

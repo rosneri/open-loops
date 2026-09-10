@@ -2,7 +2,7 @@ import { Capability, definePlugin, type OwnerScope, type ProbeDefinition,
   type SourceDefinition,
 } from '@open-loops/plugin-api';
 import { CodeReviewController } from './http/code-review.controller.js';
-import { focusPhrase } from './organizations.js';
+import { focusPhrase, githubSetupStep } from './organizations.js';
 import { settingsFragment, type CodeReviewSettings } from './settings.js';
 import { ToolProbeRunner, asArray, includesAll, textOf } from '@open-loops/plugin-host';
 import { probeText } from '@open-loops/loops';
@@ -98,6 +98,7 @@ const sources: readonly SourceDefinition[] = [
      * setting, so it is read here per person and per sync rather than baked into the intents.
      */
     focus: async (scope) => focusPhrase((await scope.settings<CodeReviewSettings>()).organizations),
+    setup: githubSetupStep(),
   },
   { provider: 'GITLAB', label: 'GitLab', toolkit: 'gitlab' },
 ];
