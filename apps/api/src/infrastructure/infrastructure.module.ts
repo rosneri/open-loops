@@ -99,11 +99,12 @@ const dataStrategy: Provider[] = [
      * whose connections it wants.
      */
     provide: Tokens.ComposioSessions,
-    inject: [Tokens.Config, Tokens.Logger, AccountIdentities],
+    inject: [Tokens.Config, Tokens.Logger, AccountIdentities, Tokens.SourceCatalog],
     useFactory: (
       config: AppConfig,
       logger: Logger,
       identities: AccountIdentities,
+      sources: SourceCatalog,
     ): ComposioSessionRegistry | undefined => {
       if (config.COMPOSIO_API_KEY === undefined || config.COMPOSIO_API_KEY.length === 0) {
         return undefined;
@@ -112,6 +113,9 @@ const dataStrategy: Provider[] = [
         apiKey: config.COMPOSIO_API_KEY,
         logger,
         identity: async (ownerId) => await identities.composioUserId(ownerId),
+        // The sessions are built over exactly the apps this deployment installed, which is the
+        // only way a project-owned custom toolkit is in them at all.
+        toolkits: sources.toolkits(),
       });
     },
   },

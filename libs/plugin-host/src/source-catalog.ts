@@ -60,6 +60,13 @@ export class SourceCatalog {
       .map((entry) => entry.provider);
   }
 
+  /** Every toolkit slug this deployment knows about — what a Composio session is built over. */
+  public toolkits(): readonly string[] {
+    return this.definitions
+      .map((entry) => entry.toolkit)
+      .filter((slug): slug is string => slug !== undefined);
+  }
+
   public toolkitFor(provider: string): string | undefined {
     return this.byProvider.get(provider)?.toolkit;
   }

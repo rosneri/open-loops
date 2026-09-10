@@ -11,22 +11,30 @@ const logger: Logger = {
 };
 
 /** Stands in for the SDK client: `create(userId)` is the only method a session provider calls. */
-const fakeClient = (): { composio: Composio; created: string[] } => {
+const fakeClient = (): {
+  composio: Composio;
+  created: string[];
+  toolkits: (readonly string[])[];
+} => {
   const created: string[] = [];
+  const toolkits: (readonly string[])[] = [];
   const composio = {
-    create: (userId: string) => {
+    create: (userId: string, options?: { toolkits?: readonly string[] }) => {
       created.push(userId);
+      toolkits.push(options?.toolkits ?? []);
       return Promise.resolve({ sessionId: `session-${userId}` });
     },
   } as unknown as Composio;
-  return { composio, created };
+  return { composio, created, toolkits };
 };
+
+const TOOLKITS = ['gmail', 'CUSTOM_WISPR_FLOW'];
 
 describe('composio session provider', () => {
   it('resolves the identity once and reuses the session', async () => {
     const { composio, created } = fakeClient();
     const identity = vi.fn(() => Promise.resolve('neri'));
-    const provider = new ComposioSessionProvider({ composio, logger, identity });
+    const provider = new ComposioSessionProvider({ composio, logger, identity, toolkits: TOOLKITS });
 
     await Promise.all([provider.session$(), provider.session$()]);
     await provider.session$();
@@ -42,7 +50,7 @@ describe('composio session provider', () => {
       .fn<() => Promise<string>>()
       .mockRejectedValueOnce(new Error('database asleep'))
       .mockResolvedValue('neri');
-    const provider = new ComposioSessionProvider({ composio, logger, identity });
+    const provider = new ComposioSessionProvider({ composio, logger, identity, toolkits: TOOLKITS });
 
     await expect(provider.session$()).rejects.toThrow('database asleep');
     await expect(provider.userId$()).resolves.toBe('neri');
@@ -54,6 +62,7 @@ describe('composio session provider', () => {
       composio,
       logger,
       identity: () => Promise.resolve('neri'),
+      toolkits: TOOLKITS,
     });
 
     await provider.session$();
@@ -66,7 +75,7 @@ describe('composio session provider', () => {
 
 describe('composio session registry', () => {
   const registry = (identity: (ownerId: string) => Promise<string>): ComposioSessionRegistry =>
-    new ComposioSessionRegistry({ apiKey: 'test-key', logger, identity });
+    new ComposioSessionRegistry({ apiKey: 'test-key', logger, identity, toolkits: TOOLKITS });
 
   /** The whole point: two accounts are two Composio identities, never one shared connection. */
   it('gives each owner its own session, asked for under its own identity', async () => {
@@ -90,5 +99,24 @@ describe('composio session registry', () => {
     sessions.forget('user-1');
 
     expect(sessions.for('user-1')).not.toBe(before);
+  });
+
+  /**
+   * The regression this exists for: a session built with no toolkits gets Composio's default
+   * catalogue, which omits a custom toolkit this project registered. The connection then reads
+   * back as inactive and a finished consent screen reports "authorisation did not complete".
+   */
+  it('builds the session over the toolkits this deployment installed', async () => {
+    const { composio, toolkits } = fakeClient();
+    const provider = new ComposioSessionProvider({
+      composio,
+      logger,
+      identity: () => Promise.resolve('neri'),
+      toolkits: TOOLKITS,
+    });
+
+    await provider.session$();
+
+    expect(toolkits[0]).toContain('CUSTOM_WISPR_FLOW');
   });
 });

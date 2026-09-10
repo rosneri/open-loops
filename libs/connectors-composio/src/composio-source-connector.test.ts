@@ -40,6 +40,7 @@ const explorerFor = (input: {
   list: Record<string, unknown>;
   detail?: (id: string) => ToolExecution;
   detailFound?: boolean;
+  tools?: readonly Record<string, unknown>[];
 }) => {
   const asked: string[] = [];
   const explorer = {
@@ -48,14 +49,15 @@ const explorerFor = (input: {
       Promise.resolve(
         input.detailFound === false
           ? []
-          : [
+          : (input.tools ?? [
               {
                 slug: 'CUSTOM_WISPR_FLOW_GET_MEETING',
                 toolkit: 'CUSTOM_WISPR_FLOW',
                 description: '',
                 connected: true,
+                inputSchema: { properties: { meeting_id: { type: 'string' } } },
               },
-            ],
+            ]),
       ),
     execute: ({ args }: { slug: string; args?: Record<string, unknown> }) => {
       const raw = args?.['meeting_id'];
@@ -148,6 +150,59 @@ describe('hydrating a listed row', () => {
     const { explorer, asked } = explorerFor({
       list: { meetings: [{ meeting_id: 'm1', title: 'Standup' }] },
       detailFound: false,
+    });
+
+    const { signals } = await fetch(connectorFor(explorer));
+
+    expect(asked).toEqual([]);
+    expect(signals[0]?.title).toBe('Standup');
+  });
+
+  /**
+   * Tool search is a similarity query, not a lookup: the same words rank `get_meeting` first on
+   * one call and `get_meeting_by_calendar_id` on the next. Picking by rank would send a meeting
+   * id to the tool that wants a calendar id — which does not fail loudly, it succeeds against
+   * nothing.
+   */
+  it('picks the tool whose schema takes the id it holds, not the top-ranked one', async () => {
+    const { explorer, asked } = explorerFor({
+      list: { meetings: [{ meeting_id: 'm1', title: 'Standup' }] },
+      tools: [
+        {
+          slug: 'CUSTOM_WISPR_FLOW_GET_MEETING_BY_CALENDAR_ID',
+          toolkit: 'CUSTOM_WISPR_FLOW',
+          description: '',
+          connected: true,
+          inputSchema: { properties: { calendar_id: { type: 'string' } } },
+        },
+        {
+          slug: 'CUSTOM_WISPR_FLOW_GET_MEETING',
+          toolkit: 'CUSTOM_WISPR_FLOW',
+          description: '',
+          connected: true,
+          inputSchema: { properties: { meeting_id: { type: 'string' } } },
+        },
+      ],
+    });
+
+    const { signals } = await fetch(connectorFor(explorer));
+
+    expect(asked).toEqual(['m1']);
+    expect(signals[0]?.body).toContain('summary for m1');
+  });
+
+  it('expands nothing when no matched tool takes the declared id', async () => {
+    const { explorer, asked } = explorerFor({
+      list: { meetings: [{ meeting_id: 'm1', title: 'Standup' }] },
+      tools: [
+        {
+          slug: 'CUSTOM_WISPR_FLOW_GET_MEETING_BY_CALENDAR_ID',
+          toolkit: 'CUSTOM_WISPR_FLOW',
+          description: '',
+          connected: true,
+          inputSchema: { properties: { calendar_id: { type: 'string' } } },
+        },
+      ],
     });
 
     const { signals } = await fetch(connectorFor(explorer));

@@ -6,7 +6,7 @@ import type {
   Signal,
   SourceConnector,
 } from '@open-loops/signals';
-import type { ComposioToolExplorer } from './composio-tool-explorer.js';
+import type { ComposioToolExplorer, DiscoveredTool } from './composio-tool-explorer.js';
 import type { SourceCatalog } from '@open-loops/plugin-host';
 import { collectionOf, normalise } from './normalizers.js';
 
@@ -39,6 +39,22 @@ export interface ComposioSourceConnectorDeps {
  */
 const narrow = (intent: string, focus: string | undefined): string =>
   focus === undefined || focus.trim().length === 0 ? intent : `${intent}, ${focus.trim()}`;
+
+/**
+ * The first discovered tool that actually takes the id we hold. Rank alone is not enough:
+ * search is a similarity query and returns a different winner for the same words on different
+ * calls, so "get a meeting" resolves to `get_meeting` once and `get_meeting_by_calendar_id`
+ * the next time. They read the same to a ranker and take different ids, and the wrong one does
+ * not fail loudly — it succeeds against nothing.
+ */
+const accepts = (
+  tools: readonly DiscoveredTool[],
+  argument: string,
+): DiscoveredTool | undefined =>
+  tools.find((tool) => {
+    const properties = (tool.inputSchema?.['properties'] ?? {}) as Record<string, unknown>;
+    return Object.prototype.hasOwnProperty.call(properties, argument);
+  });
 
 /**
  * The hosted data adapter. It resolves intents to tools, runs them, normalises whatever comes
@@ -130,13 +146,14 @@ export class ComposioSourceConnector implements SourceConnector {
     const rows = collectionOf(context.payload);
     if (rows.length === 0) return context.payload;
 
-    const [detail] = await this.deps.explorer.search({
-      query: plan.intent,
-      toolkits: [context.toolkit],
-    });
+    const detail = accepts(
+      await this.deps.explorer.search({ query: plan.intent, toolkits: [context.toolkit] }),
+      plan.argument,
+    );
     if (detail === undefined) {
       this.deps.logger.warn('no composio tool matched the hydrate intent', {
         intent: plan.intent,
+        argument: plan.argument,
       });
       return context.payload;
     }

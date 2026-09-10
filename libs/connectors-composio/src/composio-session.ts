@@ -12,6 +12,15 @@ export interface ComposioSessionOptions {
   readonly logger: Logger;
   /** Shared: one API key, one client, one connection pool for every account on this process. */
   readonly composio: Composio;
+  /**
+   * Which toolkits the session is built over. Naming them is not an optimisation: a session
+   * created with no toolkits gets Composio's default catalogue, which contains the toolkits
+   * Composio ships and *not* a custom one this project registered itself. A custom toolkit
+   * missing from the session is invisible to `toolkits()` and unreachable by `search()`, so a
+   * connection completed in the browser reads back as "authorisation did not complete" and its
+   * hourly sync finds no tool to call.
+   */
+  readonly toolkits: readonly string[];
 }
 
 /**
@@ -40,7 +49,10 @@ export class ComposioSessionProvider {
 
   public session$(): Promise<ComposioSession> {
     this.session ??= this.userId$()
-      .then(async (userId) => await this.options.composio.create(userId))
+      .then(
+        async (userId) =>
+          await this.options.composio.create(userId, { toolkits: [...this.options.toolkits] }),
+      )
       .then((session) => {
         this.options.logger.info('composio session ready', { sessionId: session.sessionId });
         return session;
@@ -71,6 +83,8 @@ export interface ComposioSessionRegistryOptions {
   readonly identity: (ownerId: string) => Promise<string>;
   /** Only set when the key does not live in COMPOSIO_API_KEY; the SDK reads that itself. */
   readonly apiKey?: string;
+  /** Every toolkit the installed source plugins name — see `ComposioSessionOptions.toolkits`. */
+  readonly toolkits: readonly string[];
 }
 
 /**
@@ -95,6 +109,7 @@ export class ComposioSessionRegistry {
       composio: this.composio,
       logger: this.options.logger,
       identity: async () => await this.options.identity(ownerId),
+      toolkits: this.options.toolkits,
     });
     this.byOwner.set(ownerId, created);
     this.evictOverflow();
