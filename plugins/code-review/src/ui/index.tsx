@@ -150,5 +150,7 @@ function OrganizationRow(props: {
 
 export default defineWebPlugin<CodeReviewSettings>({
   id: 'code-review',
-  settings: { label: 'GitHub', Panel: CodeReviewPanel },
+  // Answered while connecting GitHub rather than on the Settings screen: it is the question
+  // that decides what the connection fetches, not a preference somebody tunes afterwards.
+  settings: { label: 'GitHub organisations', Panel: CodeReviewPanel, provider: 'GITHUB' },
 });

@@ -28,6 +28,13 @@ export interface SettingsPanel<TValue = unknown> {
   /** The heading above the panel: "Podcast of the day". */
   readonly label: string;
   readonly Panel: ComponentType<SettingsPanelProps<TValue>>;
+  /**
+   * The source this panel belongs to, when it is really part of connecting one. Such a panel is
+   * shown on that provider's Integrations card — where the question is actually being asked —
+   * and deliberately not on the Settings screen, so there is one place to answer it rather than
+   * two that can disagree.
+   */
+  readonly provider?: string;
 }
 
 export interface PageProps {

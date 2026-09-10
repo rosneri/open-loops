@@ -5,6 +5,29 @@ import { useAsyncAction } from '../hooks/use-async-action.js';
 import { ErrorPanel } from '../components/error-panel.js';
 import { IntegrationCard, IntegrationCardSkeleton } from '../components/integration-card.js';
 import { ToolBench } from '../components/tool-bench.js';
+import { IntegrationSetup } from '../components/integration-setup.js';
+import { webPlugins } from '../plugins/enabled.js';
+
+/**
+ * The panel a source's plugin contributes to its own card, when that card is the one showing it.
+ * A source whose plugin ships no panel gets nothing, which is every source but GitHub today.
+ */
+const setupFor = (
+  provider: string,
+  open: boolean,
+  onSaved: () => void,
+): React.ReactElement | undefined => {
+  if (!open) return undefined;
+  const plugin = webPlugins.find((web) => web.settings?.provider === provider);
+  return plugin === undefined ? undefined : <IntegrationSetup plugin={plugin} onSaved={onSaved} />;
+};
+
+/** The sources whose plugin ships a panel, so a card knows whether it has anything to offer. */
+const configurableProviders = new Set(
+  webPlugins
+    .map((web) => web.settings?.provider)
+    .filter((provider): provider is string => provider !== undefined),
+);
 
 /** Enough rows to fill the grid at every breakpoint without inventing a count we cannot know. */
 const SKELETON_CARDS = 6;
@@ -50,14 +73,11 @@ export function IntegrationsPage(): React.ReactElement {
     [action],
   );
 
-  /**
-   * The outstanding question is answered on the Settings screen, in the panel the plugin that
-   * asked it already owns. Navigating through the same history the shell listens on keeps this
-   * a single-page move rather than a reload that would drop everything just loaded.
-   */
-  const finishSetup = useCallback((): void => {
-    window.history.pushState({}, '', '/settings');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+  /** Which card is showing its plugin's panel — the one being connected, or one being changed. */
+  const [openSetup, setOpenSetup] = useState<string | undefined>();
+
+  const finishSetup = useCallback((provider: string): void => {
+    setOpenSetup((current) => (current === provider ? undefined : provider));
   }, []);
 
   const disconnect = useCallback(
@@ -92,6 +112,11 @@ export function IntegrationsPage(): React.ReactElement {
                 onConnect={connect}
                 onDisconnect={disconnect}
                 onFinishSetup={finishSetup}
+                configurable={configurableProviders.has(integration.provider)}
+                setup={setupFor(integration.provider, openSetup === integration.provider, () => {
+                  setOpenSetup(undefined);
+                  void load();
+                })}
               />
             ))
           : Array.from({ length: SKELETON_CARDS }, (_, index) => (

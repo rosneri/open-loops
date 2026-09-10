@@ -25,7 +25,8 @@ export function PluginPanels({
     <>
       {plugins.map((plugin) => {
         const settings = contributions.find((web) => web.id === plugin.id)?.settings;
-        if (settings === undefined) return null;
+        // A panel that belongs to an integration is answered on its card, not here.
+        if (settings === undefined || settings.provider !== undefined) return null;
         const { Panel } = settings;
         return (
           <section key={plugin.id} className="space-y-6">

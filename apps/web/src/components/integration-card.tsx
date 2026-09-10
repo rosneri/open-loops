@@ -23,8 +23,15 @@ interface IntegrationCardProps {
   readonly pending: boolean;
   readonly onConnect: (provider: string) => void;
   readonly onDisconnect: (provider: string) => void;
-  /** Takes the person to the panel that answers the source's outstanding question. */
+  /** Shows or hides the panel that answers the source's outstanding question. */
   readonly onFinishSetup: (provider: string) => void;
+  /** That panel, mounted by the screen when this is the card showing it. */
+  readonly setup?: React.ReactElement | undefined;
+  /**
+   * Whether there is a panel to show at all. A connected source whose choice can be revisited
+   * needs a way back to it — the Settings screen no longer carries one, on purpose.
+   */
+  readonly configurable: boolean;
 }
 
 export function IntegrationCard({
@@ -33,6 +40,8 @@ export function IntegrationCard({
   onConnect,
   onDisconnect,
   onFinishSetup,
+  setup,
+  configurable,
 }: IntegrationCardProps): React.ReactElement {
   const active = integration.status === 'ACTIVE';
   const awaitingSetup = integration.status === 'AWAITING_SETUP';
@@ -73,6 +82,8 @@ export function IntegrationCard({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
           onFinishSetup={onFinishSetup}
+          setup={setup}
+          configurable={configurable}
         />
       </div>
     </div>
@@ -120,6 +131,8 @@ function CardAction({
   onConnect,
   onDisconnect,
   onFinishSetup,
+  setup,
+  configurable,
 }: CardActionProps): React.ReactElement {
   return (
     <>
@@ -145,26 +158,44 @@ function CardAction({
             <p className="mb-2 text-[11px] leading-relaxed text-chalk-500">
               {integration.setupLabel ?? 'One more choice before this can sync.'}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                onFinishSetup(integration.provider);
-              }}
-              className="min-h-10 w-full rounded border border-chalk-600 py-1.5 text-[11px] text-chalk-100 sm:min-h-0 transition hover:bg-ink-800"
-            >
-              Finish setup
-            </button>
+            {setup ?? (
+              <button
+                type="button"
+                onClick={() => {
+                  onFinishSetup(integration.provider);
+                }}
+                className="min-h-10 w-full rounded border border-chalk-600 py-1.5 text-[11px] text-chalk-100 sm:min-h-0 transition hover:bg-ink-800"
+              >
+                Finish setup
+              </button>
+            )}
           </>
         ) : active ? (
-          <button
-            type="button"
-            onClick={() => {
-              onDisconnect(integration.provider);
-            }}
-            className="min-h-10 w-full rounded border border-ink-700 py-1.5 text-[11px] text-chalk-500 sm:min-h-0 transition hover:border-ink-600 hover:text-chalk-100"
-          >
-            Disconnect
-          </button>
+          <>
+            {setup}
+            <div className="flex gap-2">
+              {configurable && setup === undefined && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFinishSetup(integration.provider);
+                  }}
+                  className="min-h-10 flex-1 rounded border border-ink-700 py-1.5 text-[11px] text-chalk-500 sm:min-h-0 transition hover:border-ink-600 hover:text-chalk-100"
+                >
+                  Organisations
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onDisconnect(integration.provider);
+                }}
+                className="min-h-10 flex-1 rounded border border-ink-700 py-1.5 text-[11px] text-chalk-500 sm:min-h-0 transition hover:border-ink-600 hover:text-chalk-100"
+              >
+                Disconnect
+              </button>
+            </div>
+          </>
         ) : (
           <button
             type="button"
