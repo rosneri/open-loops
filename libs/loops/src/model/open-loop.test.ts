@@ -98,3 +98,51 @@ describe('OpenLoop', () => {
     expect(loop.snapshot().evidence).toHaveLength(2);
   });
 });
+
+describe('restating a loop when its signal changed', () => {
+  const later = asInstant(2_000_000);
+
+  it('takes the new wording and keeps everything the loop has since accumulated', () => {
+    const loop = makeLoop();
+    const before = loop.snapshot();
+
+    const changed = loop.restate({
+      title: 'Setup the devops',
+      summary: 'Status: Hold / In review',
+      at: later,
+    });
+
+    expect(changed).toBe(true);
+    const after = loop.snapshot();
+    expect(after.title).toBe('Setup the devops');
+    // Identity, criteria and evidence did not become untrue when the title did.
+    expect(after.id).toBe(before.id);
+    expect(after.criteria).toEqual(before.criteria);
+    expect(after.evidence).toEqual(before.evidence);
+    expect(after.createdAt).toBe(before.createdAt);
+    expect(after.updatedAt).toBe(later);
+  });
+
+  it('says nothing changed when the wording is the same, so no write happens', () => {
+    const loop = makeLoop();
+    const before = loop.snapshot();
+
+    expect(
+      loop.restate({ title: before.title, summary: before.summary, at: later }),
+    ).toBe(false);
+    expect(loop.snapshot().updatedAt).toBe(before.updatedAt);
+  });
+
+  /**
+   * Rewriting the title of something a person already marked done would edit the record of what
+   * they decided about, after they decided it.
+   */
+  it('refuses once a person has settled it', () => {
+    const loop = makeLoop();
+    loop.confirmDone({ reason: 'shipped it', at: later });
+
+    expect(loop.restate({ title: 'Something else', summary: 'new', at: later })).toBe(false);
+    expect(loop.snapshot().title).toBe('Open the rate-limiting PR');
+    expect(loop.view(later).status).toBe(LoopStatus.Done);
+  });
+});

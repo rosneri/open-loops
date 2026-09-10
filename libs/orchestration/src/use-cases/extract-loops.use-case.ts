@@ -18,6 +18,8 @@ export interface ExtractLoopsResult {
   readonly signalsRead: number;
   readonly loopsCreated: number;
   readonly loopsSkipped: number;
+  /** Loops whose wording caught up with a signal that had been re-read and had changed. */
+  readonly loopsRestated: number;
 }
 
 const BATCH_SIZE = 120;
@@ -34,11 +36,14 @@ export class ExtractLoopsUseCase {
   public async execute(): Promise<ExtractLoopsResult> {
     const now = this.deps.clock.now();
     const batch = await this.deps.signals.listUnprocessed(BATCH_SIZE);
-    if (batch.length === 0) return { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0 };
+    if (batch.length === 0) {
+      return { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0, loopsRestated: 0 };
+    }
 
     const proposals = await this.deps.extractor.extract({ signals: batch, now });
     const byId = new Map(batch.map((signal) => [signal.externalId, signal]));
     const created: OpenLoop[] = [];
+    const restated: OpenLoop[] = [];
     let skipped = 0;
 
     for (const proposal of proposals) {
@@ -49,17 +54,42 @@ export class ExtractLoopsUseCase {
       }
       const existing = await this.deps.loops.findBySourceKey(signalKey(signal));
       if (existing !== undefined) {
-        skipped += 1;
+        // Seen before, and the signal has been re-read since — otherwise it would not be back in
+        // an unprocessed batch. Let the wording catch up rather than keeping the first guess
+        // forever; everything the loop has since accumulated survives.
+        if (
+          existing.restate({
+            title: proposal.title,
+            summary: proposal.summary,
+            ...(proposal.counterparty === undefined
+              ? {}
+              : { counterparty: proposal.counterparty }),
+            at: now,
+          })
+        ) {
+          restated.push(existing);
+        } else {
+          skipped += 1;
+        }
         continue;
       }
       created.push(OpenLoop.create(this.toProps({ proposal, signal, now })));
     }
 
-    await this.deps.loops.saveMany(created);
+    await this.deps.loops.saveMany([...created, ...restated]);
     await this.deps.signals.markProcessed(batch.map(signalKey));
-    this.deps.logger.info('extracted loops', { created: created.length, skipped });
+    this.deps.logger.info('extracted loops', {
+      created: created.length,
+      restated: restated.length,
+      skipped,
+    });
 
-    return { signalsRead: batch.length, loopsCreated: created.length, loopsSkipped: skipped };
+    return {
+      signalsRead: batch.length,
+      loopsCreated: created.length,
+      loopsSkipped: skipped,
+      loopsRestated: restated.length,
+    };
   }
 
   private toProps(input: {

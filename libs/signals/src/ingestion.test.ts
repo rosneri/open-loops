@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SourceProvider, asInstant } from '@open-loops/kernel';
 import { screenSignals } from './ingestion.js';
 import type { Signal } from './signal.js';
-import { SignalKind } from './signal.js';
+import { SignalKind, signalChanged } from './signal.js';
 
 const NOW = asInstant(1_000_000_000);
 
@@ -65,5 +65,43 @@ describe('screenSignals', () => {
   it('accepts any provider when it is not told which exist', () => {
     const report = screenSignals({ signals: [signal({ provider: 'ANYTHING' })], now: NOW });
     expect(report.accepted).toHaveLength(1);
+  });
+});
+
+describe('deciding whether a re-fetched signal says anything new', () => {
+  const signal: Signal = {
+    provider: 'NOTION',
+    externalId: 'page-1',
+    kind: SignalKind.Issue,
+    title: 'Setup the devops',
+    body: 'Status: Hold / In review',
+    author: { displayName: 'Neriya Rosner', isMe: true },
+    participants: [],
+    occurredAt: asInstant(1_700_000_000_000),
+    isDirectedAtMe: true,
+  };
+  const stored = {
+    title: signal.title,
+    body: signal.body,
+    kind: signal.kind,
+    isDirectedAtMe: signal.isDirectedAtMe,
+    occurredAt: signal.occurredAt,
+  };
+
+  /** Every sweep re-reads the same pages; treating that as news would re-extract all of them. */
+  it('says no when the re-fetch is identical', () => {
+    expect(signalChanged(signal, stored)).toBe(false);
+  });
+
+  it('says yes when the title moved — a rename, or a normaliser that got better', () => {
+    expect(signalChanged(signal, { ...stored, title: 'Item' })).toBe(true);
+  });
+
+  it('says yes when it became mine to do', () => {
+    expect(signalChanged(signal, { ...stored, isDirectedAtMe: false })).toBe(true);
+  });
+
+  it('says yes when the time it happened was wrong', () => {
+    expect(signalChanged(signal, { ...stored, occurredAt: 1 })).toBe(true);
   });
 });

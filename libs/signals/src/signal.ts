@@ -45,3 +45,28 @@ export interface Signal {
 
 export const signalKey = (signal: Pick<Signal, 'provider' | 'externalId'>): string =>
   `${signal.provider}:${signal.externalId}`;
+
+/**
+ * The parts of a stored signal worth comparing a re-fetch against. Deliberately not the whole
+ * row: `receivedAt` moves on its own, and `processedAt` is our bookkeeping rather than anything
+ * the source said.
+ */
+export interface StoredSignalFacts {
+  readonly title: string;
+  readonly body: string;
+  readonly kind: string;
+  readonly isDirectedAtMe: boolean;
+  readonly occurredAt: number;
+}
+
+/**
+ * Whether a re-fetched signal actually says something new. A connector re-reads the same items
+ * every sweep, so answering this wrongly in one direction leaves stale content forever and in
+ * the other re-extracts the entire history on every tick.
+ */
+export const signalChanged = (signal: Signal, stored: StoredSignalFacts): boolean =>
+  stored.title !== signal.title ||
+  stored.body !== signal.body ||
+  stored.kind !== signal.kind ||
+  stored.isDirectedAtMe !== signal.isDirectedAtMe ||
+  stored.occurredAt !== signal.occurredAt;

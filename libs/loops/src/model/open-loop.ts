@@ -143,6 +143,33 @@ export class OpenLoop {
     this.props = { ...this.props, lastCheckedAt: at };
   }
 
+  /**
+   * The signal this came from was re-read and says something different — usually because the
+   * page was renamed upstream, sometimes because we got better at reading it. Only the wording
+   * moves: identity, evidence, criteria and every human decision stay exactly as they were,
+   * because none of them became untrue when the title changed.
+   *
+   * Refuses once a person has settled it. Rewriting the title of something already marked done
+   * would edit the record of what they decided about, after the fact.
+   */
+  public restate(input: {
+    title: string;
+    summary: string;
+    counterparty?: Party;
+    at: Instant;
+  }): boolean {
+    if (this.props.manualResolution !== undefined) return false;
+    if (input.title === this.props.title && input.summary === this.props.summary) return false;
+    this.props = {
+      ...this.props,
+      title: input.title,
+      summary: input.summary,
+      ...(input.counterparty === undefined ? {} : { counterparty: input.counterparty }),
+      updatedAt: input.at,
+    };
+    return true;
+  }
+
   public reviseCriteria(input: { criteria: readonly CompletionCriterion[]; at: Instant }): void {
     this.transition({ at: input.at, reason: 'criteria revised' }, () => {
       this.props = { ...this.props, criteria: input.criteria, updatedAt: input.at };

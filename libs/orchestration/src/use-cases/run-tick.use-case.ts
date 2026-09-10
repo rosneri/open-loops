@@ -120,7 +120,7 @@ interface StepResults {
 /** A skipped step contributes zeros rather than absent fields, so the report is always total. */
 const SKIPPED = {
   prune: { pruned: 0, providers: [] },
-  extract: { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0 },
+  extract: { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0, loopsRestated: 0 },
   reconcile: { checked: 0, probesRun: 0, closed: 0, awaitingAcknowledgement: 0 },
   plan: { blocks: [], deferred: 0 },
 } as const;
@@ -142,6 +142,7 @@ const toReport = (input: {
     signalsFetched: input.steps.sync.fetched,
     loopsCreated: extract.loopsCreated,
     loopsPruned: prune.pruned,
+    loopsRestated: extract.loopsRestated,
     loopsChecked: reconcile.checked,
     loopsClosed: reconcile.closed,
     awaitingAcknowledgement: reconcile.awaitingAcknowledgement,

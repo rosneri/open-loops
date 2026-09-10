@@ -15,6 +15,11 @@ export interface TickReportDto {
    * finished loop stays as the record that it was finished.
    */
   readonly loopsPruned: number;
+  /**
+   * Loops whose wording caught up with a signal that changed upstream — or that we had been
+   * reading wrongly until now.
+   */
+  readonly loopsRestated: number;
   readonly loopsChecked: number;
   readonly loopsClosed: number;
   readonly awaitingAcknowledgement: number;
