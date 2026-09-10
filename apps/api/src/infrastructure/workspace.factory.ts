@@ -30,6 +30,7 @@ import {
   PrismaOpenLoopRepository,
   PrismaProbeTaskStore,
   PrismaSignalStore,
+  PrismaTickRunStore,
   PrismaSyncCursorStore,
   SignalBusyTimeProvider,
   type PrismaClient,
@@ -88,6 +89,8 @@ export interface Workspace {
   readonly ingest: IngestSignalsUseCase;
   readonly probes: PrismaProbeTaskStore;
   readonly loops: PrismaOpenLoopRepository;
+  /** Every sweep this account has run, for the activity log. */
+  readonly runs: PrismaTickRunStore;
   /** A plugin's window onto this person, carrying only what that plugin's manifest asked for. */
   readonly scopeFor: (pluginId: string) => OwnerScope;
 }
@@ -134,13 +137,8 @@ export class WorkspaceFactory {
   }
 
   public for(ownerId: string): Workspace {
-    const loops = new PrismaOpenLoopRepository(this.prisma, ownerId);
-    const plans = new PrismaDailyPlanRepository(this.prisma, ownerId);
-    const integrationRepo = new PrismaIntegrationRepository(this.prisma, ownerId);
-    const signals = new PrismaSignalStore(this.prisma, ownerId);
-    const cursors = new PrismaSyncCursorStore(this.prisma, ownerId);
-    const busyTime = new SignalBusyTimeProvider(this.prisma, ownerId);
-    const events = new PrismaLoopEventPublisher(this.prisma);
+    const { loops, plans, integrationRepo, signals, cursors, runs, busyTime, events } =
+      this.repositories(ownerId);
     const probes = new PrismaProbeTaskStore({
       prisma: this.prisma,
       logger: this.shared.logger,
@@ -240,8 +238,13 @@ export class WorkspaceFactory {
         logger,
       }),
       commands: new LoopCommandsUseCase({ loops, plans, events, clock }),
+      runs,
       tick: new RunTickUseCase({
         ownerId,
+        runs,
+        runId: () => ids.next(),
+        // Drains the stack's journal, so a run's record carries the calls that run made.
+        toolCalls: () => stack.journal?.drain() ?? [],
         integrations,
         prune: this.pruning({ integrations: integrationRepo, loops, clock, logger }),
         sync,
@@ -252,6 +255,23 @@ export class WorkspaceFactory {
         clock,
         logger,
       }),
+    };
+  }
+
+  /**
+   * Every store this account reads and writes through, built for that account and unable to
+   * express a question about anybody else. Grouped so the assembly below stays readable.
+   */
+  private repositories(ownerId: string) {
+    return {
+      loops: new PrismaOpenLoopRepository(this.prisma, ownerId),
+      plans: new PrismaDailyPlanRepository(this.prisma, ownerId),
+      integrationRepo: new PrismaIntegrationRepository(this.prisma, ownerId),
+      signals: new PrismaSignalStore(this.prisma, ownerId),
+      cursors: new PrismaSyncCursorStore(this.prisma, ownerId),
+      runs: new PrismaTickRunStore(this.prisma, ownerId),
+      busyTime: new SignalBusyTimeProvider(this.prisma, ownerId),
+      events: new PrismaLoopEventPublisher(this.prisma),
     };
   }
 

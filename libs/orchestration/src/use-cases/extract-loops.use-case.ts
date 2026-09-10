@@ -14,12 +14,24 @@ export interface ExtractLoopsDeps {
   readonly logger: Logger;
 }
 
+/** One thing a step actually did, so a count can be opened up instead of taken on trust. */
+export interface LoopEntry {
+  readonly loopId: string;
+  readonly title: string;
+  readonly provider: string;
+  readonly externalId: string;
+}
+
 export interface ExtractLoopsResult {
   readonly signalsRead: number;
   readonly loopsCreated: number;
   readonly loopsSkipped: number;
   /** Loops whose wording caught up with a signal that had been re-read and had changed. */
   readonly loopsRestated: number;
+  readonly created: readonly LoopEntry[];
+  readonly restated: readonly LoopEntry[];
+  /** Why something was passed over: the answer people actually want from a "skipped" count. */
+  readonly skippedReasons: readonly { readonly sourceExternalId: string; readonly reason: string }[];
 }
 
 const BATCH_SIZE = 120;
@@ -37,19 +49,35 @@ export class ExtractLoopsUseCase {
     const now = this.deps.clock.now();
     const batch = await this.deps.signals.listUnprocessed(BATCH_SIZE);
     if (batch.length === 0) {
-      return { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0, loopsRestated: 0 };
+      return {
+        signalsRead: 0,
+        loopsCreated: 0,
+        loopsSkipped: 0,
+        loopsRestated: 0,
+        created: [],
+        restated: [],
+        skippedReasons: [],
+      };
     }
 
     const proposals = await this.deps.extractor.extract({ signals: batch, now });
     const byId = new Map(batch.map((signal) => [signal.externalId, signal]));
     const created: OpenLoop[] = [];
     const restated: OpenLoop[] = [];
+    const skippedReasons: { sourceExternalId: string; reason: string }[] = [];
     let skipped = 0;
 
     for (const proposal of proposals) {
       const signal = byId.get(proposal.sourceExternalId);
       if (signal === undefined || proposal.confidence < MIN_CONFIDENCE) {
         skipped += 1;
+        skippedReasons.push({
+          sourceExternalId: proposal.sourceExternalId,
+          reason:
+            signal === undefined
+              ? 'the model named a signal that was not in the batch'
+              : `confidence ${proposal.confidence.toFixed(2)} is below ${String(MIN_CONFIDENCE)}`,
+        });
         continue;
       }
       const existing = await this.deps.loops.findBySourceKey(signalKey(signal));
@@ -70,6 +98,10 @@ export class ExtractLoopsUseCase {
           restated.push(existing);
         } else {
           skipped += 1;
+          skippedReasons.push({
+            sourceExternalId: proposal.sourceExternalId,
+            reason: 'already a loop, and nothing about it changed',
+          });
         }
         continue;
       }
@@ -89,6 +121,9 @@ export class ExtractLoopsUseCase {
       loopsCreated: created.length,
       loopsSkipped: skipped,
       loopsRestated: restated.length,
+      created: created.map(entryOf),
+      restated: restated.map(entryOf),
+      skippedReasons,
     };
   }
 
@@ -129,3 +164,13 @@ export class ExtractLoopsUseCase {
     };
   }
 }
+
+const entryOf = (loop: OpenLoop): LoopEntry => {
+  const props = loop.snapshot();
+  return {
+    loopId: String(props.id),
+    title: props.title,
+    provider: props.source.provider,
+    externalId: props.source.externalId,
+  };
+};

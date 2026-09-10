@@ -251,6 +251,7 @@ model User {
   probeTasks   ProbeTask[]
   pluginRecords PluginRecord[]
   schedules    ScheduleEntry[]
+  tickRuns     TickRun[]
 }
 
 /// One row per person. Settings that someone changes from the app belong in the database rather
@@ -301,4 +302,22 @@ model ScheduleEntry {
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@id([ownerId, kind])
+}
+
+/// One sweep, kept so a person can ask what happened rather than guess. The counts live in the
+/// report the API already returns; the entries are what those counts were made of — which loop,
+/// from which signal, and which upstream call — because a number is not something you can debug.
+model TickRun {
+  id         String   @id
+  ownerId    String
+  startedAt  DateTime
+  finishedAt DateTime
+  /// The TickReportDto exactly as the API returned it, plus the per-entry detail.
+  report     Json
+  /// Denormalised from the report so the list can be read without parsing every row.
+  failed     Boolean  @default(false)
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, startedAt])
 }

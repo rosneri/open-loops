@@ -7,6 +7,7 @@ import { IntegrationsController } from './modules/integrations/integrations.cont
 import { AgentController } from './modules/agent/agent.controller.js';
 import { ComposioController } from './modules/composio/composio.controller.js';
 import { TickController } from './modules/tick/tick.controller.js';
+import { ActivityController } from './modules/activity/activity.controller.js';
 import { SettingsController } from './modules/settings/settings.controller.js';
 import { SettingsService } from './modules/settings/settings.service.js';
 import { SchedulesService } from './modules/settings/schedules.service.js';
@@ -28,6 +29,7 @@ const CORE_CONTROLLERS = [
   AgentController,
   ComposioController,
   TickController,
+  ActivityController,
   SettingsController,
   SchedulesController,
 ];

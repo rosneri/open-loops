@@ -155,6 +155,9 @@ describe('a sweep after an app was disconnected', () => {
     expect(result.pruned).toBe(1);
     // The record of what was owed and settled survives disconnecting the app it came from.
     expect(loops.ids).toEqual(['done', 'dropped']);
+    // Named rather than counted, so the activity log can say which loop went.
+    expect(result.entries.map((entry) => entry.title)).toEqual(['open']);
+    expect(result.keptAsHistory).toBe(2);
   });
 
   it("leaves other apps' loops alone", async () => {
@@ -197,7 +200,7 @@ describe('a sweep after an app was disconnected', () => {
 
     const result = await sweep({ integrations, loops }).execute();
 
-    expect(result).toEqual({ pruned: 0, providers: [] });
+    expect(result).toEqual({ pruned: 0, providers: [], entries: [], keptAsHistory: 0 });
     expect(loops.ids).toEqual(['slack-open']);
   });
 });

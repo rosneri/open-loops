@@ -9,3 +9,4 @@ export * from './user.repository.js';
 export * from './settings.repository.js';
 export * from './plugin-record.store.js';
 export * from './schedule.repository.js';
+export * from './tick-run.store.js';

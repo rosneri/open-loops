@@ -3,12 +3,14 @@ import { api, pluginRequest, UNAUTHORIZED_EVENT, type SessionUser } from './api.
 import { TodayPage } from './pages/today.js';
 import { IntegrationsPage } from './pages/integrations.js';
 import { SettingsPage } from './pages/settings.js';
+import { ActivityPage } from './pages/activity.js';
 import { SignInPage } from './pages/sign-in.js';
 import { webPlugins } from './plugins/enabled.js';
 
 const CORE_TABS = [
   { path: '/', label: 'Today' },
   { path: '/integrations', label: 'Integrations' },
+  { path: '/activity', label: 'Activity' },
   { path: '/settings', label: 'Settings' },
 ] as const;
 
@@ -102,6 +104,7 @@ export function App(): React.ReactElement {
 
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 lg:px-8 lg:py-10">
         {path === '/integrations' && <IntegrationsPage />}
+        {path === '/activity' && <ActivityPage />}
         {path === '/settings' && <SettingsPage />}
         {path === '/' && <TodayPage />}
         {PLUGIN_PAGES.filter((page) => page.path === path).map((page) => (

@@ -3,6 +3,7 @@ import type { IntegrationRepository } from '@open-loops/integrations';
 import { ConnectionStatus } from '@open-loops/integrations';
 import type { OpenLoopRepository } from '@open-loops/loops';
 import { isTerminal } from '@open-loops/loops';
+import type { LoopEntry } from './extract-loops.use-case.js';
 
 export interface PruneDisconnectedDeps {
   readonly integrations: IntegrationRepository;
@@ -14,6 +15,9 @@ export interface PruneDisconnectedDeps {
 export interface PruneDisconnectedResult {
   readonly pruned: number;
   readonly providers: readonly SourceProvider[];
+  /** Which loops went, because "pruned: 7" is not something anybody can check afterwards. */
+  readonly entries: readonly LoopEntry[];
+  readonly keptAsHistory: number;
 }
 
 /**
@@ -41,7 +45,9 @@ export class PruneDisconnectedUseCase {
     const disconnected = stored
       .filter((integration) => integration.snapshot().status === ConnectionStatus.Disconnected)
       .map((integration) => integration.provider);
-    if (disconnected.length === 0) return { pruned: 0, providers: [] };
+    if (disconnected.length === 0) {
+      return { pruned: 0, providers: [], entries: [], keptAsHistory: 0 };
+    }
 
     const now = this.deps.clock.now();
     const loops = await this.deps.loops.list({ providers: disconnected });
@@ -57,6 +63,19 @@ export class PruneDisconnectedUseCase {
         keptAsHistory: loops.length - live.length,
       });
     }
-    return { pruned: live.length, providers: disconnected };
+    return {
+      pruned: live.length,
+      providers: disconnected,
+      entries: live.map((loop) => {
+        const props = loop.snapshot();
+        return {
+          loopId: String(props.id),
+          title: props.title,
+          provider: props.source.provider,
+          externalId: props.source.externalId,
+        };
+      }),
+      keptAsHistory: loops.length - live.length,
+    };
   }
 }

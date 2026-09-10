@@ -1,5 +1,6 @@
 import type { Logger } from '@open-loops/kernel';
 import type { ComposioSessionProvider } from './composio-session.js';
+import type { ToolJournal } from './tool-journal.js';
 
 export interface DiscoveredTool {
   readonly slug: string;
@@ -30,7 +31,12 @@ export interface ToolExecution {
  */
 export class ComposioToolExplorer {
   public constructor(
-    private readonly deps: { sessions: ComposioSessionProvider; logger: Logger },
+    private readonly deps: {
+      sessions: ComposioSessionProvider;
+      logger: Logger;
+      /** Where each call is written down for the run's activity record. Optional by design. */
+      journal?: ToolJournal | undefined;
+    },
   ) {}
 
   /** The live toolkit list, which is also the only trustworthy source of valid slugs. */
@@ -85,6 +91,8 @@ export class ComposioToolExplorer {
   public async execute(input: {
     slug: string;
     args?: Record<string, unknown>;
+    /** Carried only so the journal can say what this call was for; the SDK never sees it. */
+    intent?: string;
   }): Promise<ToolExecution> {
     const session = await this.deps.sessions.session$();
     const response = await session.execute(input.slug, input.args ?? {});
@@ -92,6 +100,14 @@ export class ComposioToolExplorer {
       slug: input.slug,
       logId: response.logId,
       failed: response.error !== null,
+    });
+    this.deps.journal?.record({
+      slug: input.slug,
+      logId: response.logId,
+      ok: response.error === null,
+      at: Date.now(),
+      ...(response.error === null ? {} : { error: response.error }),
+      ...(input.intent === undefined ? {} : { intent: input.intent }),
     });
     return {
       slug: input.slug,
@@ -116,6 +132,10 @@ export class ComposioToolExplorer {
       this.deps.logger.warn('no composio tool matched', { query: input.query });
       return undefined;
     }
-    return this.execute({ slug: best.slug, ...(input.args === undefined ? {} : { args: input.args }) });
+    return this.execute({
+      slug: best.slug,
+      intent: input.query,
+      ...(input.args === undefined ? {} : { args: input.args }),
+    });
   }
 }

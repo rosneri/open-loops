@@ -7,6 +7,7 @@ import {
   ComposioSourceConnector,
   ComposioToolBroker,
   ComposioToolExplorer,
+  ToolJournal,
   type ComposioSessionRegistry,
 } from '@open-loops/connectors-composio';
 import type { OwnerScope, ToolBroker } from '@open-loops/plugin-api';
@@ -28,6 +29,11 @@ export interface SourceStack {
    * are no keys and a probe is answered out of band instead of being called.
    */
   readonly tools: ToolBroker | undefined;
+  /**
+   * Every upstream call this stack makes, for the run's activity record. `undefined` in local
+   * mode, where nothing is brokered and there is nothing to write down.
+   */
+  readonly journal: ToolJournal | undefined;
 }
 
 /**
@@ -55,6 +61,7 @@ export class SourceStackFactory {
       connectors: [new LocalAgentSourceConnector(this.logger, this.sources.providers())],
       explorer: undefined,
       tools: undefined,
+      journal: undefined,
     };
   }
 
@@ -69,9 +76,12 @@ export class SourceStackFactory {
     // Cheap wrappers around one cached session — the session, not this object, is what holds
     // the connection state, so building these per request costs nothing worth caching.
     const sessions = this.sessions.for(ownerId);
-    const explorer = new ComposioToolExplorer({ sessions, logger: this.logger });
+    // One journal per stack, and a stack is built per request, so a sweep's calls are its own.
+    const journal = new ToolJournal();
+    const explorer = new ComposioToolExplorer({ sessions, logger: this.logger, journal });
     return {
       explorer,
+      journal,
       tools: new ComposioToolBroker(explorer, this.sources),
       broker: new ComposioConnectionBroker({ sessions, sources: this.sources, logger: this.logger }),
       connectors: [

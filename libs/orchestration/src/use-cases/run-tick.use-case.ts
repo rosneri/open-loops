@@ -10,6 +10,8 @@ import type {
   PruneDisconnectedUseCase,
 } from './prune-disconnected.use-case.js';
 import type { TickStep, TickStepReport } from '../ports/tick-step.port.js';
+import type { TickRunStore } from '../ports/tick-run.port.js';
+import type { ActivityDetailDto, ActivityToolCallDto } from '@open-loops/contracts';
 
 export interface RunTickDeps {
   readonly integrations: ManageIntegrationsUseCase;
@@ -28,6 +30,14 @@ export interface RunTickDeps {
   readonly ownerId: string;
   readonly clock: Clock;
   readonly logger: Logger;
+  /**
+   * Where this run writes down what it did. Optional, and never allowed to fail the sweep: an
+   * activity log that could break the thing it describes would be worse than not having one.
+   */
+  readonly runs?: TickRunStore | undefined;
+  /** Reads and clears the upstream calls this run made. Absent in local mode. */
+  readonly toolCalls?: (() => readonly ActivityToolCallDto[]) | undefined;
+  readonly runId: () => string;
 }
 
 /**
@@ -64,6 +74,7 @@ export class RunTickUseCase {
       failures,
     });
     this.deps.logger.info('tick finished', { ...report });
+    await this.remember({ report, steps: { prune, sync, extract } });
     return report;
   }
 
@@ -86,6 +97,33 @@ export class RunTickUseCase {
       if (counted !== undefined) collected[step.name] = counted;
     }
     return collected;
+  }
+
+
+  /**
+   * Writes the run down. Wrapped in its own try because the record is a description of the
+   * sweep, not part of it: a failure here must not turn a tick that worked into one that did
+   * not, and the log line is what somebody would look for if the record went missing.
+   */
+  private async remember(input: {
+    report: TickReportDto;
+    steps: {
+      prune: PruneDisconnectedResult | undefined;
+      sync: SyncSourcesResult;
+      extract: ExtractLoopsResult | undefined;
+    };
+  }): Promise<void> {
+    const store = this.deps.runs;
+    if (store === undefined) return;
+    const detail = detailOf(input.steps, this.deps.toolCalls?.() ?? []);
+
+    try {
+      await store.record({ id: this.deps.runId(), report: input.report, detail });
+    } catch (error) {
+      this.deps.logger.warn('could not record the run', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -119,11 +157,61 @@ interface StepResults {
 
 /** A skipped step contributes zeros rather than absent fields, so the report is always total. */
 const SKIPPED = {
-  prune: { pruned: 0, providers: [] },
-  extract: { signalsRead: 0, loopsCreated: 0, loopsSkipped: 0, loopsRestated: 0 },
+  prune: { pruned: 0, providers: [], entries: [], keptAsHistory: 0 },
+  extract: {
+    signalsRead: 0,
+    loopsCreated: 0,
+    loopsSkipped: 0,
+    loopsRestated: 0,
+    created: [],
+    restated: [],
+    skippedReasons: [],
+  },
   reconcile: { checked: 0, probesRun: 0, closed: 0, awaitingAcknowledgement: 0 },
   plan: { blocks: [], deferred: 0 },
 } as const;
+
+/**
+ * The run's detail, assembled from whatever the steps managed to return. Every step is optional
+ * here for the same reason it is optional in the report: a step that threw still leaves a run
+ * worth recording, and an empty list is the honest account of a step that never ran.
+ */
+const detailOf = (
+  steps: {
+    prune: PruneDisconnectedResult | undefined;
+    sync: SyncSourcesResult;
+    extract: ExtractLoopsResult | undefined;
+  },
+  toolCalls: readonly ActivityToolCallDto[],
+): ActivityDetailDto => ({
+  fetchedPerProvider: steps.sync.perProvider,
+  pushProviders: steps.sync.pushed,
+  ...loopDetail(steps.extract, steps.prune),
+  toolCalls,
+});
+
+/**
+ * The same "a skipped step contributes zeros" rule the report uses, applied once at the top so
+ * the fields below are plain reads rather than six more fallbacks.
+ */
+const loopDetail = (
+  extracted: ExtractLoopsResult | undefined,
+  pruned: PruneDisconnectedResult | undefined,
+): Pick<
+  ActivityDetailDto,
+  'created' | 'restated' | 'pruned' | 'prunedProviders' | 'keptAsHistory' | 'skipped'
+> => {
+  const extract = extracted ?? SKIPPED.extract;
+  const prune = pruned ?? SKIPPED.prune;
+  return {
+    created: extract.created,
+    restated: extract.restated,
+    skipped: extract.skippedReasons,
+    pruned: prune.entries,
+    prunedProviders: prune.providers,
+    keptAsHistory: prune.keptAsHistory,
+  };
+};
 
 const toReport = (input: {
   window: { startedAt: Instant; finishedAt: Instant };

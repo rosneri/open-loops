@@ -1,4 +1,6 @@
 import type {
+  ActivityRunDto,
+  ActivityRunSummaryDto,
   BeginConnectionDto,
   IngestResultDto,
   IntegrationDto,
@@ -198,6 +200,12 @@ export const api = {
 
   ingest: async (signals: readonly unknown[]): Promise<IngestResultDto> =>
     await post<IngestResultDto>('/api/agent/ingest', { signals }),
+
+  activity: async (limit = 30): Promise<readonly ActivityRunSummaryDto[]> =>
+    await request<readonly ActivityRunSummaryDto[]>(`/api/activity?limit=${String(limit)}`),
+
+  activityRun: async (id: string): Promise<ActivityRunDto> =>
+    await request<ActivityRunDto>(`/api/activity/${encodeURIComponent(id)}`),
 
   settings: async (): Promise<SettingsDto> => await request<SettingsDto>('/api/settings'),
 
