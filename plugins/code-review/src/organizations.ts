@@ -91,8 +91,13 @@ export const readOrganizations = (payload: unknown): readonly Organization[] => 
  * Written the way the rest of the intent is — as a sentence, not a filter expression — because
  * what reads it is a model choosing a tool call, not a query planner.
  */
-export const focusPhrase = (organizations: readonly string[]): string | undefined => {
+export const focusPhrase = (
+  organizations: readonly string[],
+  includePersonal = false,
+): string | undefined => {
   const named = organizations.map((login) => login.trim()).filter((login) => login.length > 0);
+  // Nothing named is already everything, and everything includes this account's own
+  // repositories — so the checkbox has nothing left to add and saying so would only narrow it.
   if (named.length === 0) return undefined;
   // `join` rather than an index: the last element of a non-empty array is a fact TypeScript
   // cannot see, and asserting it here would be the only assertion in this plugin.
@@ -100,8 +105,9 @@ export const focusPhrase = (organizations: readonly string[]): string | undefine
     named.length === 1
       ? named.join('')
       : `${named.slice(0, -1).join(', ')} or ${named.slice(-1).join('')}`;
-  return `limited to repositories owned by the ${list} ${
-    named.length === 1 ? 'organization' : 'organizations'
+  const scope = `the ${list} ${named.length === 1 ? 'organization' : 'organizations'}`;
+  return `limited to repositories owned by ${scope}${
+    includePersonal ? ' or by my own personal account' : ''
   } on GitHub`;
 };
 
@@ -114,8 +120,10 @@ export const focusPhrase = (organizations: readonly string[]): string | undefine
 export const githubSetupStep = (): SetupStep => ({
   label: 'Choose which GitHub organisations count',
   complete: async (scope: OwnerScope): Promise<boolean> => {
-    const chosen = (await scope.settings<CodeReviewSettings>()).organizations;
-    if (chosen.length > 0) return true;
+    const settings = await scope.settings<CodeReviewSettings>();
+    // Ticking only "my own repositories" is a deliberate answer too, even with no organisation
+    // chosen: it says the personal account is the whole of what counts.
+    if (settings.organizations.length > 0 || settings.includePersonal) return true;
     // Nothing chosen is only a question when there is something to choose. An account in no
     // organisations — or one GitHub will not tell us about, which is what a token without
     // `read:org` looks like — must not be gated behind a picker with no options.

@@ -97,7 +97,10 @@ const sources: readonly SourceDefinition[] = [
      * projects gets a day made mostly of other people's side projects. Which ones count is a
      * setting, so it is read here per person and per sync rather than baked into the intents.
      */
-    focus: async (scope) => focusPhrase((await scope.settings<CodeReviewSettings>()).organizations),
+    focus: async (scope) => {
+      const settings = await scope.settings<CodeReviewSettings>();
+      return focusPhrase(settings.organizations, settings.includePersonal);
+    },
     setup: githubSetupStep(),
   },
   { provider: 'GITLAB', label: 'GitLab', toolkit: 'gitlab' },

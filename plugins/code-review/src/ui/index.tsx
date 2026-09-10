@@ -61,11 +61,7 @@ function CodeReviewPanel({
 
   return (
     <div className="space-y-4">
-      <p className="text-[11px] leading-relaxed text-chalk-600">
-        {value.organizations.length === 0
-          ? 'Every organisation this account can see is counted. Pick some to narrow it.'
-          : 'Only the ticked organisations are fetched; their repositories are what becomes a loop.'}
-      </p>
+      <p className="text-[11px] leading-relaxed text-chalk-600">{explain(value)}</p>
 
       {state === 'loading' && rows.length === 0 && (
         <p className="text-[11px] text-chalk-600">Asking GitHub which organisations you are in…</p>
@@ -83,6 +79,16 @@ function CodeReviewPanel({
             />
           ))}
         </ul>
+      )}
+
+      {value.organizations.length > 0 && (
+        <PersonalRow
+          checked={value.includePersonal}
+          disabled={busy}
+          onToggle={() => {
+            onEdit({ ...value, includePersonal: !value.includePersonal });
+          }}
+        />
       )}
 
       {state === 'unavailable' && (
@@ -105,7 +111,7 @@ function CodeReviewPanel({
           <button
             type="button"
             onClick={() => {
-              onEdit({ ...value, organizations: [] });
+              onEdit({ ...value, organizations: [], includePersonal: false });
             }}
             className="text-[11px] text-chalk-600 transition hover:text-chalk-100"
           >
@@ -114,6 +120,47 @@ function CodeReviewPanel({
         )}
       </div>
     </div>
+  );
+}
+
+
+/** What the current selection actually means, in the words somebody would use to describe it. */
+const explain = (value: CodeReviewSettings): string => {
+  if (value.organizations.length === 0) {
+    return 'Everything this account can see is counted. Pick some organisations to narrow it.';
+  }
+  return value.includePersonal
+    ? 'The ticked organisations and your own repositories are fetched; nothing else.'
+    : 'Only the ticked organisations are fetched; their repositories are what becomes a loop.';
+};
+
+/**
+ * Not an organisation, and deliberately not in the list of them: putting it there would invite
+ * ticking it and expecting the organisations to stop counting. Shown only once something has
+ * been picked, because with nothing picked everything is already counted — this account's own
+ * repositories included — and the box would do nothing at all.
+ */
+function PersonalRow(props: {
+  readonly checked: boolean;
+  readonly disabled: boolean;
+  readonly onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <label className="flex min-h-9 cursor-pointer items-start gap-2.5 border-t border-ink-800 pt-3 text-[13px] text-chalk-300">
+      <input
+        type="checkbox"
+        disabled={props.disabled}
+        checked={props.checked}
+        onChange={props.onToggle}
+        className="mt-0.5 accent-chalk-100"
+      />
+      <span className="min-w-0">
+        Also count my own repositories
+        <span className="ml-2 text-chalk-600">
+          the ones outside any organisation, owned by this account
+        </span>
+      </span>
+    </label>
   );
 }
 

@@ -20,11 +20,17 @@ export const codeReviewSettingsSchema = z.object({
     )
     .max(50, 'Fifty organisations is more than a filter.')
     .default([]),
+  /**
+   * Whether repositories owned by the account itself count alongside the chosen organisations.
+   * Off by default, because it only means anything once organisations have been picked: with
+   * none picked everything is already counted, personal repositories included.
+   */
+  includePersonal: z.boolean().default(false),
 });
 
 export type CodeReviewSettings = z.infer<typeof codeReviewSettingsSchema>;
 
-export const DEFAULT_SETTINGS: CodeReviewSettings = { organizations: [] };
+export const DEFAULT_SETTINGS: CodeReviewSettings = { organizations: [], includePersonal: false };
 
 export const settingsFragment: SettingsFragment<CodeReviewSettings> = {
   schema: codeReviewSettingsSchema,

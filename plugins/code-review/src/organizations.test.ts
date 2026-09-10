@@ -59,6 +59,26 @@ describe('narrowing the fetch', () => {
       'limited to repositories owned by the acme, beta or gamma organizations on GitHub',
     );
   });
+
+  it('adds the personal account when it is meant to count too', () => {
+    expect(focusPhrase(['acme'], true)).toBe(
+      'limited to repositories owned by the acme organization or by my own personal account on GitHub',
+    );
+  });
+
+  it('leaves the phrase alone when only the organisations count', () => {
+    expect(focusPhrase(['acme'], false)).toBe(
+      'limited to repositories owned by the acme organization on GitHub',
+    );
+  });
+
+  /**
+   * Nothing named is already everything, and everything includes this account's own
+   * repositories — narrowing to them would be the opposite of what the box says.
+   */
+  it('stays silent with no organisations, even when personal is ticked', () => {
+    expect(focusPhrase([], true)).toBeUndefined();
+  });
 });
 
 describe('the question GitHub asks before it will connect', () => {
@@ -67,9 +87,14 @@ describe('the question GitHub asks before it will connect', () => {
   const scopeWith = (input: {
     organizations: readonly string[];
     available?: readonly unknown[];
+    includePersonal?: boolean;
   }): Parameters<typeof step.complete>[0] =>
     ({
-      settings: () => Promise.resolve({ organizations: input.organizations }),
+      settings: () =>
+        Promise.resolve({
+          organizations: input.organizations,
+          includePersonal: input.includePersonal ?? false,
+        }),
       logger: { debug: () => undefined, info: () => undefined, warn: () => undefined, error: () => undefined },
       tools: {
         execute: () =>
@@ -92,5 +117,15 @@ describe('the question GitHub asks before it will connect', () => {
    */
   it('is answered when there is nothing to choose from', async () => {
     await expect(step.complete(scopeWith({ organizations: [] }))).resolves.toBe(true);
+  });
+
+  /** Ticking only "my own repositories" says the personal account is the whole of what counts. */
+  it('is answered by choosing the personal account alone', async () => {
+    const scope = scopeWith({
+      organizations: [],
+      includePersonal: true,
+      available: [{ login: 'acme' }],
+    });
+    await expect(step.complete(scope)).resolves.toBe(true);
   });
 });
